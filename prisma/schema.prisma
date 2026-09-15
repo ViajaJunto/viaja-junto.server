@@ -1,0 +1,189 @@
+// ViajaJunto — Prisma schema
+// Modelo relacional descrito em docs/architecture.md (secao 5).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: a URL de conexao vive em prisma.config.ts (CLI/Migrate)
+  // e no adapter passado ao PrismaClient (runtime).
+}
+
+// ─── Enums ──────────────────────────────────────────────
+
+enum TripStatus {
+  PLANNING
+  CONFIRMED
+  COMPLETED
+}
+
+enum MemberPermission {
+  EDITOR
+  VIEWER
+}
+
+enum DestinationCategory {
+  CITY
+  BEACH
+  NATURE
+  CULTURAL
+}
+
+enum ActivityType {
+  TOUR
+  FOOD
+  LODGING
+  TRANSPORT
+  OTHER
+}
+
+enum TripActivityStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+}
+
+// ─── Models ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  createdTrips Trip[]       @relation("TripCreator")
+  memberships  TripMember[]
+  reviews      Review[]
+
+  @@map("user")
+}
+
+model Trip {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  startDate   DateTime?  @map("start_date") @db.Date
+  endDate     DateTime?  @map("end_date") @db.Date
+  status      TripStatus @default(PLANNING)
+  createdBy   String     @map("created_by")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  creator      User              @relation("TripCreator", fields: [createdBy], references: [id])
+  members      TripMember[]
+  destinations TripDestination[]
+  budget       Budget?
+
+  @@map("trip")
+}
+
+model TripMember {
+  id         String           @id @default(uuid())
+  tripId     String           @map("trip_id")
+  userId     String           @map("user_id")
+  permission MemberPermission @default(VIEWER)
+  joinedAt   DateTime         @default(now()) @map("joined_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@map("trip_member")
+}
+
+model DestinationCatalog {
+  id          String               @id @default(uuid())
+  name        String
+  country     String?
+  category    DestinationCategory?
+  description String?
+  latitude    Float?
+  longitude   Float?
+  photoUrl    String?              @map("photo_url")
+
+  tripDestinations TripDestination[]
+
+  @@map("destination_catalog")
+}
+
+model TripDestination {
+  id                   String    @id @default(uuid())
+  tripId               String    @map("trip_id")
+  destinationCatalogId String    @map("destination_catalog_id")
+  arrival              DateTime? @db.Date
+  departure            DateTime? @db.Date
+  description          String?
+  order                Int?      @map("display_order")
+
+  trip               Trip               @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  destinationCatalog DestinationCatalog @relation(fields: [destinationCatalogId], references: [id])
+  activities         TripActivity[]
+
+  @@map("trip_destination")
+}
+
+model ActivityCatalog {
+  id            String       @id @default(uuid())
+  name          String
+  description   String?
+  type          ActivityType @default(OTHER)
+  location      String?
+  city          String?
+  country       String?
+  latitude      Float?
+  longitude     Float?
+  googlePlaceId String?      @map("google_place_id")
+  photoUrl      String?      @map("photo_url")
+  source        String?
+  averageRating Float?       @map("average_rating")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  tripActivities TripActivity[]
+  reviews        Review[]
+
+  @@map("activity_catalog")
+}
+
+model TripActivity {
+  id                String             @id @default(uuid())
+  tripDestinationId String             @map("trip_destination_id")
+  activityCatalogId String             @map("activity_catalog_id")
+  dateTime          DateTime?          @map("date_time")
+  durationMinutes   Int?               @map("duration_minutes")
+  expectedCost      Float?             @map("expected_cost")
+  status            TripActivityStatus @default(PENDING)
+
+  tripDestination TripDestination @relation(fields: [tripDestinationId], references: [id], onDelete: Cascade)
+  activityCatalog ActivityCatalog @relation(fields: [activityCatalogId], references: [id])
+
+  @@map("trip_activity")
+}
+
+model Budget {
+  id                String   @id @default(uuid())
+  tripId            String   @unique @map("trip_id")
+  totalValue        Float    @map("total_value")
+  plannedActivities Float    @default(0) @map("planned_activities")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("budget")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  activityId String   @map("activity_catalog_id")
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityCatalog ActivityCatalog @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, activityId])
+  @@map("review")
+}

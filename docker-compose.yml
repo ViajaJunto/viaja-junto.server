@@ -1,0 +1,47 @@
+name: viajajunto
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: viajajunto-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-viajajunto}
+      # Evita recriar o volume a cada mudanca de locale
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # `prisma migrate` falha se o banco ainda estiver subindo:
+      # espere o healthcheck ficar healthy antes de rodar.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-viajajunto}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Cliente web para inspecionar o banco durante o desenvolvimento.
+  # Nao sobe por padrao — use: docker compose --profile tools up -d
+  adminer:
+    image: adminer
+    container_name: viajajunto-adminer
+    restart: unless-stopped
+    profiles: ["tools"]
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

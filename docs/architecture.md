@@ -39,9 +39,10 @@ The application follows a client-server architecture with clear separation of co
 
 | Constraint | Tool or decision |
 | ---------- | ---------------- |
-| Language | To be defined by the team |
-| Framework | To be defined by the team |
+| Language | TypeScript (Node.js) |
+| Framework | NestJS 12 |
 | Platform | Web browser |
+| Persistence | PostgreSQL via Prisma ORM |
 | Security | Password hash; JWT authentication; trip-level authorization |
 | Language of interface | Portuguese (pt-BR) |
 | Interactive map | Example: jsVectormap or Google Maps API |
@@ -95,6 +96,125 @@ review(#id, *user_id->user, *activity_catalog_id->activity_catalog, rating, comm
 ```
 
 > Legend: `#` primary key, `*` foreign key
+
+### 5.3 Source code organization
+
+The backend follows a **hybrid layered structure**: feature-first at the top level,
+with DDD layers inside each feature module. Every module owns its full vertical slice,
+so a change to one aggregate stays inside one directory.
+
+```
+src/
+├── app.module.ts                  Root module — wires PrismaModule + feature modules
+├── main.ts
+├── shared/
+│   └── database/
+│       ├── prisma.service.ts      PrismaClient exposed as a Nest provider
+│       └── prisma.module.ts       @Global — injectable from any module
+└── modules/
+    └── <feature>/                 e.g. trips, users, budgets, reviews
+        ├── domain/                Enterprise rules — no framework, no ORM
+        │   ├── <entity>.entity.ts
+        │   └── <entity>.repository.ts     Abstract class = persistence contract
+        ├── application/           Use cases
+        │   ├── dto/
+        │   └── <feature>.service.ts
+        ├── infrastructure/        Technical detail
+        │   └── <entity>.prisma.repository.ts
+        ├── presentation/          HTTP boundary
+        │   └── <feature>.controller.ts
+        └── <feature>.module.ts    Binds the contract to its implementation
+```
+
+**Dependency rule.** Dependencies point inwards only:
+
+```
+presentation ──▶ application ──▶ domain ◀── infrastructure
+```
+
+`domain` imports nothing from the other layers. `application` depends on the
+repository *contract* declared in `domain`, never on Prisma. Each feature module
+performs the binding:
+
+```ts
+{ provide: TripRepository, useClass: TripPrismaRepository }
+```
+
+The contract is declared as an `abstract class` rather than a TypeScript
+`interface` because Nest's dependency injection container resolves providers by a
+runtime token, and interfaces are erased at compile time.
+
+Swapping PostgreSQL for another database — or Prisma for another ORM — means adding
+a new class under `infrastructure/` and changing a single line in the module.
+No service or controller is touched.
+
+### 5.4 Feature modules
+
+| Module | Route | Aggregate |
+| ------ | ----- | --------- |
+| `users` | `/users` | `user` |
+| `trips` | `/trips` | `trip` |
+| `trip-members` | `/trip-members` | `trip_member` |
+| `destination-catalog` | `/destination-catalog` | `destination_catalog` |
+| `trip-destinations` | `/trip-destinations` | `trip_destination` |
+| `activity-catalog` | `/activity-catalog` | `activity_catalog` |
+| `trip-activities` | `/trip-activities` | `trip_activity` |
+| `budgets` | `/budgets` | `budget` |
+| `reviews` | `/reviews` | `review` |
+
+
+### 5.5 Database access (Prisma 7)
+
+Prisma 7 splits the database connection into two independent paths, and
+`schema.prisma` no longer holds the URL:
+
+| Path | Consumer | Where the URL comes from |
+| ---- | -------- | ------------------------ |
+| CLI — `generate`, `migrate`, `studio` | Prisma CLI | `prisma.config.ts` |
+| Runtime — queries from the API | `PrismaClient` | Driver adapter (`PrismaPg`) |
+
+`prisma.config.ts` (project root) loads `.env` and declares the datasource URL
+for the CLI. At runtime, `PrismaService` builds a `PrismaPg` adapter from
+`DATABASE_URL` and passes it to the `PrismaClient` constructor — a driver
+adapter is mandatory in Prisma 7 unless the project uses Prisma Accelerate.
+
+The generator is still `prisma-client-js`, which Prisma 7 labels *legacy* but
+continues to support; the client is emitted into `node_modules/.prisma/client`
+and imported as `@prisma/client`. Migrating to the newer `prisma-client`
+generator later means setting an explicit `output` directory in the schema and
+updating the single import inside `prisma.service.ts` — no other file refers to
+the ORM.
+
+**Local setup**
+
+PostgreSQL runs in Docker — `docker-compose.yml` at the project root defines the
+database service with a named volume (data survives restarts) and a healthcheck.
+Prisma migrations fail while the container is still booting, so wait for the
+health status to report `healthy` before migrating.
+
+```bash
+cp .env.example .env          # defaults already match docker-compose.yml
+npm install
+
+npm run db:up                 # starts PostgreSQL (docker compose up -d)
+docker compose ps             # wait until postgres is "healthy"
+
+npm run prisma:generate       # emits the typed client
+npm run prisma:migrate        # applies migrations to the database
+npm run start:dev
+```
+
+| Script | Purpose |
+| ------ | ------- |
+| `npm run db:up` | Start PostgreSQL in the background |
+| `npm run db:down` | Stop the containers, keeping the data |
+| `npm run db:nuke` | Stop and delete the volume — wipes the database |
+| `npm run db:logs` | Follow the PostgreSQL logs |
+| `npm run db:admin` | Also start Adminer on `http://localhost:8080` |
+
+Adminer sits behind the `tools` Compose profile, so a plain `db:up` starts only
+the database.
+
 
 ## 6. Size and performance
 
