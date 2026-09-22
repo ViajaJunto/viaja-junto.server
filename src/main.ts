@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
@@ -19,7 +20,14 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(process.env.SWAGGER_PATH ?? 'docs', app, document);
+  app.use(
+    `/${process.env.SWAGGER_PATH ?? 'docs'}`,
+    apiReference({
+      spec: {
+        content: document,
+      },
+    }),
+  );
 
   await app.listen(port);
 }
