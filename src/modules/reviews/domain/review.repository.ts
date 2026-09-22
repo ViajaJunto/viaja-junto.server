@@ -1,17 +1,19 @@
+import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { Review } from './review.entity.js';
 
 export type CreateReviewData = Omit<Review, 'id' | 'createdAt'>;
 export type UpdateReviewData = Partial<CreateReviewData>;
 
 /**
- * Contrato de persistencia do agregado Review.
+ * Persistence contract for the Review.
+ * aggregate.
  *
- * Classe abstrata em vez de interface: o container de injecao de
- * dependencia do Nest precisa de um token que exista em runtime,
- * e interfaces do TypeScript desaparecem na compilacao.
+ * Declared as an abstract class rather than a TypeScript interface: Nest
+ * resolves providers by a token that must exist at runtime, and interfaces
+ * are erased at compile time.
  */
 export abstract class ReviewRepository {
-  abstract findAll(): Promise<Review[]>;
+  abstract findAll(page: PageRequest): Promise<Page<Review>>;
   abstract findById(id: string): Promise<Review | null>;
   abstract create(data: CreateReviewData): Promise<Review>;
   abstract update(id: string, data: UpdateReviewData): Promise<Review>;

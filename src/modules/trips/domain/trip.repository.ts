@@ -1,17 +1,19 @@
+import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { Trip } from './trip.entity.js';
 
 export type CreateTripData = Omit<Trip, 'id' | 'createdAt'>;
 export type UpdateTripData = Partial<CreateTripData>;
 
 /**
- * Contrato de persistencia do agregado Trip.
+ * Persistence contract for the Trip.
+ * aggregate.
  *
- * Classe abstrata em vez de interface: o container de injecao de
- * dependencia do Nest precisa de um token que exista em runtime,
- * e interfaces do TypeScript desaparecem na compilacao.
+ * Declared as an abstract class rather than a TypeScript interface: Nest
+ * resolves providers by a token that must exist at runtime, and interfaces
+ * are erased at compile time.
  */
 export abstract class TripRepository {
-  abstract findAll(): Promise<Trip[]>;
+  abstract findAll(page: PageRequest): Promise<Page<Trip>>;
   abstract findById(id: string): Promise<Trip | null>;
   abstract create(data: CreateTripData): Promise<Trip>;
   abstract update(id: string, data: UpdateTripData): Promise<Trip>;

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { Budget } from '../domain/budget.entity.js';
 import {
@@ -11,8 +12,18 @@ import {
 export class BudgetPrismaRepository implements BudgetRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(): Promise<Budget[]> {
-    return this.prisma.budget.findMany();
+  async findAll({ skip, take }: PageRequest): Promise<Page<Budget>> {
+    // One transaction so the page and the total come from the same snapshot.
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.budget.findMany({
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.budget.count(),
+    ]);
+
+    return { items, total };
   }
 
   findById(id: string): Promise<Budget | null> {

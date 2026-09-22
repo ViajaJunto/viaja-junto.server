@@ -1,17 +1,19 @@
+import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { Budget } from './budget.entity.js';
 
 export type CreateBudgetData = Omit<Budget, 'id' | 'createdAt'>;
 export type UpdateBudgetData = Partial<CreateBudgetData>;
 
 /**
- * Contrato de persistencia do agregado Budget.
+ * Persistence contract for the Budget.
+ * aggregate.
  *
- * Classe abstrata em vez de interface: o container de injecao de
- * dependencia do Nest precisa de um token que exista em runtime,
- * e interfaces do TypeScript desaparecem na compilacao.
+ * Declared as an abstract class rather than a TypeScript interface: Nest
+ * resolves providers by a token that must exist at runtime, and interfaces
+ * are erased at compile time.
  */
 export abstract class BudgetRepository {
-  abstract findAll(): Promise<Budget[]>;
+  abstract findAll(page: PageRequest): Promise<Page<Budget>>;
   abstract findById(id: string): Promise<Budget | null>;
   abstract create(data: CreateBudgetData): Promise<Budget>;
   abstract update(id: string, data: UpdateBudgetData): Promise<Budget>;

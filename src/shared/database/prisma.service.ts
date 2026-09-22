@@ -1,12 +1,13 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+import { env } from '../config/env.js';
 
 /**
- * Cliente Prisma exposto como provider do Nest.
+ * Prisma client exposed as a Nest provider.
  *
- * No Prisma 7 o PrismaClient nao le mais a URL do schema: a conexao chega
- * por um driver adapter (aqui o PrismaPg, que usa o driver `pg`).
+ * As of Prisma 7 the client no longer reads the URL from the schema: the
+ * connection arrives through a driver adapter (PrismaPg, backed by `pg`).
  */
 @Injectable()
 export class PrismaService
@@ -14,15 +15,9 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    const connectionString = process.env.DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error(
-        'DATABASE_URL is not set. Copy .env.example to .env and fill it in.',
-      );
-    }
-
-    super({ adapter: new PrismaPg({ connectionString }) });
+    // The environment was already validated by Zod at boot
+    // (src/shared/config/env.ts), so DATABASE_URL exists and is well formed.
+    super({ adapter: new PrismaPg({ connectionString: env.DATABASE_URL }) });
   }
 
   async onModuleInit(): Promise<void> {

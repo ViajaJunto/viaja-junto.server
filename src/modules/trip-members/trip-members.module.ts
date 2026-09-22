@@ -8,8 +8,8 @@ import { TripMembersController } from './presentation/trip-members.controller.js
   controllers: [TripMembersController],
   providers: [
     TripMembersService,
-    // Inversao de dependencia: a aplicacao depende do contrato do dominio,
-    // e a infraestrutura fornece a implementacao concreta.
+    // Dependency inversion: the application depends on the domain contract,
+    // and infrastructure supplies the concrete implementation.
     { provide: TripMemberRepository, useClass: TripMemberPrismaRepository },
   ],
   exports: [TripMembersService],

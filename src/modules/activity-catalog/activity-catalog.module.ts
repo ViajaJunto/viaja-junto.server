@@ -8,8 +8,8 @@ import { ActivityCatalogController } from './presentation/activity-catalog.contr
   controllers: [ActivityCatalogController],
   providers: [
     ActivityCatalogService,
-    // Inversao de dependencia: a aplicacao depende do contrato do dominio,
-    // e a infraestrutura fornece a implementacao concreta.
+    // Dependency inversion: the application depends on the domain contract,
+    // and infrastructure supplies the concrete implementation.
     { provide: ActivityCatalogRepository, useClass: ActivityCatalogPrismaRepository },
   ],
   exports: [ActivityCatalogService],

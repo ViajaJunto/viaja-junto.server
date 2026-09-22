@@ -8,8 +8,8 @@ import { BudgetsController } from './presentation/budgets.controller.js';
   controllers: [BudgetsController],
   providers: [
     BudgetsService,
-    // Inversao de dependencia: a aplicacao depende do contrato do dominio,
-    // e a infraestrutura fornece a implementacao concreta.
+    // Dependency inversion: the application depends on the domain contract,
+    // and infrastructure supplies the concrete implementation.
     { provide: BudgetRepository, useClass: BudgetPrismaRepository },
   ],
   exports: [BudgetsService],

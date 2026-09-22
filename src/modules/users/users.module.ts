@@ -8,8 +8,8 @@ import { UsersController } from './presentation/users.controller.js';
   controllers: [UsersController],
   providers: [
     UsersService,
-    // Inversao de dependencia: a aplicacao depende do contrato do dominio,
-    // e a infraestrutura fornece a implementacao concreta.
+    // Dependency inversion: the application depends on the domain contract,
+    // and infrastructure supplies the concrete implementation.
     { provide: UserRepository, useClass: UserPrismaRepository },
   ],
   exports: [UsersService],

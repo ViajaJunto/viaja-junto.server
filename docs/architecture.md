@@ -216,6 +216,77 @@ Adminer sits behind the `tools` Compose profile, so a plain `db:up` starts only
 the database.
 
 
+### 5.6 API conventions
+
+**Validation.** Two libraries with two distinct jobs, so no rule is written twice:
+
+| Library | Scope | Where |
+| ------- | ----- | ----- |
+| `class-validator` + `class-transformer` | HTTP request payloads | `**/application/dto/*.dto.ts` |
+| `zod` | Environment variables, at boot | `src/shared/config/env.ts` |
+
+A global `ValidationPipe` runs with `whitelist`, `forbidNonWhitelisted` and
+`transform` enabled: unknown properties are rejected rather than ignored, and
+DTOs are instantiated for real so `@Type()` conversions apply. Validation
+failures return **422**, keeping them distinct from a malformed request (400).
+
+Update DTOs are derived from their Create counterpart with
+`PartialType` / `OmitType` / `PickType`, so validation rules and OpenAPI
+metadata live in exactly one place.
+
+**Responses.** Every endpoint returns a `*ResponseDto` built explicitly from the
+domain entity through a static `from()` mapper, rather than returning the entity
+itself. This is what keeps `passwordHash` out of `UserResponseDto` — a new
+column cannot leak into the API by accident.
+
+**Pagination.** Offset based. List endpoints accept `page` (default 1) and
+`limit` (default 20, maximum 100) and answer with:
+
+```json
+{
+  "data": [ ... ],
+  "meta": {
+    "page": 1, "limit": 20, "total": 137,
+    "totalPages": 7, "hasNext": true, "hasPrevious": false
+  }
+}
+```
+
+The page and the total are read inside a single `$transaction`, so both come
+from the same database snapshot. Each resource has a deterministic default
+ordering — itinerary position for trip destinations, chronological for planned
+activities, newest first for trips and reviews — which is what makes paging
+stable across requests.
+
+**Authentication.** Endpoints are documented with `@ApiBearerAuth` and expect
+`Authorization: Bearer <token>`. Public by design, matching the scope document
+("a visitor can browse and read reviews, but cannot create trips"):
+
+| Endpoint | Reason |
+| -------- | ------ |
+| `POST /users` | Sign-up — there is no token yet |
+| `GET /destination-catalog`, `GET /destination-catalog/{id}` | Destination discovery |
+| `GET /activity-catalog`, `GET /activity-catalog/{id}` | Activity discovery |
+| `GET /reviews`, `GET /reviews/{id}` | Reading community reviews |
+
+Everything else — 38 of the 45 resource operations — requires a token. The
+guard that enforces this is not implemented yet; the contract is documented
+first so the frontend can be built against it.
+
+**Status codes.**
+
+| Code | Meaning |
+| ---- | ------- |
+| `200` | Read or update succeeded |
+| `201` | Resource created |
+| `204` | Deleted, no body |
+| `400` | Path parameter is not a valid UUID |
+| `401` | Missing or invalid token |
+| `404` | No resource with that id |
+| `409` | Unique constraint violated (duplicate email, member, budget or review) |
+| `422` | Payload failed validation — one message per violated rule |
+
+
 ## 6. Size and performance
 
 The system is intended for a general audience and must support multiple simultaneous users working on shared trips. The main pages should load in less than 3 seconds under normal network conditions.

@@ -1,4 +1,4 @@
-// Entidade de dominio — sem dependencia de framework ou ORM.
+// Domain entity — no framework and no ORM dependency.
 export interface Review {
   id: string;
   userId: string;

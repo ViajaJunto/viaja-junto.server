@@ -1,17 +1,19 @@
+import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { DestinationCatalog } from './destination-catalog.entity.js';
 
 export type CreateDestinationCatalogData = Omit<DestinationCatalog, 'id'>;
 export type UpdateDestinationCatalogData = Partial<CreateDestinationCatalogData>;
 
 /**
- * Contrato de persistencia do agregado DestinationCatalog.
+ * Persistence contract for the DestinationCatalog.
+ * aggregate.
  *
- * Classe abstrata em vez de interface: o container de injecao de
- * dependencia do Nest precisa de um token que exista em runtime,
- * e interfaces do TypeScript desaparecem na compilacao.
+ * Declared as an abstract class rather than a TypeScript interface: Nest
+ * resolves providers by a token that must exist at runtime, and interfaces
+ * are erased at compile time.
  */
 export abstract class DestinationCatalogRepository {
-  abstract findAll(): Promise<DestinationCatalog[]>;
+  abstract findAll(page: PageRequest): Promise<Page<DestinationCatalog>>;
   abstract findById(id: string): Promise<DestinationCatalog | null>;
   abstract create(data: CreateDestinationCatalogData): Promise<DestinationCatalog>;
   abstract update(id: string, data: UpdateDestinationCatalogData): Promise<DestinationCatalog>;
