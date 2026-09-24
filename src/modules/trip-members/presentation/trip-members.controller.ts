@@ -64,8 +64,7 @@ export class TripMembersController {
 
   @ApiOperation({
     summary: 'Get a membership by id',
-    description:
-      'Returns a single membership record.',
+    description: 'Returns a single membership record.',
   })
   @ApiParam({
     name: 'id',
@@ -73,7 +72,10 @@ export class TripMembersController {
     format: 'uuid',
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
-  @ApiOkResponse({ description: 'The requested trip member.', type: TripMemberResponseDto })
+  @ApiOkResponse({
+    description: 'The requested trip member.',
+    type: TripMemberResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -98,7 +100,10 @@ export class TripMembersController {
       'Adds a user to a trip with the given permission level. Only the trip creator can invite. A user can only be added once per trip.',
   })
   @ApiBody({ type: CreateTripMemberDto })
-  @ApiCreatedResponse({ description: 'The created trip member.', type: TripMemberResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created trip member.',
+    type: TripMemberResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -130,7 +135,10 @@ export class TripMembersController {
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
   @ApiBody({ type: UpdateTripMemberDto })
-  @ApiOkResponse({ description: 'The updated trip member.', type: TripMemberResponseDto })
+  @ApiOkResponse({
+    description: 'The updated trip member.',
+    type: TripMemberResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,

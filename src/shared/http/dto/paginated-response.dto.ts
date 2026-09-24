@@ -25,7 +25,13 @@ export class PaginationMetaDto {
  * The type of `data` is documented per endpoint via @ApiPaginatedResponse.
  */
 export class PaginatedResponseDto<T> {
-  @ApiProperty({ description: 'Registros da pagina atual.', isArray: true })
+  @ApiProperty({
+    description: 'Records in the current page.',
+    isArray: true,
+    // The concrete item type is supplied per endpoint by
+    // @ApiPaginatedResponse; `object` keeps the base schema valid on its own.
+    type: Object,
+  })
   data!: T[];
 
   @ApiProperty({ type: PaginationMetaDto })

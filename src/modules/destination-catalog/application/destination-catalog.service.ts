@@ -28,14 +28,23 @@ export class DestinationCatalogService {
     return DestinationCatalogResponseDto.from(await this.getOrFail(id));
   }
 
-  async create(dto: CreateDestinationCatalogDto): Promise<DestinationCatalogResponseDto> {
-    return DestinationCatalogResponseDto.from(await this.repository.create({ ...dto }));
+  async create(
+    dto: CreateDestinationCatalogDto,
+  ): Promise<DestinationCatalogResponseDto> {
+    return DestinationCatalogResponseDto.from(
+      await this.repository.create({ ...dto }),
+    );
   }
 
-  async update(id: string, dto: UpdateDestinationCatalogDto): Promise<DestinationCatalogResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateDestinationCatalogDto,
+  ): Promise<DestinationCatalogResponseDto> {
     await this.getOrFail(id);
 
-    return DestinationCatalogResponseDto.from(await this.repository.update(id, { ...dto }));
+    return DestinationCatalogResponseDto.from(
+      await this.repository.update(id, { ...dto }),
+    );
   }
 
   async remove(id: string): Promise<void> {
@@ -47,7 +56,9 @@ export class DestinationCatalogService {
     const found = await this.repository.findById(id);
 
     if (!found) {
-      throw new NotFoundException(`DestinationCatalog with id "${id}" not found`);
+      throw new NotFoundException(
+        `DestinationCatalog with id "${id}" not found`,
+      );
     }
 
     return found;

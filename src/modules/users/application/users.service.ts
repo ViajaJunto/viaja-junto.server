@@ -29,12 +29,14 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto): Promise<UserResponseDto> {
-    return UserResponseDto.from(await this.repository.create({
-      name: dto.name,
-      email: dto.email,
-      // TODO: replace with a real hash (argon2/bcrypt) once auth lands.
-      passwordHash: dto.password,
-    }));
+    return UserResponseDto.from(
+      await this.repository.create({
+        name: dto.name,
+        email: dto.email,
+        // TODO: replace with a real hash (argon2/bcrypt) once auth lands.
+        passwordHash: dto.password,
+      }),
+    );
   }
 
   async update(id: string, dto: UpdateUserDto): Promise<UserResponseDto> {

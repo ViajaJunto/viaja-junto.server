@@ -46,7 +46,10 @@ export class TripDestinationsController {
     description:
       'Returns the destinations of a trip in itinerary order. Entries without an explicit order come last.',
   })
-  @ApiPaginatedResponse(TripDestinationResponseDto, 'Page of trip destination records.')
+  @ApiPaginatedResponse(
+    TripDestinationResponseDto,
+    'Page of trip destination records.',
+  )
   @ApiUnprocessableEntityResponse({
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
@@ -72,7 +75,10 @@ export class TripDestinationsController {
     format: 'uuid',
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
-  @ApiOkResponse({ description: 'The requested trip destination.', type: TripDestinationResponseDto })
+  @ApiOkResponse({
+    description: 'The requested trip destination.',
+    type: TripDestinationResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -97,7 +103,10 @@ export class TripDestinationsController {
       'Attaches a catalog destination to a trip as one stop of the itinerary. Requires EDITOR permission.',
   })
   @ApiBody({ type: CreateTripDestinationDto })
-  @ApiCreatedResponse({ description: 'The created trip destination.', type: TripDestinationResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created trip destination.',
+    type: TripDestinationResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -125,7 +134,10 @@ export class TripDestinationsController {
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
   @ApiBody({ type: UpdateTripDestinationDto })
-  @ApiOkResponse({ description: 'The updated trip destination.', type: TripDestinationResponseDto })
+  @ApiOkResponse({
+    description: 'The updated trip destination.',
+    type: TripDestinationResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -153,8 +165,7 @@ export class TripDestinationsController {
 
   @ApiOperation({
     summary: 'Remove a destination from a trip',
-    description:
-      'Also removes every activity planned for that stop.',
+    description: 'Also removes every activity planned for that stop.',
   })
   @ApiParam({
     name: 'id',

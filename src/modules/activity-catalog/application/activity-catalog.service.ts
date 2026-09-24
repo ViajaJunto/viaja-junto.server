@@ -28,14 +28,23 @@ export class ActivityCatalogService {
     return ActivityCatalogResponseDto.from(await this.getOrFail(id));
   }
 
-  async create(dto: CreateActivityCatalogDto): Promise<ActivityCatalogResponseDto> {
-    return ActivityCatalogResponseDto.from(await this.repository.create({ ...dto, type: dto.type ?? 'OTHER' }));
+  async create(
+    dto: CreateActivityCatalogDto,
+  ): Promise<ActivityCatalogResponseDto> {
+    return ActivityCatalogResponseDto.from(
+      await this.repository.create({ ...dto, type: dto.type ?? 'OTHER' }),
+    );
   }
 
-  async update(id: string, dto: UpdateActivityCatalogDto): Promise<ActivityCatalogResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateActivityCatalogDto,
+  ): Promise<ActivityCatalogResponseDto> {
     await this.getOrFail(id);
 
-    return ActivityCatalogResponseDto.from(await this.repository.update(id, { ...dto }));
+    return ActivityCatalogResponseDto.from(
+      await this.repository.update(id, { ...dto }),
+    );
   }
 
   async remove(id: string): Promise<void> {

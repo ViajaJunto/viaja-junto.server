@@ -28,14 +28,23 @@ export class TripDestinationsService {
     return TripDestinationResponseDto.from(await this.getOrFail(id));
   }
 
-  async create(dto: CreateTripDestinationDto): Promise<TripDestinationResponseDto> {
-    return TripDestinationResponseDto.from(await this.repository.create({ ...dto }));
+  async create(
+    dto: CreateTripDestinationDto,
+  ): Promise<TripDestinationResponseDto> {
+    return TripDestinationResponseDto.from(
+      await this.repository.create({ ...dto }),
+    );
   }
 
-  async update(id: string, dto: UpdateTripDestinationDto): Promise<TripDestinationResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateTripDestinationDto,
+  ): Promise<TripDestinationResponseDto> {
     await this.getOrFail(id);
 
-    return TripDestinationResponseDto.from(await this.repository.update(id, { ...dto }));
+    return TripDestinationResponseDto.from(
+      await this.repository.update(id, { ...dto }),
+    );
   }
 
   async remove(id: string): Promise<void> {
