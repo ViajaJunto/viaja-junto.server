@@ -10,7 +10,10 @@ import { TripDestinationsController } from './presentation/trip-destinations.con
     TripDestinationsService,
     // Dependency inversion: the application depends on the domain contract,
     // and infrastructure supplies the concrete implementation.
-    { provide: TripDestinationRepository, useClass: TripDestinationPrismaRepository },
+    {
+      provide: TripDestinationRepository,
+      useClass: TripDestinationPrismaRepository,
+    },
   ],
   exports: [TripDestinationsService],
 })

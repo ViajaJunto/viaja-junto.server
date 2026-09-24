@@ -7,4 +7,9 @@ import { CreateTripActivityDto } from './create-trip-activity.dto.js';
  * Derived from CreateTripActivityDto, so every validation rule and every piece
  * of OpenAPI metadata stays in one place; here they only become optional.
  */
-export class UpdateTripActivityDto extends PartialType(OmitType(CreateTripActivityDto, ['tripDestinationId', 'activityCatalogId'] as const)) {}
+export class UpdateTripActivityDto extends PartialType(
+  OmitType(CreateTripActivityDto, [
+    'tripDestinationId',
+    'activityCatalogId',
+  ] as const),
+) {}

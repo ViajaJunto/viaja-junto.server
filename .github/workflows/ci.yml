@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ────────────────────────────── 1. Lint ──────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # --ignore-scripts skips `prisma generate`: the linter never needs the
+      # generated client, and skipping it keeps this job fast.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run oxlint
+        run: npx oxlint src/ test/ --deny-warnings
+
+      - name: Check formatting
+        run: npx prettier --check "src/**/*.ts" "test/**/*.ts"
+
+  # ─────────────────────── 2. Tests and coverage ───────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: viajajunto_test
+        ports:
+          - 5432:5432
+        # The e2e suite connects on boot; without this the job races the server.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/viajajunto_test?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Run unit tests with coverage
+        run: npm run test:cov
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      # Consumed by the SonarCloud job, which must not re-run the suite.
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  # ──────────────────── 3. API contract (Spectral) ─────────────────────
+  contract:
+    name: API contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The contract is generated from the decorators rather than committed,
+      # so it can never drift from the code that serves it.
+      - name: Generate OpenAPI document
+        run: npm run openapi:generate
+
+      - name: Lint contract with Spectral
+        uses: stoplightio/spectral-action@latest
+        with:
+          file_glob: openapi.json
+          spectral_ruleset: .spectral.yaml
+
+      - name: Upload OpenAPI document
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi
+          path: openapi.json
+          retention-days: 7
+
+  # ────────────────────── 4. SonarCloud analysis ───────────────────────
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Sonar needs the full history to work out what "new code" is.
+          fetch-depth: 0
+
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          # qualitygate.wait blocks until SonarCloud reports back and fails
+          # this job — and therefore the PR — when the gate does not pass.
+          args: >
+            -Dsonar.qualitygate.wait=true
+
+  # ───────────────── 5. Container build and Trivy scan ─────────────────
+  container:
+    name: Image scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Loaded into the local daemon instead of pushed: this job only builds
+      # and scans, it does not publish.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: viajajunto-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: viajajunto-api:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          # A CVE with no released fix cannot be acted on, so it would block
+          # every PR indefinitely. Set to false to gate on those as well.
+          ignore-unfixed: true
+          vuln-type: os,library

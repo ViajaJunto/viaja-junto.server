@@ -34,7 +34,10 @@ export class TripDestinationPrismaRepository implements TripDestinationRepositor
     return this.prisma.tripDestination.create({ data });
   }
 
-  update(id: string, data: UpdateTripDestinationData): Promise<TripDestination> {
+  update(
+    id: string,
+    data: UpdateTripDestinationData,
+  ): Promise<TripDestination> {
     return this.prisma.tripDestination.update({ where: { id }, data });
   }
 

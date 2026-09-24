@@ -59,8 +59,7 @@ export class ReviewsController {
 
   @ApiOperation({
     summary: 'Get a review by id',
-    description:
-      'Returns a single review with its rating and comment. Public.',
+    description: 'Returns a single review with its rating and comment. Public.',
   })
   @ApiParam({
     name: 'id',
@@ -68,7 +67,10 @@ export class ReviewsController {
     format: 'uuid',
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
-  @ApiOkResponse({ description: 'The requested review.', type: ReviewResponseDto })
+  @ApiOkResponse({
+    description: 'The requested review.',
+    type: ReviewResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -88,7 +90,10 @@ export class ReviewsController {
       'Rates an activity from 1 to 5 with an optional comment. Requires authentication; a user can review the same activity only once.',
   })
   @ApiBody({ type: CreateReviewDto })
-  @ApiCreatedResponse({ description: 'The created review.', type: ReviewResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created review.',
+    type: ReviewResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -120,7 +125,10 @@ export class ReviewsController {
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
   @ApiBody({ type: UpdateReviewDto })
-  @ApiOkResponse({ description: 'The updated review.', type: ReviewResponseDto })
+  @ApiOkResponse({
+    description: 'The updated review.',
+    type: ReviewResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -139,10 +147,7 @@ export class ReviewsController {
     type: ErrorResponseDto,
   })
   @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateReviewDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateReviewDto) {
     return this.service.update(id, dto);
   }
 

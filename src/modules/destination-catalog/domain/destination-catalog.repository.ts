@@ -2,7 +2,8 @@ import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { DestinationCatalog } from './destination-catalog.entity.js';
 
 export type CreateDestinationCatalogData = Omit<DestinationCatalog, 'id'>;
-export type UpdateDestinationCatalogData = Partial<CreateDestinationCatalogData>;
+export type UpdateDestinationCatalogData =
+  Partial<CreateDestinationCatalogData>;
 
 /**
  * Persistence contract for the DestinationCatalog.
@@ -15,7 +16,12 @@ export type UpdateDestinationCatalogData = Partial<CreateDestinationCatalogData>
 export abstract class DestinationCatalogRepository {
   abstract findAll(page: PageRequest): Promise<Page<DestinationCatalog>>;
   abstract findById(id: string): Promise<DestinationCatalog | null>;
-  abstract create(data: CreateDestinationCatalogData): Promise<DestinationCatalog>;
-  abstract update(id: string, data: UpdateDestinationCatalogData): Promise<DestinationCatalog>;
+  abstract create(
+    data: CreateDestinationCatalogData,
+  ): Promise<DestinationCatalog>;
+  abstract update(
+    id: string,
+    data: UpdateDestinationCatalogData,
+  ): Promise<DestinationCatalog>;
   abstract remove(id: string): Promise<void>;
 }

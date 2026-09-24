@@ -8,25 +8,59 @@ import type { TripDestination } from '../../domain/trip-destination.entity.js';
  * so a new column never leaks into the API by accident.
  */
 export class TripDestinationResponseDto {
-  @ApiProperty({ description: 'Unique identifier.', format: 'uuid', example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301' })
+  @ApiProperty({
+    description: 'Unique identifier.',
+    format: 'uuid',
+    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  })
   id!: string;
 
-  @ApiProperty({ description: 'Trip this stop belongs to.', format: 'uuid', example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301' })
+  @ApiProperty({
+    description: 'Trip this stop belongs to.',
+    format: 'uuid',
+    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  })
   tripId!: string;
 
-  @ApiProperty({ description: 'Catalog destination.', format: 'uuid', example: 'b17c9d42-8e31-4a55-9f02-6c4d8e1a7b90' })
+  @ApiProperty({
+    description: 'Catalog destination.',
+    format: 'uuid',
+    example: 'b17c9d42-8e31-4a55-9f02-6c4d8e1a7b90',
+  })
   destinationCatalogId!: string;
 
-  @ApiProperty({ description: 'Arrival date.', type: String, format: 'date', example: '2026-07-03', nullable: true })
+  @ApiProperty({
+    description: 'Arrival date.',
+    type: String,
+    format: 'date',
+    example: '2026-07-03',
+    nullable: true,
+  })
   arrival!: Date | null;
 
-  @ApiProperty({ description: 'Departure date.', type: String, format: 'date', example: '2026-07-07', nullable: true })
+  @ApiProperty({
+    description: 'Departure date.',
+    type: String,
+    format: 'date',
+    example: '2026-07-07',
+    nullable: true,
+  })
   departure!: Date | null;
 
-  @ApiProperty({ description: 'Notes for this stop.', example: 'Hospedagem no 11e arrondissement.', nullable: true })
+  @ApiProperty({
+    type: String,
+    description: 'Notes for this stop.',
+    example: 'Hospedagem no 11e arrondissement.',
+    nullable: true,
+  })
   description!: string | null;
 
-  @ApiProperty({ description: 'Position in the itinerary.', example: 1, nullable: true })
+  @ApiProperty({
+    type: Number,
+    description: 'Position in the itinerary.',
+    example: 1,
+    nullable: true,
+  })
   order!: number | null;
 
   static from(entity: TripDestination): TripDestinationResponseDto {

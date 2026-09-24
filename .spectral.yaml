@@ -1,0 +1,23 @@
+# Spectral ruleset for the ViajaJunto OpenAPI contract.
+# CI lints the document exported by scripts/generate-openapi.mjs, so what gets
+# checked is exactly what the API serves.
+extends:
+  - "spectral:oas"
+
+rules:
+  # The contract is generated from decorators, so these carry real signal: a
+  # missing description or tag means a controller was left undocumented.
+  operation-description: error
+  operation-tags: error
+  operation-tag-defined: error
+  operation-operationId: error
+  operation-success-response: error
+
+  # Catches an @ApiProperty example that drifted from the type it illustrates.
+  oas3-valid-schema-example: error
+  oas3-valid-media-example: error
+
+  # Nest derives operationIds from controller method names, which repeat across
+  # modules (findAll, findOne...). They are unique per path+verb, which is what
+  # client generators need, so the URL-casing convention is noise here.
+  operation-operationId-valid-in-url: off

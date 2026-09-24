@@ -29,7 +29,12 @@ export class TripsService {
   }
 
   async create(dto: CreateTripDto): Promise<TripResponseDto> {
-    return TripResponseDto.from(await this.repository.create({ ...dto, status: dto.status ?? 'PLANNING' }));
+    return TripResponseDto.from(
+      await this.repository.create({
+        ...dto,
+        status: dto.status ?? 'PLANNING',
+      }),
+    );
   }
 
   async update(id: string, dto: UpdateTripDto): Promise<TripResponseDto> {

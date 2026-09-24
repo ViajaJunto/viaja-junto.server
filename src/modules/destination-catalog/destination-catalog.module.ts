@@ -10,7 +10,10 @@ import { DestinationCatalogController } from './presentation/destination-catalog
     DestinationCatalogService,
     // Dependency inversion: the application depends on the domain contract,
     // and infrastructure supplies the concrete implementation.
-    { provide: DestinationCatalogRepository, useClass: DestinationCatalogPrismaRepository },
+    {
+      provide: DestinationCatalogRepository,
+      useClass: DestinationCatalogPrismaRepository,
+    },
   ],
   exports: [DestinationCatalogService],
 })

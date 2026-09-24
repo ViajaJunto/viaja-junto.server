@@ -7,4 +7,6 @@ import { CreateTripMemberDto } from './create-trip-member.dto.js';
  * Derived from CreateTripMemberDto, so every validation rule and every piece
  * of OpenAPI metadata stays in one place; here they only become optional.
  */
-export class UpdateTripMemberDto extends PartialType(PickType(CreateTripMemberDto, ['permission'] as const)) {}
+export class UpdateTripMemberDto extends PartialType(
+  PickType(CreateTripMemberDto, ['permission'] as const),
+) {}
