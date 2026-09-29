@@ -9,7 +9,15 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
-RUN npm ci
+
+# The npm cache is kept in a BuildKit cache mount so a retry after a dropped
+# connection reuses what was already downloaded instead of starting over.
+# The retry flags cover the transient ECONNRESET the public registry throws
+# when many packages are fetched at once.
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --fetch-retries=5 \
+           --fetch-retry-mintimeout=20000 \
+           --fetch-retry-maxtimeout=120000
 
 COPY . .
 RUN npm run build
@@ -21,7 +29,11 @@ COPY package.json package-lock.json ./
 # --ignore-scripts skips the prisma generate hook here; the generated client
 # is copied from the build stage instead, so the Prisma CLI (a devDependency)
 # is never needed in the runtime image.
-RUN npm ci --omit=dev --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev --ignore-scripts \
+           --fetch-retries=5 \
+           --fetch-retry-mintimeout=20000 \
+           --fetch-retry-maxtimeout=120000
 
 # ────────────────────────── runtime ──────────────────────────
 FROM node:22-alpine AS runtime

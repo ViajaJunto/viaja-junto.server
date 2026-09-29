@@ -313,6 +313,7 @@ job for its coverage report.
 | **API contract** | `spectral lint` over the generated OpenAPI document | The contract breaks a `spectral:oas` rule |
 | **SonarCloud** | `sonarqube-scan-action` with `sonar.qualitygate.wait=true` | The Quality Gate does not pass |
 | **Image scan** | `trivy-action` on the built image | A HIGH or CRITICAL vulnerability with a known fix |
+| **Publish image** | `docker/build-push-action` | — (does not run on pull requests) |
 
 **Contract linting.** `scripts/generate-openapi.mjs` boots the real `AppModule`
 with `PrismaService` stubbed and writes the OpenAPI document to disk, so the
@@ -338,6 +339,32 @@ forward. Set it to `false` to gate on those as well.
 
 **Required secrets.** `SONAR_TOKEN`, from the SonarCloud project settings. The
 project key and organization live in `sonar-project.properties`.
+
+
+**Publishing.** The `publish` job runs only on a push to the default branch or
+on a `v*` tag, never on a pull request, and it lists every other job in `needs`.
+A failing Trivy scan or a red Quality Gate therefore blocks the release, not
+just the pull request. Tags are derived from the ref by `docker/metadata-action`:
+
+| Ref | Tags pushed |
+| --- | ----------- |
+| push on the default branch | `latest`, `sha-<commit>` |
+| tag `v1.4.2` | `1.4.2`, `1.4`, `1`, `sha-<commit>` |
+
+Authentication uses a Docker Hub **Access Token**, never an account password.
+
+**Branch protection.** The default branch accepts merges through pull requests
+only, with these five checks required: `Lint`, `Tests`, `API contract`,
+`SonarCloud` and `Image scan`. `Publish image` is deliberately not required —
+it does not run on pull requests.
+
+**Required secrets.**
+
+| Secret | Used by |
+| ------ | ------- |
+| `SONAR_TOKEN` | SonarCloud job |
+| `DOCKERHUB_USERNAME` | Publish job |
+| `DOCKERHUB_TOKEN` | Publish job (Docker Hub Access Token) |
 
 
 ## 10. References
