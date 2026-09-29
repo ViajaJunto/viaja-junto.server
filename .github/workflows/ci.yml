@@ -213,7 +213,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/viajajunto-api
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/viaja-junto-docker-hub
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
