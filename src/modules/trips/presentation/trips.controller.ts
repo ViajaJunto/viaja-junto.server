@@ -97,7 +97,10 @@ export class TripsController {
       'Creates a trip and makes the caller its owner. Destinations, activities and the budget are added through their own endpoints.',
   })
   @ApiBody({ type: CreateTripDto })
-  @ApiCreatedResponse({ description: 'The created trip.', type: TripResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created trip.',
+    type: TripResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -144,10 +147,7 @@ export class TripsController {
     type: ErrorResponseDto,
   })
   @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateTripDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTripDto) {
     return this.service.update(id, dto);
   }
 

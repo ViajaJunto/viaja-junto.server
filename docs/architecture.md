@@ -300,7 +300,74 @@ The client-server architecture with frontend/server separation supports:
 - Security: access control is centralized in the backend.
 - Scalability: frontend and backend can scale independently.
 
-## 8. References
+## 9. Continuous integration
+
+Every push to `master` and every pull request runs `.github/workflows/ci.yml`.
+The five jobs are independent except for SonarCloud, which waits on the test
+job for its coverage report.
+
+| Job | Gate | Fails the PR when |
+| --- | ---- | ----------------- |
+| **Lint** | `oxlint --deny-warnings` + `prettier --check` | Any lint error or warning, or unformatted code |
+| **Tests** | `vitest` with v8 coverage, against a PostgreSQL service container | A test fails or coverage drops below the thresholds in `vitest.config.ts` |
+| **API contract** | `spectral lint` over the generated OpenAPI document | The contract breaks a `spectral:oas` rule |
+| **SonarCloud** | `sonarqube-scan-action` with `sonar.qualitygate.wait=true` | The Quality Gate does not pass |
+| **Image scan** | `trivy-action` on the built image | A HIGH or CRITICAL vulnerability with a known fix |
+| **Publish image** | `docker/build-push-action` | — (does not run on pull requests) |
+
+**Contract linting.** `scripts/generate-openapi.mjs` boots the real `AppModule`
+with `PrismaService` stubbed and writes the OpenAPI document to disk, so the
+contract Spectral checks is produced by the same decorators the API serves —
+it cannot drift. The file is generated in CI rather than committed.
+
+**Coverage.** `npm run test:cov` writes `coverage/lcov.info`, which is uploaded
+as an artifact and handed to SonarCloud. The scan job never re-runs the suite.
+Excluded from coverage: DI wiring, entity interfaces, abstract contracts and the
+Prisma adapters, which only run against a real database and belong to the e2e
+suite instead. The reasons are listed in `vitest.config.ts` and mirrored in
+`sonar-project.properties`.
+
+**Image.** The `Dockerfile` is multi-stage: dependencies and the Prisma client
+are built in a full Node image, and only `dist/`, production `node_modules` and
+the generated client reach the runtime layer, which runs as the unprivileged
+`node` user. The image is loaded into the local daemon and scanned; nothing is
+pushed to a registry.
+
+Trivy runs with `ignore-unfixed: true`. A vulnerability with no released patch
+cannot be acted on, so gating on it would block every pull request with no way
+forward. Set it to `false` to gate on those as well.
+
+**Required secrets.** `SONAR_TOKEN`, from the SonarCloud project settings. The
+project key and organization live in `sonar-project.properties`.
+
+
+**Publishing.** The `publish` job runs only on a push to the default branch or
+on a `v*` tag, never on a pull request, and it lists every other job in `needs`.
+A failing Trivy scan or a red Quality Gate therefore blocks the release, not
+just the pull request. Tags are derived from the ref by `docker/metadata-action`:
+
+| Ref | Tags pushed |
+| --- | ----------- |
+| push on the default branch | `latest`, `sha-<commit>` |
+| tag `v1.4.2` | `1.4.2`, `1.4`, `1`, `sha-<commit>` |
+
+Authentication uses a Docker Hub **Access Token**, never an account password.
+
+**Branch protection.** The default branch accepts merges through pull requests
+only, with these five checks required: `Lint`, `Tests`, `API contract`,
+`SonarCloud` and `Image scan`. `Publish image` is deliberately not required —
+it does not run on pull requests.
+
+**Required secrets.**
+
+| Secret | Used by |
+| ------ | ------- |
+| `SONAR_TOKEN` | SonarCloud job |
+| `DOCKERHUB_USERNAME` | Publish job |
+| `DOCKERHUB_TOKEN` | Publish job (Docker Hub Access Token) |
+
+
+## 10. References
 
 - Project scope document — ViajaJunto
 - Requirements document — ViajaJunto

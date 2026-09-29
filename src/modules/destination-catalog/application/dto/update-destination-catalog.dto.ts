@@ -7,4 +7,6 @@ import { CreateDestinationCatalogDto } from './create-destination-catalog.dto.js
  * Derived from CreateDestinationCatalogDto, so every validation rule and every piece
  * of OpenAPI metadata stays in one place; here they only become optional.
  */
-export class UpdateDestinationCatalogDto extends PartialType(CreateDestinationCatalogDto) {}
+export class UpdateDestinationCatalogDto extends PartialType(
+  CreateDestinationCatalogDto,
+) {}

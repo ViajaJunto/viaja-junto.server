@@ -10,7 +10,10 @@ import { ActivityCatalogController } from './presentation/activity-catalog.contr
     ActivityCatalogService,
     // Dependency inversion: the application depends on the domain contract,
     // and infrastructure supplies the concrete implementation.
-    { provide: ActivityCatalogRepository, useClass: ActivityCatalogPrismaRepository },
+    {
+      provide: ActivityCatalogRepository,
+      useClass: ActivityCatalogPrismaRepository,
+    },
   ],
   exports: [ActivityCatalogService],
 })

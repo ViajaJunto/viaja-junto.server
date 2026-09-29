@@ -7,4 +7,6 @@ import { CreateReviewDto } from './create-review.dto.js';
  * Derived from CreateReviewDto, so every validation rule and every piece
  * of OpenAPI metadata stays in one place; here they only become optional.
  */
-export class UpdateReviewDto extends PartialType(PickType(CreateReviewDto, ['rating', 'comment'] as const)) {}
+export class UpdateReviewDto extends PartialType(
+  PickType(CreateReviewDto, ['rating', 'comment'] as const),
+) {}

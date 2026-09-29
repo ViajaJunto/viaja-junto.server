@@ -46,7 +46,10 @@ export class DestinationCatalogController {
     description:
       'Returns a paginated, alphabetically sorted list of destinations in the shared catalog. Public — visitors can browse without an account.',
   })
-  @ApiPaginatedResponse(DestinationCatalogResponseDto, 'Page of destination records.')
+  @ApiPaginatedResponse(
+    DestinationCatalogResponseDto,
+    'Page of destination records.',
+  )
   @ApiUnprocessableEntityResponse({
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
@@ -67,7 +70,10 @@ export class DestinationCatalogController {
     format: 'uuid',
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
-  @ApiOkResponse({ description: 'The requested destination.', type: DestinationCatalogResponseDto })
+  @ApiOkResponse({
+    description: 'The requested destination.',
+    type: DestinationCatalogResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -87,7 +93,10 @@ export class DestinationCatalogController {
       'Registers a destination that any trip can then reference. Requires authentication.',
   })
   @ApiBody({ type: CreateDestinationCatalogDto })
-  @ApiCreatedResponse({ description: 'The created destination.', type: DestinationCatalogResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created destination.',
+    type: DestinationCatalogResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -115,7 +124,10 @@ export class DestinationCatalogController {
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
   @ApiBody({ type: UpdateDestinationCatalogDto })
-  @ApiOkResponse({ description: 'The updated destination.', type: DestinationCatalogResponseDto })
+  @ApiOkResponse({
+    description: 'The updated destination.',
+    type: DestinationCatalogResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -143,8 +155,7 @@ export class DestinationCatalogController {
 
   @ApiOperation({
     summary: 'Remove a destination from the catalog',
-    description:
-      'Fails while any trip still references this destination.',
+    description: 'Fails while any trip still references this destination.',
   })
   @ApiParam({
     name: 'id',

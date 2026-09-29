@@ -1,5 +1,10 @@
 import { applyDecorators, type Type } from '@nestjs/common';
-import { ApiExtraModels, ApiOkResponse, ApiQuery, getSchemaPath } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiQuery,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import {
   DEFAULT_LIMIT,
   DEFAULT_PAGE,

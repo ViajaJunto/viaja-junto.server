@@ -34,7 +34,10 @@ export class ActivityCatalogPrismaRepository implements ActivityCatalogRepositor
     return this.prisma.activityCatalog.create({ data });
   }
 
-  update(id: string, data: UpdateActivityCatalogData): Promise<ActivityCatalog> {
+  update(
+    id: string,
+    data: UpdateActivityCatalogData,
+  ): Promise<ActivityCatalog> {
     return this.prisma.activityCatalog.update({ where: { id }, data });
   }
 

@@ -29,7 +29,12 @@ export class BudgetsService {
   }
 
   async create(dto: CreateBudgetDto): Promise<BudgetResponseDto> {
-    return BudgetResponseDto.from(await this.repository.create({ ...dto, plannedActivities: dto.plannedActivities ?? 0 }));
+    return BudgetResponseDto.from(
+      await this.repository.create({
+        ...dto,
+        plannedActivities: dto.plannedActivities ?? 0,
+      }),
+    );
   }
 
   async update(id: string, dto: UpdateBudgetDto): Promise<BudgetResponseDto> {

@@ -7,4 +7,6 @@ import { CreateActivityCatalogDto } from './create-activity-catalog.dto.js';
  * Derived from CreateActivityCatalogDto, so every validation rule and every piece
  * of OpenAPI metadata stays in one place; here they only become optional.
  */
-export class UpdateActivityCatalogDto extends PartialType(CreateActivityCatalogDto) {}
+export class UpdateActivityCatalogDto extends PartialType(
+  CreateActivityCatalogDto,
+) {}

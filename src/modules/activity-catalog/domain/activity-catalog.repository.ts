@@ -1,7 +1,10 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { ActivityCatalog } from './activity-catalog.entity.js';
 
-export type CreateActivityCatalogData = Omit<ActivityCatalog, 'id' | 'createdAt'>;
+export type CreateActivityCatalogData = Omit<
+  ActivityCatalog,
+  'id' | 'createdAt'
+>;
 export type UpdateActivityCatalogData = Partial<CreateActivityCatalogData>;
 
 /**
@@ -16,6 +19,9 @@ export abstract class ActivityCatalogRepository {
   abstract findAll(page: PageRequest): Promise<Page<ActivityCatalog>>;
   abstract findById(id: string): Promise<ActivityCatalog | null>;
   abstract create(data: CreateActivityCatalogData): Promise<ActivityCatalog>;
-  abstract update(id: string, data: UpdateActivityCatalogData): Promise<ActivityCatalog>;
+  abstract update(
+    id: string,
+    data: UpdateActivityCatalogData,
+  ): Promise<ActivityCatalog>;
   abstract remove(id: string): Promise<void>;
 }

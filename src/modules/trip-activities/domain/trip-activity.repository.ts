@@ -16,6 +16,9 @@ export abstract class TripActivityRepository {
   abstract findAll(page: PageRequest): Promise<Page<TripActivity>>;
   abstract findById(id: string): Promise<TripActivity | null>;
   abstract create(data: CreateTripActivityData): Promise<TripActivity>;
-  abstract update(id: string, data: UpdateTripActivityData): Promise<TripActivity>;
+  abstract update(
+    id: string,
+    data: UpdateTripActivityData,
+  ): Promise<TripActivity>;
   abstract remove(id: string): Promise<void>;
 }

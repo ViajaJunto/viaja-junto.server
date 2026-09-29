@@ -73,7 +73,10 @@ export class BudgetsController {
     format: 'uuid',
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
-  @ApiOkResponse({ description: 'The requested budget.', type: BudgetResponseDto })
+  @ApiOkResponse({
+    description: 'The requested budget.',
+    type: BudgetResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -98,7 +101,10 @@ export class BudgetsController {
       'Defines the total amount available for a trip. A trip has at most one budget.',
   })
   @ApiBody({ type: CreateBudgetDto })
-  @ApiCreatedResponse({ description: 'The created budget.', type: BudgetResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created budget.',
+    type: BudgetResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -130,7 +136,10 @@ export class BudgetsController {
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
   @ApiBody({ type: UpdateBudgetDto })
-  @ApiOkResponse({ description: 'The updated budget.', type: BudgetResponseDto })
+  @ApiOkResponse({
+    description: 'The updated budget.',
+    type: BudgetResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -149,10 +158,7 @@ export class BudgetsController {
     type: ErrorResponseDto,
   })
   @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateBudgetDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBudgetDto) {
     return this.service.update(id, dto);
   }
 

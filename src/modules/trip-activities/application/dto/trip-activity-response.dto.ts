@@ -8,25 +8,57 @@ import type { TripActivity } from '../../domain/trip-activity.entity.js';
  * so a new column never leaks into the API by accident.
  */
 export class TripActivityResponseDto {
-  @ApiProperty({ description: 'Unique identifier.', format: 'uuid', example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301' })
+  @ApiProperty({
+    description: 'Unique identifier.',
+    format: 'uuid',
+    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  })
   id!: string;
 
-  @ApiProperty({ description: 'Itinerary stop.', format: 'uuid', example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301' })
+  @ApiProperty({
+    description: 'Itinerary stop.',
+    format: 'uuid',
+    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  })
   tripDestinationId!: string;
 
-  @ApiProperty({ description: 'Catalog activity.', format: 'uuid', example: 'c48a1f60-7b22-4d19-9e33-5a0b6d2c8f41' })
+  @ApiProperty({
+    description: 'Catalog activity.',
+    format: 'uuid',
+    example: 'c48a1f60-7b22-4d19-9e33-5a0b6d2c8f41',
+  })
   activityCatalogId!: string;
 
-  @ApiProperty({ description: 'Scheduled start.', type: String, format: 'date-time', example: '2026-07-04T10:30:00.000Z', nullable: true })
+  @ApiProperty({
+    description: 'Scheduled start.',
+    type: String,
+    format: 'date-time',
+    example: '2026-07-04T10:30:00.000Z',
+    nullable: true,
+  })
   dateTime!: Date | null;
 
-  @ApiProperty({ description: 'Estimated duration in minutes.', example: 180, nullable: true })
+  @ApiProperty({
+    type: Number,
+    description: 'Estimated duration in minutes.',
+    example: 180,
+    nullable: true,
+  })
   durationMinutes!: number | null;
 
-  @ApiProperty({ description: 'Estimated cost per person.', example: 22.5, nullable: true })
+  @ApiProperty({
+    type: Number,
+    description: 'Estimated cost per person.',
+    example: 22.5,
+    nullable: true,
+  })
   expectedCost!: number | null;
 
-  @ApiProperty({ description: 'Booking status.', enum: ['PENDING', 'CONFIRMED', 'COMPLETED'], example: 'PENDING' })
+  @ApiProperty({
+    description: 'Booking status.',
+    enum: ['PENDING', 'CONFIRMED', 'COMPLETED'],
+    example: 'PENDING',
+  })
   status!: 'PENDING' | 'CONFIRMED' | 'COMPLETED';
 
   static from(entity: TripActivity): TripActivityResponseDto {

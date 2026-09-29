@@ -32,10 +32,15 @@ export class TripMembersService {
     return TripMemberResponseDto.from(await this.repository.create({ ...dto }));
   }
 
-  async update(id: string, dto: UpdateTripMemberDto): Promise<TripMemberResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateTripMemberDto,
+  ): Promise<TripMemberResponseDto> {
     await this.getOrFail(id);
 
-    return TripMemberResponseDto.from(await this.repository.update(id, { ...dto }));
+    return TripMemberResponseDto.from(
+      await this.repository.update(id, { ...dto }),
+    );
   }
 
   async remove(id: string): Promise<void> {

@@ -64,8 +64,7 @@ export class UsersController {
 
   @ApiOperation({
     summary: 'Get a user by id',
-    description:
-      'Returns a single user. Requires authentication.',
+    description: 'Returns a single user. Requires authentication.',
   })
   @ApiParam({
     name: 'id',
@@ -98,7 +97,10 @@ export class UsersController {
       'Creates an account. This endpoint is public — it is how a visitor signs up. The password is accepted in plain text over HTTPS and stored hashed; it is never returned by the API.',
   })
   @ApiBody({ type: CreateUserDto })
-  @ApiCreatedResponse({ description: 'The created user.', type: UserResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created user.',
+    type: UserResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -144,10 +146,7 @@ export class UsersController {
     type: ErrorResponseDto,
   })
   @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateUserDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
     return this.service.update(id, dto);
   }
 

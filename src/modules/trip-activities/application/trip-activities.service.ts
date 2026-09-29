@@ -29,13 +29,20 @@ export class TripActivitiesService {
   }
 
   async create(dto: CreateTripActivityDto): Promise<TripActivityResponseDto> {
-    return TripActivityResponseDto.from(await this.repository.create({ ...dto, status: dto.status ?? 'PENDING' }));
+    return TripActivityResponseDto.from(
+      await this.repository.create({ ...dto, status: dto.status ?? 'PENDING' }),
+    );
   }
 
-  async update(id: string, dto: UpdateTripActivityDto): Promise<TripActivityResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateTripActivityDto,
+  ): Promise<TripActivityResponseDto> {
     await this.getOrFail(id);
 
-    return TripActivityResponseDto.from(await this.repository.update(id, { ...dto }));
+    return TripActivityResponseDto.from(
+      await this.repository.update(id, { ...dto }),
+    );
   }
 
   async remove(id: string): Promise<void> {

@@ -12,7 +12,10 @@ import {
 export class DestinationCatalogPrismaRepository implements DestinationCatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll({ skip, take }: PageRequest): Promise<Page<DestinationCatalog>> {
+  async findAll({
+    skip,
+    take,
+  }: PageRequest): Promise<Page<DestinationCatalog>> {
     // One transaction so the page and the total come from the same snapshot.
     const [items, total] = await this.prisma.$transaction([
       this.prisma.destinationCatalog.findMany({
@@ -34,7 +37,10 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
     return this.prisma.destinationCatalog.create({ data });
   }
 
-  update(id: string, data: UpdateDestinationCatalogData): Promise<DestinationCatalog> {
+  update(
+    id: string,
+    data: UpdateDestinationCatalogData,
+  ): Promise<DestinationCatalog> {
     return this.prisma.destinationCatalog.update({ where: { id }, data });
   }
 

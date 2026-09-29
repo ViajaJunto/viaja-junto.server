@@ -46,7 +46,10 @@ export class TripActivitiesController {
     description:
       'Returns the activities planned for a trip in chronological order. Entries without a date come last.',
   })
-  @ApiPaginatedResponse(TripActivityResponseDto, 'Page of planned activity records.')
+  @ApiPaginatedResponse(
+    TripActivityResponseDto,
+    'Page of planned activity records.',
+  )
   @ApiUnprocessableEntityResponse({
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
@@ -72,7 +75,10 @@ export class TripActivitiesController {
     format: 'uuid',
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
-  @ApiOkResponse({ description: 'The requested planned activity.', type: TripActivityResponseDto })
+  @ApiOkResponse({
+    description: 'The requested planned activity.',
+    type: TripActivityResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -97,7 +103,10 @@ export class TripActivitiesController {
       'Schedules a catalog activity inside one stop of the itinerary. Requires EDITOR permission on the trip.',
   })
   @ApiBody({ type: CreateTripActivityDto })
-  @ApiCreatedResponse({ description: 'The created planned activity.', type: TripActivityResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created planned activity.',
+    type: TripActivityResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -125,7 +134,10 @@ export class TripActivitiesController {
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
   @ApiBody({ type: UpdateTripActivityDto })
-  @ApiOkResponse({ description: 'The updated planned activity.', type: TripActivityResponseDto })
+  @ApiOkResponse({
+    description: 'The updated planned activity.',
+    type: TripActivityResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,

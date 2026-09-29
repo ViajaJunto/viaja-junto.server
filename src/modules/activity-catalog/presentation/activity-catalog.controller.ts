@@ -67,7 +67,10 @@ export class ActivityCatalogController {
     format: 'uuid',
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
-  @ApiOkResponse({ description: 'The requested activity.', type: ActivityCatalogResponseDto })
+  @ApiOkResponse({
+    description: 'The requested activity.',
+    type: ActivityCatalogResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -87,7 +90,10 @@ export class ActivityCatalogController {
       'Registers a tour, restaurant, lodging or transfer that trips can reference. Requires authentication.',
   })
   @ApiBody({ type: CreateActivityCatalogDto })
-  @ApiCreatedResponse({ description: 'The created activity.', type: ActivityCatalogResponseDto })
+  @ApiCreatedResponse({
+    description: 'The created activity.',
+    type: ActivityCatalogResponseDto,
+  })
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -115,7 +121,10 @@ export class ActivityCatalogController {
     example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
   })
   @ApiBody({ type: UpdateActivityCatalogDto })
-  @ApiOkResponse({ description: 'The updated activity.', type: ActivityCatalogResponseDto })
+  @ApiOkResponse({
+    description: 'The updated activity.',
+    type: ActivityCatalogResponseDto,
+  })
   @ApiBadRequestResponse({
     description: 'The id in the path is not a valid UUID.',
     type: ErrorResponseDto,
@@ -143,8 +152,7 @@ export class ActivityCatalogController {
 
   @ApiOperation({
     summary: 'Remove an activity from the catalog',
-    description:
-      'Fails while any trip still references this activity.',
+    description: 'Fails while any trip still references this activity.',
   })
   @ApiParam({
     name: 'id',
