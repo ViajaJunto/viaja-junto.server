@@ -27,10 +27,15 @@ FROM node:22-alpine AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # --ignore-scripts skips the prisma generate hook here; the generated client
-# is copied from the build stage instead, so the Prisma CLI (a devDependency)
-# is never needed in the runtime image.
+# is copied from the build stage instead.
+#
+# --omit=optional keeps the Prisma CLI out of the image. @prisma/client lists
+# `prisma` as an optional peer, so --omit=dev alone still installs it — along
+# with ~120 transitive packages (mysql2, deepmerge-ts...) that Trivy flags and
+# the API never loads at runtime. Also dropped: pg-cloudflare (Workers only)
+# and optional react/typescript peers of tooling.
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --ignore-scripts \
+    npm ci --omit=dev --omit=optional --ignore-scripts \
            --fetch-retries=5 \
            --fetch-retry-mintimeout=20000 \
            --fetch-retry-maxtimeout=120000
@@ -38,6 +43,17 @@ RUN --mount=type=cache,target=/root/.npm \
 # ────────────────────────── runtime ──────────────────────────
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
+
+# The base image ships npm, corepack and yarn. The API starts with plain
+# `node dist/main.js` and never uses them, but their bundled dependencies
+# (pacote, sigstore, brace-expansion, picomatch, ip-address...) account for
+# most of the HIGH findings Trivy reports. Removing them shrinks the attack
+# surface without changing runtime behaviour.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
+
 WORKDIR /app
 
 COPY --from=prod-deps /app/node_modules ./node_modules
