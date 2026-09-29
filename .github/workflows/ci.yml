@@ -113,7 +113,7 @@ jobs:
         run: npm run openapi:generate
 
       - name: Lint contract with Spectral
-        uses: stoplightio/spectral-action@latest
+        uses: stoplightio/spectral-action@v0.8.13
         with:
           file_glob: openapi.json
           spectral_ruleset: .spectral.yaml
@@ -177,7 +177,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: viajajunto-api:${{ github.sha }}
           format: table
