@@ -3,6 +3,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  passwordHash: string;
+  /** Google account id. Null for accounts not yet linked to Google. */
+  googleId: string | null;
   createdAt: Date;
 }

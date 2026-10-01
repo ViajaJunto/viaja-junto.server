@@ -76,7 +76,7 @@ The relational model is composed of the following entities:
 ### 5.2 Data model summary
 
 ```
-user(#id, name, email, password_hash, created_at)
+user(#id, name, email, google_id, created_at)
 
 trip(#id, name, description, start_date, end_date, status, *created_by->user, created_at)
 
@@ -236,7 +236,7 @@ metadata live in exactly one place.
 
 **Responses.** Every endpoint returns a `*ResponseDto` built explicitly from the
 domain entity through a static `from()` mapper, rather than returning the entity
-itself. This is what keeps `passwordHash` out of `UserResponseDto` — a new
+itself. This is what keeps `googleId` out of `UserResponseDto` — a new
 column cannot leak into the API by accident.
 
 **Pagination.** Offset based. List endpoints accept `page` (default 1) and
@@ -258,20 +258,48 @@ ordering — itinerary position for trip destinations, chronological for planned
 activities, newest first for trips and reviews — which is what makes paging
 stable across requests.
 
-**Authentication.** Endpoints are documented with `@ApiBearerAuth` and expect
+**Authentication.** Google is the only sign-in method; there are no
+passwords. It is built on Passport.js (`passport-google-oauth20` and
+`passport-jwt`) in `src/modules/auth`:
+
+1. The frontend navigates the browser (full page load, not fetch) to
+   `GET /api/auth/google`, which redirects to the Google consent screen.
+2. Google redirects back to `GET /api/auth/google/callback`. The API finds the
+   user by Google id, links an existing account by verified email, or creates
+   one on first sign-in.
+3. The API signs its own JWT (HS256, `JWT_EXPIRES_IN` seconds) and redirects to
+   `AUTH_REDIRECT_URL#access_token=<jwt>&token_type=Bearer&expires_in=<s>`.
+   On failure it redirects to `AUTH_REDIRECT_URL#error=google_sign_in_failed`.
+   The token sits in the fragment so it never reaches server logs or the
+   Referer header.
+4. The client sends `Authorization: Bearer <token>` on later requests.
+   `GET /api/auth/me` returns the current user. Signing out means the client
+   discards the token.
+
+Login CSRF is prevented by the OAuth `state` parameter, kept in a short-lived
+httpOnly cookie (`CookieStateStore`) because the API holds no session.
+Only Google-verified emails are accepted, since accounts are linked by email.
+
+Required configuration: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`GOOGLE_CALLBACK_URL` (registered as an authorized redirect URI in Google
+Cloud Console), `AUTH_REDIRECT_URL`, `JWT_SECRET` (32+ characters) and
+`JWT_EXPIRES_IN`. See `.env.example`.
+
+Endpoints are documented with `@ApiBearerAuth` and expect
 `Authorization: Bearer <token>`. Public by design, matching the scope document
 ("a visitor can browse and read reviews, but cannot create trips"):
 
 | Endpoint | Reason |
 | -------- | ------ |
-| `POST /users` | Sign-up — there is no token yet |
+| `GET /auth/google`, `GET /auth/google/callback` | Sign-in — there is no token yet |
 | `GET /destination-catalog`, `GET /destination-catalog/{id}` | Destination discovery |
 | `GET /activity-catalog`, `GET /activity-catalog/{id}` | Activity discovery |
 | `GET /reviews`, `GET /reviews/{id}` | Reading community reviews |
 
-Everything else — 38 of the 45 resource operations — requires a token. The
-guard that enforces this is not implemented yet; the contract is documented
-first so the frontend can be built against it.
+Everything else requires a token. `JwtAuthGuard` and the `@CurrentUser()`
+decorator are available in `src/modules/auth/presentation`; so far only
+`GET /auth/me` applies the guard, and the resource controllers still have to
+adopt it.
 
 **Status codes.**
 

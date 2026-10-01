@@ -48,11 +48,13 @@ enum TripActivityStatus {
 // ─── Models ─────────────────────────────────────────────
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  // Stable Google account id ("sub"). Null only for accounts created before
+  // Google sign-in existed; they are linked by verified email on first login.
+  googleId  String?  @unique @map("google_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   createdTrips Trip[]       @relation("TripCreator")
   memberships  TripMember[]

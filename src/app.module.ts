@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { PrismaModule } from './shared/database/prisma.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { TripsModule } from './modules/trips/trips.module.js';
 import { TripMembersModule } from './modules/trip-members/trip-members.module.js';
@@ -15,6 +16,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module.js';
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     UsersModule,
     TripsModule,
     TripMembersModule,

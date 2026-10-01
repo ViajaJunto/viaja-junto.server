@@ -13,6 +13,9 @@ import { dirname, resolve } from 'node:path';
 // env.ts validates the environment at import time; nothing here connects.
 process.env.DATABASE_URL ??=
   'postgresql://postgres:postgres@localhost:5432/viajajunto?schema=public';
+process.env.GOOGLE_CLIENT_ID ??= 'openapi-export';
+process.env.GOOGLE_CLIENT_SECRET ??= 'openapi-export';
+process.env.JWT_SECRET ??= 'openapi-export-placeholder-secret-32+';
 
 const { Test } = await import('@nestjs/testing');
 const { SwaggerModule } = await import('@nestjs/swagger');

@@ -8,15 +8,12 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
-  Post,
   Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
-  ApiConflictResponse,
-  ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -32,7 +29,6 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
-import { CreateUserDto } from '../application/dto/create-user.dto.js';
 import { UpdateUserDto } from '../application/dto/update-user.dto.js';
 import { UserResponseDto } from '../application/dto/user-response.dto.js';
 import { UsersService } from '../application/users.service.js';
@@ -92,33 +88,9 @@ export class UsersController {
   }
 
   @ApiOperation({
-    summary: 'Register a user',
-    description:
-      'Creates an account. This endpoint is public — it is how a visitor signs up. The password is accepted in plain text over HTTPS and stored hashed; it is never returned by the API.',
-  })
-  @ApiBody({ type: CreateUserDto })
-  @ApiCreatedResponse({
-    description: 'The created user.',
-    type: UserResponseDto,
-  })
-  @ApiUnprocessableEntityResponse({
-    description: 'The payload failed validation.',
-    type: ValidationErrorResponseDto,
-  })
-  @ApiConflictResponse({
-    description: 'A user with this email already exists.',
-    type: ErrorResponseDto,
-  })
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateUserDto) {
-    return this.service.create(dto);
-  }
-
-  @ApiOperation({
     summary: 'Update a user',
     description:
-      'Updates the authenticated user profile. The password is changed through a dedicated endpoint, so it is not accepted here.',
+      'Updates the authenticated user profile. Accounts are created by signing in with Google, so there is no password to change.',
   })
   @ApiParam({
     name: 'id',

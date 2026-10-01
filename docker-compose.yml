@@ -68,6 +68,12 @@ services:
       # `postgres` is the service name on the compose network — not localhost,
       # which inside the container would point at the container itself.
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-viajajunto}?schema=public
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3000/api/auth/google/callback}
+      AUTH_REDIRECT_URL: ${AUTH_REDIRECT_URL:-http://localhost:5173/auth/callback}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3600}
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:
