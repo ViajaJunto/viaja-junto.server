@@ -34,7 +34,12 @@
     "openapi:lint": "npx --yes @stoplight/spectral-cli@6 lint openapi.json --ruleset .spectral.yaml",
     "stack:up": "docker compose up -d --build",
     "stack:down": "docker compose down",
-    "stack:logs": "docker compose logs -f api"
+    "stack:logs": "docker compose logs -f api",
+    "aws:up": "docker compose --profile aws up -d --wait ministack",
+    "aws:deploy": "bash infra/deploy.sh",
+    "aws:status": "bash infra/status.sh",
+    "aws:destroy": "bash infra/destroy.sh",
+    "aws:down": "docker compose --profile aws stop ministack"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
