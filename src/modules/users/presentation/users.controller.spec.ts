@@ -17,7 +17,7 @@ describe('UsersController', () => {
     service = {
       findAll: vi.fn(),
       findOne: vi.fn(),
-      create: vi.fn(),
+      findOrCreateFromGoogle: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
     };
@@ -40,18 +40,6 @@ describe('UsersController', () => {
     controller.findOne(id);
 
     expect(service.findOne).toHaveBeenCalledWith(id);
-  });
-
-  it('forwards the body on create', () => {
-    const dto = {
-      name: 'Gustavo Fidelis',
-      email: 'gustavo@exemplo.com',
-      password: 'umaSenhaForte123',
-    };
-
-    controller.create(dto);
-
-    expect(service.create).toHaveBeenCalledWith(dto);
   });
 
   it('forwards id and body on update', () => {

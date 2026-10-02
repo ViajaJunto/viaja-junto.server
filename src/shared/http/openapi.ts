@@ -15,9 +15,12 @@ export function buildOpenApiConfig() {
         'REST API for ViajaJunto — collaborative trip planning.',
         '',
         '### Authentication',
-        'Operations marked with a padlock require a JWT in the',
-        '`Authorization: Bearer <token>` header. Reading the destination and',
-        'activity catalogues, reading reviews and signing up are public.',
+        'Google is the only sign-in method. Open `GET /auth/google` in the',
+        'browser; after consent the API redirects to the frontend with an',
+        'access token in the URL fragment. Operations marked with a padlock',
+        'require that JWT in the `Authorization: Bearer <token>` header.',
+        'Reading the destination and activity catalogues and reading reviews',
+        'are public.',
         '',
         '### Pagination',
         'List operations accept `page` (default 1) and `limit` (default 20,',
@@ -40,7 +43,8 @@ export function buildOpenApiConfig() {
     )
     .addServer('http://localhost:3000', 'Local development')
     .addTag('Health', 'Liveness probe.')
-    .addTag('Users', 'Accounts: sign-up and profile management.')
+    .addTag('Auth', 'Sign-in with Google and the current session.')
+    .addTag('Users', 'Accounts and profile management.')
     .addTag('Trips', 'Trips and their planning stage.')
     .addTag(
       'Trip Members',

@@ -24,6 +24,26 @@ const envSchema = z.object({
     .refine((value) => /^postgres(ql)?:\/\//.test(value), {
       message: 'must be a PostgreSQL connection string (postgresql://...)',
     }),
+
+  // OAuth client from Google Cloud Console > APIs & Services > Credentials.
+  GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
+
+  GOOGLE_CLIENT_SECRET: z.string().min(1, 'GOOGLE_CLIENT_SECRET is required'),
+
+  // Must match one of the "Authorized redirect URIs" registered for the client.
+  GOOGLE_CALLBACK_URL: z
+    .url()
+    .default('http://localhost:3000/api/auth/google/callback'),
+
+  // Frontend page that receives the access token after a Google sign-in.
+  AUTH_REDIRECT_URL: z.url().default('http://localhost:5173/auth/callback'),
+
+  JWT_SECRET: z
+    .string()
+    .min(32, 'JWT_SECRET must be at least 32 characters long'),
+
+  // Access token lifetime, in seconds.
+  JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
 });
 
 export type Env = z.infer<typeof envSchema>;

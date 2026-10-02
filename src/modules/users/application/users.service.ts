@@ -3,8 +3,8 @@ import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-re
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { GoogleUserData } from '../domain/user.repository.js';
 import { UserRepository } from '../domain/user.repository.js';
-import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserResponseDto } from './dto/user-response.dto.js';
 
@@ -28,13 +28,36 @@ export class UsersService {
     return UserResponseDto.from(await this.getOrFail(id));
   }
 
-  async create(dto: CreateUserDto): Promise<UserResponseDto> {
+  /**
+   * Resolves the account behind a Google sign-in, creating it on first use.
+   *
+   * Lookup order: the Google id first, since it never changes; then the email,
+   * which links an account created before Google sign-in existed. The caller
+   * must only pass emails Google has verified, otherwise anyone could claim an
+   * existing account by registering its address with Google.
+   */
+  async findOrCreateFromGoogle(
+    identity: GoogleUserData,
+  ): Promise<UserResponseDto> {
+    const linked = await this.repository.findByGoogleId(identity.googleId);
+    if (linked) {
+      return UserResponseDto.from(linked);
+    }
+
+    const byEmail = await this.repository.findByEmail(identity.email);
+    if (byEmail) {
+      return UserResponseDto.from(
+        await this.repository.update(byEmail.id, {
+          googleId: identity.googleId,
+        }),
+      );
+    }
+
     return UserResponseDto.from(
       await this.repository.create({
-        name: dto.name,
-        email: dto.email,
-        // TODO: replace with a real hash (argon2/bcrypt) once auth lands.
-        passwordHash: dto.password,
+        name: identity.name,
+        email: identity.email,
+        googleId: identity.googleId,
       }),
     );
   }

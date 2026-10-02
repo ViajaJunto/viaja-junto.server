@@ -3,6 +3,9 @@ import { validateEnv } from './env.js';
 
 const valid = {
   DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/viajajunto',
+  GOOGLE_CLIENT_ID: 'client-id.apps.googleusercontent.com',
+  GOOGLE_CLIENT_SECRET: 'client-secret',
+  JWT_SECRET: 'a-test-secret-that-is-at-least-32-chars',
 };
 
 describe('validateEnv', () => {
@@ -31,14 +34,16 @@ describe('validateEnv', () => {
 
   it('rejects a DATABASE_URL that is not PostgreSQL', () => {
     expect(() =>
-      validateEnv({ DATABASE_URL: 'mysql://root@localhost:3306/db' }),
+      validateEnv({ ...valid, DATABASE_URL: 'mysql://root@localhost:3306/db' }),
     ).toThrow(/PostgreSQL connection string/);
   });
 
   it('accepts the postgres:// scheme as well', () => {
     expect(
-      validateEnv({ DATABASE_URL: 'postgres://u:p@localhost:5432/db' })
-        .DATABASE_URL,
+      validateEnv({
+        ...valid,
+        DATABASE_URL: 'postgres://u:p@localhost:5432/db',
+      }).DATABASE_URL,
     ).toContain('postgres://');
   });
 
@@ -59,5 +64,44 @@ describe('validateEnv', () => {
       expect(message).toContain('PORT');
       expect(message).toContain('DATABASE_URL');
     }
+  });
+
+  describe('authentication', () => {
+    it('applies the documented defaults', () => {
+      const env = validateEnv(valid);
+
+      expect(env.GOOGLE_CALLBACK_URL).toBe(
+        'http://localhost:3000/api/auth/google/callback',
+      );
+      expect(env.AUTH_REDIRECT_URL).toBe('http://localhost:5173/auth/callback');
+      expect(env.JWT_EXPIRES_IN).toBe(3600);
+    });
+
+    it.each(['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'JWT_SECRET'])(
+      'rejects a missing %s',
+      (name) => {
+        const { [name as keyof typeof valid]: _omitted, ...rest } = valid;
+
+        expect(() => validateEnv(rest)).toThrow(new RegExp(name));
+      },
+    );
+
+    it('rejects a JWT_SECRET too short to resist brute force', () => {
+      expect(() => validateEnv({ ...valid, JWT_SECRET: 'short' })).toThrow(
+        /at least 32 characters/,
+      );
+    });
+
+    it('rejects a redirect URL that is not a URL', () => {
+      expect(() =>
+        validateEnv({ ...valid, AUTH_REDIRECT_URL: 'not-a-url' }),
+      ).toThrow(/AUTH_REDIRECT_URL/);
+    });
+
+    it('coerces JWT_EXPIRES_IN to a number of seconds', () => {
+      expect(
+        validateEnv({ ...valid, JWT_EXPIRES_IN: '900' }).JWT_EXPIRES_IN,
+      ).toBe(900);
+    });
   });
 });
