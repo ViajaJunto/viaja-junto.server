@@ -96,6 +96,37 @@ services:
       retries: 5
       start_period: 15s
 
+  # ──────────────────── emulated AWS (MiniStack) ───────────────────
+  # Local AWS emulator: CloudFormation, ECR, ECS, RDS, Secrets Manager and
+  # IAM on a single port. Off by default — start it with `npm run aws:up`,
+  # then deploy with `npm run aws:deploy` (see infra/deploy.sh).
+  ministack:
+    image: ministackorg/ministack:latest
+    container_name: viajajunto-ministack
+    profiles: ["aws"]
+    ports:
+      - "${MINISTACK_PORT:-4566}:4566"
+    environment:
+      MINISTACK_REGION: us-east-1
+      # RDS and ECS start real containers through the Docker socket. They join
+      # this network, so the API task resolves the RDS endpoint by name —
+      # the same way it would inside a VPC on AWS.
+      DOCKER_NETWORK: viajajunto_default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:4566/_ministack/health')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
   # ──────────────────────── dev tooling ────────────────────────────
   # Web client for inspecting the database during development.
   # Off by default — use: docker compose --profile tools up -d

@@ -1,0 +1,171 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  ViajaJunto - API hosting on ECS. The database endpoint comes in as a
+  parameter: the RDS instance is created before this stack (see
+  infra/deploy.sh for why it is not a resource here).
+
+Parameters:
+  Image:
+    Type: String
+    Description: Full image reference, e.g. localhost:4566/viajajunto-api:latest
+  DbHost:
+    Type: String
+  DbPort:
+    Type: String
+    Default: '5432'
+  DbName:
+    Type: String
+    Default: viajajunto
+  DbUser:
+    Type: String
+    Default: viajajunto
+  DbPassword:
+    Type: String
+    NoEcho: true
+  HostPort:
+    Type: Number
+    Default: 3001
+    Description: Port the API is published on, on the Docker host.
+  GoogleClientId:
+    Type: String
+    NoEcho: true
+  GoogleClientSecret:
+    Type: String
+    NoEcho: true
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+  AuthRedirectUrl:
+    Type: String
+    Default: http://localhost:5173/auth/callback
+
+Resources:
+  # The connection string never appears in the task definition: ECS reads it
+  # from Secrets Manager at launch and injects it as DATABASE_URL.
+  DatabaseUrlSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: viajajunto/database-url
+      Description: PostgreSQL connection string used by the API.
+      SecretString: !Sub 'postgresql://${DbUser}:${DbPassword}@${DbHost}:${DbPort}/${DbName}?schema=public'
+
+  # Application credentials, one JSON document; each key is injected as its
+  # own environment variable through the `<arn>:<key>::` valueFrom syntax.
+  AppSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: viajajunto/app
+      Description: OAuth client and JWT signing key used by the API.
+      SecretString: !Sub |
+        {"GOOGLE_CLIENT_ID":"${GoogleClientId}","GOOGLE_CLIENT_SECRET":"${GoogleClientSecret}","JWT_SECRET":"${JwtSecret}"}
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/viajajunto-api
+      RetentionInDays: 7
+
+  # Role ECS assumes to pull the image, read the secret and ship logs.
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: viajajunto-ecs-execution
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-database-secret
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref DatabaseUrlSecret
+                  - !Ref AppSecrets
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: viajajunto
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: viajajunto-api
+      # EC2 launch type with bridge networking: the container port is
+      # published on the host, which is how it becomes reachable locally.
+      # Fargate requires awsvpc, which publishes no host port.
+      RequiresCompatibilities: [EC2]
+      NetworkMode: bridge
+      Cpu: '256'
+      Memory: '512'
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: api
+          Image: !Ref Image
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3000
+              HostPort: !Ref HostPort
+              Protocol: tcp
+          Environment:
+            - Name: NODE_ENV
+              Value: production
+            - Name: PORT
+              Value: '3000'
+            - Name: API_PREFIX
+              Value: api
+            - Name: GOOGLE_CALLBACK_URL
+              Value: !Sub 'http://localhost:${HostPort}/api/auth/google/callback'
+            - Name: AUTH_REDIRECT_URL
+              Value: !Ref AuthRedirectUrl
+            - Name: JWT_EXPIRES_IN
+              Value: '3600'
+          Secrets:
+            - Name: DATABASE_URL
+              ValueFrom: !Ref DatabaseUrlSecret
+            - Name: GOOGLE_CLIENT_ID
+              ValueFrom: !Sub '${AppSecrets}:GOOGLE_CLIENT_ID::'
+            - Name: GOOGLE_CLIENT_SECRET
+              ValueFrom: !Sub '${AppSecrets}:GOOGLE_CLIENT_SECRET::'
+            - Name: JWT_SECRET
+              ValueFrom: !Sub '${AppSecrets}:JWT_SECRET::'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: api
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: viajajunto-api
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: EC2
+      DesiredCount: 1
+      # One task bound to a fixed host port: a new task cannot start while the
+      # old one holds the port. Stop first, then start — a short gap instead
+      # of a deployment that never completes.
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+
+Outputs:
+  ClusterName:
+    Value: !Ref Cluster
+  ServiceName:
+    Value: !GetAtt Service.Name
+  DatabaseUrlSecretArn:
+    Value: !Ref DatabaseUrlSecret
+  ApiUrl:
+    Value: !Sub 'http://localhost:${HostPort}/api'

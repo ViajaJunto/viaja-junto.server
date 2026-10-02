@@ -328,7 +328,7 @@ The client-server architecture with frontend/server separation supports:
 - Security: access control is centralized in the backend.
 - Scalability: frontend and backend can scale independently.
 
-## 9. Continuous integration
+## 8. Continuous integration
 
 Every push to `master` and every pull request runs `.github/workflows/ci.yml`.
 The five jobs are independent except for SonarCloud, which waits on the test
@@ -393,6 +393,63 @@ it does not run on pull requests.
 | `SONAR_TOKEN` | SonarCloud job |
 | `DOCKERHUB_USERNAME` | Publish job |
 | `DOCKERHUB_TOKEN` | Publish job (Docker Hub Access Token) |
+
+
+## 9. Emulated AWS deployment (MiniStack)
+
+The API can be deployed to a local AWS environment emulated by
+[MiniStack](https://ministack.org), reproducing how it would be hosted on AWS
+without an account. Templates and scripts live in `infra/`.
+
+```
+CloudFormation ─┬─ viajajunto-registry ── ECR repository
+                └─ viajajunto-app ─────── Secrets Manager (DATABASE_URL)
+                                          IAM execution role
+                                          CloudWatch log group
+                                          ECS cluster ─ task definition ─ service
+RDS API ────────── PostgreSQL 17 instance
+```
+
+| Step | Service | What happens |
+| ---- | ------- | ------------ |
+| 1 | RDS | A real PostgreSQL container is started |
+| 2 | CloudFormation | `registry.yaml` creates the ECR repository |
+| 3 | ECR | The API image is pushed to MiniStack's registry (`localhost:4566`) |
+| 4 | — | Prisma migrations run against the RDS endpoint |
+| 5 | CloudFormation | `app.yaml` creates the secret, IAM role, log group, cluster, task definition and service |
+| 6 | ECS | The service starts the API container with `DATABASE_URL` injected from Secrets Manager |
+
+```bash
+npm run aws:up        # start MiniStack
+npm run aws:deploy    # steps 1-6; the API answers on http://localhost:3001/api
+npm run aws:status    # stacks, RDS, ECR images, ECS service and tasks
+npm run aws:destroy   # remove everything deploy created
+```
+
+Requires Docker and the AWS CLI v2. All calls go to `http://localhost:4566`
+with dummy credentials; no real AWS account is involved.
+
+**Design choices.**
+
+- *ECS on the EC2 launch type with bridge networking*, not Fargate. Fargate
+  requires `awsvpc`, which publishes no port on the host, so the API would be
+  unreachable locally. Bridge mode maps container port 3000 to host port 3001.
+- *Single task, fixed host port* means a new task cannot start while the old
+  one holds the port, so the service uses `MinimumHealthyPercent: 0` /
+  `MaximumPercent: 100`: stop, then start.
+- *The connection string never appears in the task definition*. ECS resolves
+  it from Secrets Manager at launch, using the execution role.
+
+**Emulator limitations, and how they are handled.** The templates are written
+for real AWS; `deploy.sh` compensates where MiniStack diverges:
+
+| Divergence | Handling |
+| ---------- | -------- |
+| `AWS::RDS::DBInstance` in a template is metadata only — no database starts | The instance is created through the RDS API, and its endpoint is passed to `app.yaml` as a parameter |
+| The CloudFormation provisioner drops `Secrets` from `AWS::ECS::TaskDefinition`, and `Ref` on a secret returns its name instead of its ARN | After the stack is created, the same task definition is registered again through the ECS API with the secret ARN, and the service is redeployed |
+
+Neither workaround is needed on AWS; both are isolated in `deploy.sh` and
+marked as such.
 
 
 ## 10. References
