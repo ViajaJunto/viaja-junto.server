@@ -7,6 +7,12 @@ import { z } from 'zod';
  * fails at boot with the full list of problems, instead of breaking at
  * runtime in the middle of a request.
  */
+/** Treats `KEY=` (present but blank in .env) the same as an absent variable. */
+const blankAsUndefined = (value: unknown) => (value === '' ? undefined : value);
+
+const optionalString = z.preprocess(blankAsUndefined, z.string().optional());
+const optionalUrl = z.preprocess(blankAsUndefined, z.url().optional());
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -44,6 +50,28 @@ const envSchema = z.object({
 
   // Access token lifetime, in seconds.
   JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
+
+  // ── Object storage (S3) ────────────────────────────────────────────────
+  // Optional: without S3_BUCKET the API still boots and photo uploads answer
+  // 503. Credentials are never read from here — the AWS SDK resolves them
+  // from its default chain (env vars, ECS task role, ~/.aws).
+  AWS_REGION: z.string().min(1).default('us-east-1'),
+
+  S3_BUCKET: optionalString,
+
+  // Custom endpoint (MiniStack, LocalStack, MinIO). Unset on real AWS. The SDK
+  // also honours AWS_ENDPOINT_URL, which MiniStack injects into ECS tasks.
+  S3_ENDPOINT: optionalUrl,
+
+  // Base URL the browser uses to fetch objects, bucket included. Differs from
+  // S3_ENDPOINT when the API reaches S3 through an internal hostname.
+  S3_PUBLIC_URL: optionalUrl,
+
+  // Emulators address buckets as http://host/bucket instead of by subdomain.
+  S3_FORCE_PATH_STYLE: z.preprocess(
+    blankAsUndefined,
+    z.stringbool().default(false),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

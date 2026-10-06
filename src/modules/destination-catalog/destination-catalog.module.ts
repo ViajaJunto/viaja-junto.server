@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module.js';
 import { DestinationCatalogService } from './application/destination-catalog.service.js';
 import { DestinationCatalogRepository } from './domain/destination-catalog.repository.js';
 import { DestinationCatalogPrismaRepository } from './infrastructure/destination-catalog.prisma.repository.js';
 import { DestinationCatalogController } from './presentation/destination-catalog.controller.js';
 
 @Module({
+  // Provides what JwtAuthGuard (photo upload) needs.
+  imports: [AuthModule],
   controllers: [DestinationCatalogController],
   providers: [
     DestinationCatalogService,

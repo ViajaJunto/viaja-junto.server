@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityCatalog } from '../domain/activity-catalog.entity.js';
 import type { ActivityCatalogRepository } from '../domain/activity-catalog.repository.js';
+import type { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
 import { ActivityCatalogService } from './activity-catalog.service.js';
 
 const base: ActivityCatalog = {
@@ -32,6 +33,10 @@ type RepoMock = {
 
 describe('ActivityCatalogService', () => {
   let repository: RepoMock;
+  let photos: {
+    upload: ReturnType<typeof vi.fn>;
+    discard: ReturnType<typeof vi.fn>;
+  };
   let service: ActivityCatalogService;
 
   beforeEach(() => {
@@ -42,8 +47,13 @@ describe('ActivityCatalogService', () => {
       update: vi.fn(),
       remove: vi.fn(),
     };
+    photos = {
+      upload: vi.fn(),
+      discard: vi.fn().mockResolvedValue(undefined),
+    };
     service = new ActivityCatalogService(
       repository as unknown as ActivityCatalogRepository,
+      photos as unknown as PhotoStorageService,
     );
   });
 
@@ -148,6 +158,83 @@ describe('ActivityCatalogService', () => {
         NotFoundException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('remove (photo cleanup)', () => {
+    it('discards the stored photo after deleting the record', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ photoUrl: 'http://s3/bucket/activities/old.jpg' }),
+      );
+      repository.remove.mockResolvedValue(undefined);
+
+      await service.remove(base.id);
+
+      expect(photos.discard).toHaveBeenCalledWith(
+        'http://s3/bucket/activities/old.jpg',
+      );
+    });
+  });
+
+  describe('updatePhoto', () => {
+    const photo = { buffer: Buffer.from('img'), mimetype: 'image/jpeg' };
+    const newUrl = 'http://s3/bucket/activities/new.jpg';
+
+    it('uploads under the activities folder and stores the new URL', async () => {
+      repository.findById.mockResolvedValue(entity());
+      photos.upload.mockResolvedValue(newUrl);
+      repository.update.mockResolvedValue(entity({ photoUrl: newUrl }));
+
+      const result = await service.updatePhoto(base.id, photo);
+
+      expect(photos.upload).toHaveBeenCalledWith({
+        folder: 'activities',
+        ownerId: base.id,
+        photo,
+      });
+      expect(repository.update).toHaveBeenCalledWith(base.id, {
+        photoUrl: newUrl,
+      });
+      expect(result.photoUrl).toBe(newUrl);
+    });
+
+    it('discards the previous photo only after the record points elsewhere', async () => {
+      const oldUrl = 'http://s3/bucket/activities/old.jpg';
+      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
+      photos.upload.mockResolvedValue(newUrl);
+      repository.update.mockResolvedValue(entity({ photoUrl: newUrl }));
+
+      await service.updatePhoto(base.id, photo);
+
+      expect(photos.discard).toHaveBeenCalledWith(oldUrl);
+      expect(photos.discard).not.toHaveBeenCalledWith(newUrl);
+      expect(repository.update.mock.invocationCallOrder[0]).toBeLessThan(
+        photos.discard.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('rolls back the uploaded photo when the update fails', async () => {
+      const oldUrl = 'http://s3/bucket/activities/old.jpg';
+      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
+      photos.upload.mockResolvedValue(newUrl);
+      repository.update.mockRejectedValue(new Error('db down'));
+
+      await expect(service.updatePhoto(base.id, photo)).rejects.toThrow(
+        'db down',
+      );
+
+      expect(photos.discard).toHaveBeenCalledWith(newUrl);
+      expect(photos.discard).not.toHaveBeenCalledWith(oldUrl);
+    });
+
+    it('does not upload anything for a missing record', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(service.updatePhoto(base.id, photo)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+
+      expect(photos.upload).not.toHaveBeenCalled();
     });
   });
 });

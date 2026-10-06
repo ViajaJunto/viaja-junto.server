@@ -10,7 +10,13 @@ export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 export AWS_PAGER=""
 awsl() { aws --endpoint-url "$ENDPOINT" "$@"; }
 
-echo "▸ application stack (ECS service, task definition, secret, logs, IAM)"
+echo "▸ photos bucket (emptied first: S3 refuses to delete a bucket with objects)"
+for bucket in $(awsl s3api list-buckets \
+    --query "Buckets[?starts_with(Name, 'viajajunto-photos-')].Name" --output text 2>/dev/null); do
+  awsl s3 rm "s3://$bucket" --recursive >/dev/null || true
+done
+
+echo "▸ application stack (ECS service, task definition, secrets, logs, IAM, S3)"
 awsl cloudformation delete-stack --stack-name viajajunto-app
 awsl cloudformation wait stack-delete-complete --stack-name viajajunto-app
 

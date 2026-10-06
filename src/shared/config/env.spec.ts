@@ -104,4 +104,48 @@ describe('validateEnv', () => {
       ).toBe(900);
     });
   });
+
+  describe('object storage', () => {
+    it('leaves S3 disabled when no bucket is configured', () => {
+      const env = validateEnv(valid);
+
+      expect(env.S3_BUCKET).toBeUndefined();
+      expect(env.AWS_REGION).toBe('us-east-1');
+      expect(env.S3_FORCE_PATH_STYLE).toBe(false);
+    });
+
+    it('treats blank values from .env as absent', () => {
+      const env = validateEnv({
+        ...valid,
+        S3_BUCKET: '',
+        S3_ENDPOINT: '',
+        S3_PUBLIC_URL: '',
+        S3_FORCE_PATH_STYLE: '',
+      });
+
+      expect(env.S3_BUCKET).toBeUndefined();
+      expect(env.S3_ENDPOINT).toBeUndefined();
+      expect(env.S3_PUBLIC_URL).toBeUndefined();
+      expect(env.S3_FORCE_PATH_STYLE).toBe(false);
+    });
+
+    it('parses an emulator configuration', () => {
+      const env = validateEnv({
+        ...valid,
+        S3_BUCKET: 'photos',
+        S3_ENDPOINT: 'http://ministack:4566',
+        S3_PUBLIC_URL: 'http://localhost:4566/photos',
+        S3_FORCE_PATH_STYLE: 'true',
+      });
+
+      expect(env.S3_BUCKET).toBe('photos');
+      expect(env.S3_FORCE_PATH_STYLE).toBe(true);
+    });
+
+    it('rejects a malformed public URL', () => {
+      expect(() =>
+        validateEnv({ ...valid, S3_PUBLIC_URL: 'not a url' }),
+      ).toThrow(/S3_PUBLIC_URL/);
+    });
+  });
 });

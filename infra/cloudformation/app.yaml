@@ -39,6 +39,13 @@ Parameters:
   AuthRedirectUrl:
     Type: String
     Default: http://localhost:5173/auth/callback
+  PublicStorageUrl:
+    Type: String
+    Default: http://localhost:4566
+    Description: >-
+      Base URL browsers use to read objects (path style, bucket appended).
+      MiniStack serves S3 on localhost:4566; on real AWS this would be
+      https://s3.<region>.amazonaws.com or a CloudFront domain.
 
 Resources:
   # The connection string never appears in the task definition: ECS reads it
@@ -59,6 +66,66 @@ Resources:
       Description: OAuth client and JWT signing key used by the API.
       SecretString: !Sub |
         {"GOOGLE_CLIENT_ID":"${GoogleClientId}","GOOGLE_CLIENT_SECRET":"${GoogleClientSecret}","JWT_SECRET":"${JwtSecret}"}
+
+  # ── Photos ────────────────────────────────────────────────────────────
+  # Destination and activity photos. Objects are public-read so the frontend
+  # can use photoUrl straight in an <img>; only the API task can write.
+  PhotosBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'viajajunto-photos-${AWS::AccountId}'
+      # New AWS buckets block public policies by default; this one is meant
+      # to serve public images, so the policy below must be allowed.
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+      # Only needed if the frontend fetch()es images or draws them on a canvas;
+      # plain <img> tags work without it. (MiniStack ignores this block.)
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods: [GET, HEAD]
+            AllowedOrigins: ['*']
+            AllowedHeaders: ['*']
+            MaxAge: 3600
+
+  PhotosBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PhotosBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadPhotos
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${PhotosBucket.Arn}/*'
+
+  # Role the API process itself assumes (the execution role above is only
+  # used by ECS to start the task). The SDK picks it up automatically.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: viajajunto-api-task
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: write-photos
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub '${PhotosBucket.Arn}/*'
 
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -108,6 +175,7 @@ Resources:
       Cpu: '256'
       Memory: '512'
       ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
       ContainerDefinitions:
         - Name: api
           Image: !Ref Image
@@ -129,6 +197,19 @@ Resources:
               Value: !Ref AuthRedirectUrl
             - Name: JWT_EXPIRES_IN
               Value: '3600'
+            # S3 endpoint and credentials are not set here: ECS (and
+            # MiniStack) provide them to the task, and the SDK reads them
+            # from AWS_ENDPOINT_URL / the container credentials endpoint.
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: S3_BUCKET
+              Value: !Ref PhotosBucket
+            - Name: S3_PUBLIC_URL
+              Value: !Sub '${PublicStorageUrl}/${PhotosBucket}'
+            # MiniStack is reached by IP, where bucket subdomains cannot
+            # resolve. Unnecessary (but harmless) on real AWS.
+            - Name: S3_FORCE_PATH_STYLE
+              Value: 'true'
           Secrets:
             - Name: DATABASE_URL
               ValueFrom: !Ref DatabaseUrlSecret
@@ -169,3 +250,7 @@ Outputs:
     Value: !Ref DatabaseUrlSecret
   ApiUrl:
     Value: !Sub 'http://localhost:${HostPort}/api'
+  PhotosBucketName:
+    Value: !Ref PhotosBucket
+  PhotosPublicUrl:
+    Value: !Sub '${PublicStorageUrl}/${PhotosBucket}'

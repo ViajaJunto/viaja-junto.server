@@ -3,7 +3,10 @@
 #
 #   RDS (PostgreSQL) -> ECR (image) -> migrations -> ECS service
 #
+#   ... -> S3 bucket (photos) -> sample data
+#
 # Usage:  npm run aws:up && npm run aws:deploy
+# Skip the sample data with SKIP_SEED=1.
 #
 # Requires Docker and the AWS CLI v2 (brew install awscli). No real AWS
 # account is touched: every call goes to http://localhost:4566.
@@ -189,6 +192,30 @@ fix_task_secrets() {
   ok "service stable on ${revision##*/}"
 }
 
+# ── 5. Sample data ───────────────────────────────────────────────────────
+# Runs prisma/seed.mjs in the migrate image: destination records go to RDS,
+# their photos to the bucket the app stack just created. From inside the
+# Docker network MiniStack is reached as `ministack`; the URL saved in the
+# database is the one a browser on this machine can open.
+seed_data() {
+  if [[ "${SKIP_SEED:-0}" == 1 ]]; then return; fi
+  log "Seed: sample destinations and their photos"
+  PHOTOS_BUCKET=$(awsl cloudformation describe-stacks --stack-name viajajunto-app \
+    --query "Stacks[0].Outputs[?OutputKey=='PhotosBucketName'].OutputValue" --output text)
+  PHOTOS_URL=$(awsl cloudformation describe-stacks --stack-name viajajunto-app \
+    --query "Stacks[0].Outputs[?OutputKey=='PhotosPublicUrl'].OutputValue" --output text)
+  docker run --rm --network "$NETWORK" \
+    -e DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME?schema=public" \
+    -e S3_BUCKET="$PHOTOS_BUCKET" \
+    -e S3_ENDPOINT="http://ministack:4566" \
+    -e S3_PUBLIC_URL="$PHOTOS_URL" \
+    -e S3_FORCE_PATH_STYLE=true \
+    -e AWS_REGION="$AWS_DEFAULT_REGION" \
+    -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY \
+    viajajunto-migrate:local node prisma/seed.mjs
+  ok "sample data loaded (bucket $PHOTOS_BUCKET)"
+}
+
 wait_for_api() {
   log "Waiting for the API on http://localhost:$HOST_PORT/api"
   for _ in $(seq 1 60); do
@@ -210,6 +237,7 @@ summary() {
     Docs       http://localhost:$HOST_PORT/docs
     Image      $IMAGE
     Database   RDS $DB_ID ($DB_HOST:$DB_PORT)
+    Photos     ${PHOTOS_URL:-s3://viajajunto-photos-*} (S3 bucket, public read)
 
   Inspect:   npm run aws:status
   Tear down: npm run aws:destroy
@@ -224,6 +252,7 @@ main() {
   run_migrations
   deploy_app
   fix_task_secrets
+  seed_data
   wait_for_api
   summary
 }

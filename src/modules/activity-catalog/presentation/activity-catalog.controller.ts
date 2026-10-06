@@ -9,7 +9,11 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -35,6 +39,11 @@ import { CreateActivityCatalogDto } from '../application/dto/create-activity-cat
 import { UpdateActivityCatalogDto } from '../application/dto/update-activity-catalog.dto.js';
 import { ActivityCatalogResponseDto } from '../application/dto/activity-catalog-response.dto.js';
 import { ActivityCatalogService } from '../application/activity-catalog.service.js';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { ApiPhotoUpload } from '../../../shared/storage/http/api-photo-upload.decorator.js';
+import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
+import { photoFilePipe } from '../../../shared/storage/http/photo-file.pipe.js';
+import { PhotoUploadInterceptor } from '../../../shared/storage/http/photo-upload.interceptor.js';
 
 @ApiTags('Activity Catalog')
 @Controller('activity-catalog')
@@ -178,5 +187,25 @@ export class ActivityCatalogController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @ApiOperation({
+    summary: 'Upload the activity photo',
+    description:
+      'Stores the image in object storage (S3) and sets `photoUrl` to its public URL. Replaces, and deletes, the previous photo. Requires authentication.',
+  })
+  @ApiPhotoUpload('ActivityCatalog')
+  @ApiOkResponse({
+    description: 'The activity with its new `photoUrl`.',
+    type: ActivityCatalogResponseDto,
+  })
+  @Put(':id/photo')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(PhotoUploadInterceptor)
+  updatePhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile(photoFilePipe) file: UploadedPhoto,
+  ) {
+    return this.service.updatePhoto(id, file);
   }
 }

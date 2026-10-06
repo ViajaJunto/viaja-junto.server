@@ -3,6 +3,8 @@ import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-re
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
+import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
 import { DestinationCatalogRepository } from '../domain/destination-catalog.repository.js';
 import { CreateDestinationCatalogDto } from './dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from './dto/update-destination-catalog.dto.js';
@@ -10,7 +12,10 @@ import { DestinationCatalogResponseDto } from './dto/destination-catalog-respons
 
 @Injectable()
 export class DestinationCatalogService {
-  constructor(private readonly repository: DestinationCatalogRepository) {}
+  constructor(
+    private readonly repository: DestinationCatalogRepository,
+    private readonly photos: PhotoStorageService,
+  ) {}
 
   async findAll(
     query: PaginationQueryDto,
@@ -47,9 +52,41 @@ export class DestinationCatalogService {
     );
   }
 
+  /**
+   * Uploads a new photo and points the record at it.
+   *
+   * The previous photo is deleted only after the record is updated, and the
+   * new one is rolled back if that update fails, so the stored URL always
+   * resolves to an existing object.
+   */
+  async updatePhoto(
+    id: string,
+    photo: UploadedPhoto,
+  ): Promise<DestinationCatalogResponseDto> {
+    const current = await this.getOrFail(id);
+    const photoUrl = await this.photos.upload({
+      folder: 'destinations',
+      ownerId: id,
+      photo,
+    });
+
+    let updated;
+    try {
+      updated = await this.repository.update(id, { photoUrl });
+    } catch (error) {
+      await this.photos.discard(photoUrl);
+      throw error;
+    }
+
+    await this.photos.discard(current.photoUrl);
+
+    return DestinationCatalogResponseDto.from(updated);
+  }
+
   async remove(id: string): Promise<void> {
-    await this.getOrFail(id);
+    const current = await this.getOrFail(id);
     await this.repository.remove(id);
+    await this.photos.discard(current.photoUrl);
   }
 
   private async getOrFail(id: string) {

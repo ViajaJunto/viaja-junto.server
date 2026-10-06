@@ -20,4 +20,8 @@ for t in $(awsl ecs list-tasks --cluster viajajunto --desired-status STOPPED --q
   awsl ecs describe-tasks --cluster viajajunto --tasks "$t" \
     --query 'tasks[0].[taskDefinitionArn,stoppedReason]' --output text
 done | tail -5
+echo "── S3 (photos)"
+for b in $(awsl s3api list-buckets --query "Buckets[?starts_with(Name, 'viajajunto-photos-')].Name" --output text 2>/dev/null); do
+  printf '%s\t%s objects\n' "$b" "$(awsl s3api list-objects-v2 --bucket "$b" --query 'KeyCount' --output text)"
+done
 echo "── containers";  docker ps --filter name=ministack --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'

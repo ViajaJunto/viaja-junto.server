@@ -17,6 +17,10 @@ import { defineConfig } from 'prisma/config';
  */
 export default defineConfig({
   schema: 'prisma/schema.prisma',
+  migrations: {
+    // Also run by `prisma migrate reset` (npm run db:reset).
+    seed: 'node prisma/seed.mjs',
+  },
   datasource: {
     url: process.env.DATABASE_URL,
   },
