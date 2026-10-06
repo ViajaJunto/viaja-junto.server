@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  ViajaJunto - container registry. Deployed on its own, before the image is
+  pushed, so the application stack never references an image that does not
+  exist yet.
+
+Parameters:
+  RepositoryName:
+    Type: String
+    Default: viajajunto-api
+
+Resources:
+  ApiRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      ImageTagMutability: MUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      Tags:
+        - Key: project
+          Value: viajajunto
+
+Outputs:
+  RepositoryUri:
+    Description: URI the image is tagged and pushed with.
+    Value: !GetAtt ApiRepository.RepositoryUri

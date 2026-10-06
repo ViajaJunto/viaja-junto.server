@@ -23,6 +23,7 @@ describe('DestinationCatalogController', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      updatePhoto: vi.fn(),
     };
     controller = new DestinationCatalogController(
       service as unknown as DestinationCatalogService,
@@ -72,5 +73,16 @@ describe('DestinationCatalogController', () => {
     service.findAll.mockReturnValue(page);
 
     expect(controller.findAll({})).toBe(page);
+  });
+
+  it('hands the uploaded photo to the service', () => {
+    const file = {
+      buffer: Buffer.from('img'),
+      mimetype: 'image/png',
+    };
+
+    controller.updatePhoto(id, file);
+
+    expect(service.updatePhoto).toHaveBeenCalledWith(id, file);
   });
 });

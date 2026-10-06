@@ -9,7 +9,11 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -35,6 +39,11 @@ import { CreateDestinationCatalogDto } from '../application/dto/create-destinati
 import { UpdateDestinationCatalogDto } from '../application/dto/update-destination-catalog.dto.js';
 import { DestinationCatalogResponseDto } from '../application/dto/destination-catalog-response.dto.js';
 import { DestinationCatalogService } from '../application/destination-catalog.service.js';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { ApiPhotoUpload } from '../../../shared/storage/http/api-photo-upload.decorator.js';
+import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
+import { photoFilePipe } from '../../../shared/storage/http/photo-file.pipe.js';
+import { PhotoUploadInterceptor } from '../../../shared/storage/http/photo-upload.interceptor.js';
 
 @ApiTags('Destination Catalog')
 @Controller('destination-catalog')
@@ -181,5 +190,25 @@ export class DestinationCatalogController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @ApiOperation({
+    summary: 'Upload the destination photo',
+    description:
+      'Stores the image in object storage (S3) and sets `photoUrl` to its public URL. Replaces, and deletes, the previous photo. Requires authentication.',
+  })
+  @ApiPhotoUpload('DestinationCatalog')
+  @ApiOkResponse({
+    description: 'The destination with its new `photoUrl`.',
+    type: DestinationCatalogResponseDto,
+  })
+  @Put(':id/photo')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(PhotoUploadInterceptor)
+  updatePhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile(photoFilePipe) file: UploadedPhoto,
+  ) {
+    return this.service.updatePhoto(id, file);
   }
 }

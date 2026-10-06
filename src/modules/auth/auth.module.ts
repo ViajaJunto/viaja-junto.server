@@ -29,6 +29,8 @@ import { AuthController } from './presentation/auth.controller.js';
     // and infrastructure supplies the concrete implementation.
     { provide: AccessTokenIssuer, useClass: JwtAccessTokenIssuer },
   ],
-  exports: [AuthService],
+  // PassportModule is re-exported so a feature module can use JwtAuthGuard
+  // just by importing AuthModule.
+  exports: [AuthService, PassportModule],
 })
 export class AuthModule {}

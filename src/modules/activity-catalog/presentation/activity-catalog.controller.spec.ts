@@ -20,6 +20,7 @@ describe('ActivityCatalogController', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      updatePhoto: vi.fn(),
     };
     controller = new ActivityCatalogController(
       service as unknown as ActivityCatalogService,
@@ -69,5 +70,16 @@ describe('ActivityCatalogController', () => {
     service.findAll.mockReturnValue(page);
 
     expect(controller.findAll({})).toBe(page);
+  });
+
+  it('hands the uploaded photo to the service', () => {
+    const file = {
+      buffer: Buffer.from('img'),
+      mimetype: 'image/png',
+    };
+
+    controller.updatePhoto(id, file);
+
+    expect(service.updatePhoto).toHaveBeenCalledWith(id, file);
   });
 });
