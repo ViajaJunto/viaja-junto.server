@@ -7,8 +7,8 @@ import { UsersController } from './presentation/users.controller.js';
 
 @Module({
   // AuthModule imports this module, so it cannot be imported back here;
-  // PassportModule is all JwtAuthGuard needs.
-  imports: [PassportModule],
+  // a registered PassportModule is all JwtAuthGuard needs.
+  imports: [PassportModule.register({ session: false })],
   controllers: [UsersController],
   providers: [
     UsersService,
