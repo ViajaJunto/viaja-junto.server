@@ -131,9 +131,9 @@ export class UsersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() caller: AuthenticatedUser,
   ) {
-    return this.service.update(id, dto, user);
+    return this.service.update(id, dto, caller);
   }
 
   @ApiOperation({
@@ -169,8 +169,8 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() caller: AuthenticatedUser,
   ) {
-    return this.service.remove(id, user);
+    return this.service.remove(id, caller);
   }
 }

@@ -115,8 +115,11 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateReviewDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.service.create(dto, user);
+  create(
+    @Body() dto: CreateReviewDto,
+    @CurrentUser() author: AuthenticatedUser,
+  ) {
+    return this.service.create(dto, author);
   }
 
   @ApiOperation({
@@ -161,9 +164,9 @@ export class ReviewsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateReviewDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() author: AuthenticatedUser,
   ) {
-    return this.service.update(id, dto, user);
+    return this.service.update(id, dto, author);
   }
 
   @ApiOperation({
@@ -200,8 +203,8 @@ export class ReviewsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentUser() author: AuthenticatedUser,
   ) {
-    return this.service.remove(id, user);
+    return this.service.remove(id, author);
   }
 }
