@@ -16,6 +16,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -33,6 +34,8 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateBudgetDto } from '../application/dto/create-budget.dto.js';
 import { UpdateBudgetDto } from '../application/dto/update-budget.dto.js';
@@ -61,8 +64,11 @@ export class BudgetsController {
     type: ErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.service.findAll(query);
+  findAll(
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findAll(query, user);
   }
 
   @ApiOperation({
@@ -94,8 +100,11 @@ export class BudgetsController {
     type: ErrorResponseDto,
   })
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findOne(id, user);
   }
 
   @ApiOperation({
@@ -116,6 +125,10 @@ export class BudgetsController {
     description: 'This trip already has a budget.',
     type: ErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller has read-only (VIEWER) access to the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -123,8 +136,8 @@ export class BudgetsController {
   })
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateBudgetDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateBudgetDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
@@ -155,14 +168,22 @@ export class BudgetsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller has read-only (VIEWER) access to the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBudgetDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBudgetDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
@@ -185,6 +206,10 @@ export class BudgetsController {
     description: 'No budget exists with this id.',
     type: ErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller has read-only (VIEWER) access to the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -192,7 +217,10 @@ export class BudgetsController {
   })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.remove(id, user);
   }
 }

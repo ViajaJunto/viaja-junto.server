@@ -13,7 +13,8 @@ export type UpdateTripData = Partial<CreateTripData>;
  * are erased at compile time.
  */
 export abstract class TripRepository {
-  abstract findAll(page: PageRequest): Promise<Page<Trip>>;
+  /** Trips the user created or was invited to. */
+  abstract findAll(page: PageRequest, userId: string): Promise<Page<Trip>>;
   abstract findById(id: string): Promise<Trip | null>;
   abstract create(data: CreateTripData): Promise<Trip>;
   abstract update(id: string, data: UpdateTripData): Promise<Trip>;

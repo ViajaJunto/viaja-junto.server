@@ -16,6 +16,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -62,8 +63,11 @@ export class TripsController {
     type: ErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.service.findAll(query);
+  findAll(
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findAll(query, user);
   }
 
   @ApiOperation({
@@ -92,8 +96,11 @@ export class TripsController {
     type: ErrorResponseDto,
   })
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findOne(id, user);
   }
 
   @ApiOperation({
@@ -110,6 +117,10 @@ export class TripsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller is not the creator of the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -124,7 +135,7 @@ export class TripsController {
   @ApiOperation({
     summary: 'Update a trip',
     description:
-      'Updates name, description, dates or status. The creator cannot be reassigned. Requires EDITOR permission on the trip.',
+      'Updates name, description, dates or status. The creator cannot be reassigned. Only the creator can do this.',
   })
   @ApiParam({
     name: 'id',
@@ -146,14 +157,22 @@ export class TripsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller is not the creator of the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTripDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTripDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
@@ -176,6 +195,10 @@ export class TripsController {
     description: 'No trip exists with this id.',
     type: ErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller is not the creator of the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -183,7 +206,10 @@ export class TripsController {
   })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.remove(id, user);
   }
 }

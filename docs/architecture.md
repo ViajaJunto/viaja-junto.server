@@ -110,6 +110,7 @@ src/
 ├── shared/
 │   ├── database/
 │   │   ├── prisma.service.ts      PrismaClient exposed as a Nest provider
+│   │   ├── trip-scope.ts          Prisma filter: trips a user created or joined
 │   │   └── prisma.module.ts       @Global — injectable from any module
 │   └── storage/                   Photo uploads (S3), same layering as a module
 │       ├── domain/                ObjectStorage port, photo rules (types, size, keys)
@@ -167,6 +168,7 @@ No service or controller is touched.
 | `trip-activities` | `/trip-activities` | `trip_activity` |
 | `budgets` | `/budgets` | `budget` |
 | `reviews` | `/reviews` | `review` |
+| `trip-access` | — (no routes) | Trip-level authorization policy shared by the trip modules |
 
 
 ### 5.5 Database access (Prisma 7)
@@ -309,6 +311,25 @@ through `@CurrentUser()`, never from the payload: `createdBy` of a trip and
 `userId` of a review are set by the server, and `PATCH/DELETE /users/{id}` only
 accept the caller's own id. Only a review's author can update or delete it.
 
+**Trip-level authorization.** Being signed in is not enough to touch a trip.
+`TripAccessService` (`src/modules/trip-access`) resolves the caller's role on
+the trip — creator, `EDITOR` or `VIEWER` — from a `tripId`, a trip destination
+or a planned activity, and the services of `trips`, `trip-members`,
+`trip-destinations`, `trip-activities` and `budgets` consult it:
+
+| Action | Creator | Editor | Viewer | Others |
+| ------ | :-----: | :----: | :----: | :----: |
+| Read the trip and its destinations, activities, budget and members | yes | yes | yes | 404 |
+| Add, edit or remove destinations, activities and the budget | yes | yes | 403 | 404 |
+| Edit or delete the trip | yes | 403 | 403 | 404 |
+| Invite, change the permission of, or remove members | yes | 403 | 403 | 404 |
+
+Someone with no relationship to a trip receives the same `404` as for a trip
+that does not exist, so ids cannot be probed. List endpoints only return rows
+belonging to trips the caller created or joined. The creator owns the trip
+implicitly and has no `trip_member` row, so the creator cannot be removed or
+downgraded, and adding the creator as a member answers `409`.
+
 **Status codes.**
 
 | Code | Meaning |
@@ -318,7 +339,8 @@ accept the caller's own id. Only a review's author can update or delete it.
 | `204` | Deleted, no body |
 | `400` | Path parameter is not a valid UUID |
 | `401` | Missing or invalid token |
-| `404` | No resource with that id |
+| `403` | Authenticated, but the role on the trip (or ownership of the record) does not allow the action |
+| `404` | No resource with that id, or a trip the caller has no access to |
 | `409` | Unique constraint violated (duplicate email, member, budget or review) |
 | `422` | Payload failed validation — one message per violated rule |
 

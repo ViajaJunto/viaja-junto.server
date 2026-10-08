@@ -16,6 +16,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -32,6 +33,8 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateTripDestinationDto } from '../application/dto/create-trip-destination.dto.js';
 import { UpdateTripDestinationDto } from '../application/dto/update-trip-destination.dto.js';
@@ -63,8 +66,11 @@ export class TripDestinationsController {
     type: ErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.service.findAll(query);
+  findAll(
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findAll(query, user);
   }
 
   @ApiOperation({
@@ -96,8 +102,11 @@ export class TripDestinationsController {
     type: ErrorResponseDto,
   })
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findOne(id, user);
   }
 
   @ApiOperation({
@@ -114,6 +123,10 @@ export class TripDestinationsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller has read-only (VIEWER) access to the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -121,8 +134,11 @@ export class TripDestinationsController {
   })
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateTripDestinationDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateTripDestinationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
@@ -153,6 +169,10 @@ export class TripDestinationsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller has read-only (VIEWER) access to the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -162,8 +182,9 @@ export class TripDestinationsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTripDestinationDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.update(id, dto);
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
@@ -185,6 +206,10 @@ export class TripDestinationsController {
     description: 'No trip destination exists with this id.',
     type: ErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'The caller has read-only (VIEWER) access to the trip.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -192,7 +217,10 @@ export class TripDestinationsController {
   })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.remove(id, user);
   }
 }

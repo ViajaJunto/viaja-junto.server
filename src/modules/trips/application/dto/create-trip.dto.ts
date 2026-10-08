@@ -9,7 +9,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-/** Request body for creating a trip. */
+/** Request body for creating a trip. The creator is the authenticated caller. */
 export class CreateTripDto {
   @ApiProperty({
     description: 'Trip name shown in the dashboard.',

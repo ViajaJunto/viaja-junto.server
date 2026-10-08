@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/swagger';
+import { OmitType, PartialType } from '@nestjs/swagger';
 import { CreateBudgetDto } from './create-budget.dto.js';
 
 /**
@@ -7,4 +7,6 @@ import { CreateBudgetDto } from './create-budget.dto.js';
  * Derived from CreateBudgetDto, so every validation rule and every piece
  * of OpenAPI metadata stays in one place; here they only become optional.
  */
-export class UpdateBudgetDto extends PartialType(CreateBudgetDto) {}
+export class UpdateBudgetDto extends PartialType(
+  OmitType(CreateBudgetDto, ['tripId'] as const),
+) {}

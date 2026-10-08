@@ -16,6 +16,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -33,6 +34,8 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateTripMemberDto } from '../application/dto/create-trip-member.dto.js';
 import { UpdateTripMemberDto } from '../application/dto/update-trip-member.dto.js';
@@ -61,8 +64,11 @@ export class TripMembersController {
     type: ErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.service.findAll(query);
+  findAll(
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findAll(query, user);
   }
 
   @ApiOperation({
@@ -93,8 +99,11 @@ export class TripMembersController {
     type: ErrorResponseDto,
   })
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findOne(id, user);
   }
 
   @ApiOperation({
@@ -112,7 +121,12 @@ export class TripMembersController {
     type: ValidationErrorResponseDto,
   })
   @ApiConflictResponse({
-    description: 'This user is already a member of the trip.',
+    description:
+      'This user is already a member of the trip, or is the trip creator.',
+    type: ErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Only the trip creator can manage members.',
     type: ErrorResponseDto,
   })
   @ApiBearerAuth('bearer')
@@ -122,8 +136,11 @@ export class TripMembersController {
   })
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateTripMemberDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateTripMemberDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
@@ -154,6 +171,10 @@ export class TripMembersController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'Only the trip creator can manage members.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -163,8 +184,9 @@ export class TripMembersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTripMemberDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.update(id, dto);
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
@@ -187,6 +209,10 @@ export class TripMembersController {
     description: 'No trip member exists with this id.',
     type: ErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'Only the trip creator can manage members.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
@@ -194,7 +220,10 @@ export class TripMembersController {
   })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.remove(id, user);
   }
 }
