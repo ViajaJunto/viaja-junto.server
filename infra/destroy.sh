@@ -10,6 +10,15 @@ export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 export AWS_PAGER=""
 awsl() { aws --endpoint-url "$ENDPOINT" "$@"; }
 
+# MiniStack keeps its state in memory: if it is not running, the stacks,
+# bucket and RDS instance are already gone and there is nothing to remove.
+if ! curl -fsS "$ENDPOINT/_ministack/health" >/dev/null 2>&1; then
+  echo "MiniStack is not running on $ENDPOINT: nothing to destroy."
+  echo "Leftover containers it started (RDS, ECS tasks), if any:"
+  docker ps -a --filter "label=ministack" --format '  {{.Names}}\t{{.Status}}' 2>/dev/null || true
+  exit 0
+fi
+
 echo "▸ photos bucket (emptied first: S3 refuses to delete a bucket with objects)"
 for bucket in $(awsl s3api list-buckets \
     --query "Buckets[?starts_with(Name, 'viajajunto-photos-')].Name" --output text 2>/dev/null); do

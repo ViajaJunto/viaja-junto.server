@@ -27,7 +27,7 @@ DB_NAME="viajajunto"
 DB_USER="viajajunto"
 DB_PASSWORD="${DB_PASSWORD:-viajajunto-local}"
 IMAGE_TAG="${IMAGE_TAG:-$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo latest)}"
-HOST_PORT="${HOST_PORT:-3001}"
+HOST_PORT="${HOST_PORT:-3000}"
 NETWORK="${MINISTACK_NETWORK:-viajajunto_default}"
 
 log()  { printf '\n\033[1;36m▸ %s\033[0m\n' "$*"; }

@@ -26,8 +26,8 @@
     "prisma:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down",
-    "db:nuke": "docker compose down -v",
+    "db:down": "docker compose --profile aws --profile tools down",
+    "db:nuke": "docker compose --profile aws --profile tools down -v",
     "db:logs": "docker compose logs -f postgres",
     "db:admin": "docker compose --profile tools up -d",
     "db:seed": "node prisma/seed.mjs",
@@ -35,13 +35,13 @@
     "openapi:generate": "npm run build && node scripts/generate-openapi.mjs openapi.json",
     "openapi:lint": "npx --yes @stoplight/spectral-cli@6 lint openapi.json --ruleset .spectral.yaml",
     "stack:up": "docker compose up -d --build",
-    "stack:down": "docker compose down",
+    "stack:down": "docker compose --profile aws --profile tools down",
     "stack:logs": "docker compose logs -f api",
     "aws:up": "docker compose --profile aws up -d --wait ministack",
     "aws:deploy": "bash infra/deploy.sh",
     "aws:status": "bash infra/status.sh",
     "aws:destroy": "bash infra/destroy.sh",
-    "aws:down": "docker compose --profile aws stop ministack"
+    "aws:down": "docker compose --profile aws rm --stop --force ministack"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",
