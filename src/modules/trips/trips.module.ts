@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module.js';
 import { TripAccessModule } from '../trip-access/trip-access.module.js';
 import { TripsService } from './application/trips.service.js';
 import { TripRepository } from './domain/trip.repository.js';
@@ -6,7 +7,7 @@ import { TripPrismaRepository } from './infrastructure/trip.prisma.repository.js
 import { TripsController } from './presentation/trips.controller.js';
 
 @Module({
-  imports: [TripAccessModule],
+  imports: [AuthModule, TripAccessModule],
   controllers: [TripsController],
   providers: [
     TripsService,
