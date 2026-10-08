@@ -5,39 +5,46 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
+import {
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateBudgetDto } from '../application/dto/create-budget.dto.js';
 import { UpdateBudgetDto } from '../application/dto/update-budget.dto.js';
 import { BudgetResponseDto } from '../application/dto/budget-response.dto.js';
 import { BudgetsService } from '../application/budgets.service.js';
 
 @ApiTags('Budgets')
+@UseGuards(JwtAuthGuard)
 @Controller('budgets')
 export class BudgetsController {
   constructor(private readonly service: BudgetsService) {}
@@ -52,14 +59,13 @@ export class BudgetsController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.service.findAll(query);
+  findAll(
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findAll(query, user);
   }
 
   @ApiOperation({
@@ -67,32 +73,16 @@ export class BudgetsController {
     description:
       'Returns the budget with its total and the amount already committed to activities.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Budget identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Budget identifier.')
   @ApiOkResponse({
     description: 'The requested budget.',
     type: BudgetResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No budget exists with this id.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No budget exists with this id.')
+  @ApiAuthenticated()
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(id);
+  findOne(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.findOne(id, user);
   }
 
   @ApiOperation({
@@ -113,15 +103,12 @@ export class BudgetsController {
     description: 'This trip already has a budget.',
     type: ErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateBudgetDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateBudgetDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
@@ -129,37 +116,26 @@ export class BudgetsController {
     description:
       'Adjusts the total or the amount committed to activities. Requires EDITOR permission on the trip.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Budget identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Budget identifier.')
   @ApiBody({ type: UpdateBudgetDto })
   @ApiOkResponse({
     description: 'The updated budget.',
     type: BudgetResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No budget exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No budget exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBudgetDto) {
-    return this.service.update(id, dto);
+  update(
+    @IdParam() id: string,
+    @Body() dto: UpdateBudgetDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
@@ -167,29 +143,14 @@ export class BudgetsController {
     description:
       'Removes budget tracking from the trip. The trip and its activities are untouched.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Budget identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Budget identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No budget exists with this id.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No budget exists with this id.')
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.remove(id, user);
   }
 }

@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import type { GoogleUserData } from '../domain/user.repository.js';
 import { UserRepository } from '../domain/user.repository.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -62,15 +67,28 @@ export class UsersService {
     );
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<UserResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    user: AuthenticatedUser,
+  ): Promise<UserResponseDto> {
+    this.assertSelf(id, user);
     await this.getOrFail(id);
 
     return UserResponseDto.from(await this.repository.update(id, { ...dto }));
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    this.assertSelf(id, user);
     await this.getOrFail(id);
     await this.repository.remove(id);
+  }
+
+  /** An account can only be changed or deleted by its own owner. */
+  private assertSelf(id: string, user: AuthenticatedUser): void {
+    if (id !== user.id) {
+      throw new ForbiddenException('You can only change your own account');
+    }
   }
 
   private async getOrFail(id: string) {

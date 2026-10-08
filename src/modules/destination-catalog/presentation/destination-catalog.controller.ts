@@ -115,6 +115,7 @@ export class DestinationCatalogController {
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateDestinationCatalogDto) {
@@ -154,6 +155,7 @@ export class DestinationCatalogController {
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -186,6 +188,7 @@ export class DestinationCatalogController {
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string) {
