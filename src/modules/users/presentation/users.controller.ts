@@ -5,8 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Query,
   UseGuards,
@@ -27,6 +25,7 @@ import {
   ApiIdParam,
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
@@ -68,7 +67,7 @@ export class UsersController {
   @ApiNotFound('No user exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@IdParam() id: string) {
     return this.service.findOne(id);
   }
 
@@ -89,7 +88,7 @@ export class UsersController {
   @ApiAuthenticated()
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @Body() dto: UpdateUserDto,
     @CurrentUser() caller: AuthenticatedUser,
   ) {
@@ -108,10 +107,7 @@ export class UsersController {
   @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() caller: AuthenticatedUser,
-  ) {
+  remove(@IdParam() id: string, @CurrentUser() caller: AuthenticatedUser) {
     return this.service.remove(id, caller);
   }
 }

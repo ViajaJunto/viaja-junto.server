@@ -5,8 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -30,6 +28,7 @@ import {
   ApiIdParam,
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -81,10 +80,7 @@ export class TripMembersController {
   @ApiNotFound('No trip member exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
-  findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  findOne(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.service.findOne(id, user);
   }
 
@@ -138,7 +134,7 @@ export class TripMembersController {
   @ApiAuthenticated()
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @Body() dto: UpdateTripMemberDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
@@ -157,10 +153,7 @@ export class TripMembersController {
   @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  remove(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.service.remove(id, user);
   }
 }

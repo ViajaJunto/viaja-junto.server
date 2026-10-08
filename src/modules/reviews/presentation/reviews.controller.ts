@@ -5,8 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -30,6 +28,7 @@ import {
   ApiIdParam,
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -75,7 +74,7 @@ export class ReviewsController {
   })
   @ApiNotFound('No review exists with this id.')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@IdParam() id: string) {
     return this.service.findOne(id);
   }
 
@@ -129,7 +128,7 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @Body() dto: UpdateReviewDto,
     @CurrentUser() author: AuthenticatedUser,
   ) {
@@ -149,10 +148,7 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() author: AuthenticatedUser,
-  ) {
+  remove(@IdParam() id: string, @CurrentUser() author: AuthenticatedUser) {
     return this.service.remove(id, author);
   }
 }
