@@ -13,14 +13,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
   ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -28,11 +25,12 @@ import {
   ApiAuthenticated,
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
-import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
-  ErrorResponseDto,
-  ValidationErrorResponseDto,
-} from '../../../shared/http/dto/error-response.dto.js';
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
+import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
@@ -75,24 +73,12 @@ export class TripDestinationsController {
     description:
       'Returns one stop of the itinerary with its arrival and departure dates.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripDestination identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripDestination identifier.')
   @ApiOkResponse({
     description: 'The requested trip destination.',
     type: TripDestinationResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip destination exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip destination exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
   findOne(
@@ -132,25 +118,13 @@ export class TripDestinationsController {
     description:
       'Adjusts dates, notes or the position in the itinerary. The trip and the catalog entry cannot be reassigned.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripDestination identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripDestination identifier.')
   @ApiBody({ type: UpdateTripDestinationDto })
   @ApiOkResponse({
     description: 'The updated trip destination.',
     type: TripDestinationResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip destination exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip destination exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -170,21 +144,9 @@ export class TripDestinationsController {
     summary: 'Remove a destination from a trip',
     description: 'Also removes every activity planned for that stop.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripDestination identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripDestination identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip destination exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip destination exists with this id.')
   @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
   @ApiAuthenticated()
   @Delete(':id')

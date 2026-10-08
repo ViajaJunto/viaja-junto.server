@@ -12,13 +12,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
   ApiBody,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -26,11 +23,12 @@ import {
   ApiAuthenticated,
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
-import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
-  ErrorResponseDto,
-  ValidationErrorResponseDto,
-} from '../../../shared/http/dto/error-response.dto.js';
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
+import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
@@ -65,21 +63,9 @@ export class UsersController {
     summary: 'Get a user by id',
     description: 'Returns a single user. Requires authentication.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'User identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('User identifier.')
   @ApiOkResponse({ description: 'The requested user.', type: UserResponseDto })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No user exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No user exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -91,22 +77,10 @@ export class UsersController {
     description:
       'Updates the authenticated user profile. Accounts are created by signing in with Google, so there is no password to change.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'User identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('User identifier.')
   @ApiBody({ type: UpdateUserDto })
   @ApiOkResponse({ description: 'The updated user.', type: UserResponseDto })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No user exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No user exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -127,21 +101,9 @@ export class UsersController {
     description:
       'Permanently deletes the account and every trip membership and review attached to it.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'User identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('User identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No user exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No user exists with this id.')
   @ApiForbidden('The token belongs to a different user.')
   @ApiAuthenticated()
   @Delete(':id')

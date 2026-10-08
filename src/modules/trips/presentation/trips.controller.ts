@@ -13,14 +13,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
   ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -28,6 +25,10 @@ import {
   ApiAuthenticated,
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
+import {
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -72,21 +73,9 @@ export class TripsController {
     description:
       'Returns a single trip. The caller must be the creator or a member of the trip.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Trip identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Trip identifier.')
   @ApiOkResponse({ description: 'The requested trip.', type: TripResponseDto })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
   findOne(
@@ -123,22 +112,10 @@ export class TripsController {
     description:
       'Updates name, description, dates or status. The creator cannot be reassigned. Only the creator can do this.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Trip identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Trip identifier.')
   @ApiBody({ type: UpdateTripDto })
   @ApiOkResponse({ description: 'The updated trip.', type: TripResponseDto })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -159,21 +136,9 @@ export class TripsController {
     description:
       'Deletes the trip along with its members, destinations, activities and budget. Only the creator can do this.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Trip identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Trip identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip exists with this id.')
   @ApiForbidden('The caller is not the creator of the trip.')
   @ApiAuthenticated()
   @Delete(':id')

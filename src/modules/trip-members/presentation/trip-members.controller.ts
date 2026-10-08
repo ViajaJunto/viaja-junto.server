@@ -13,15 +13,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -29,6 +26,10 @@ import {
   ApiAuthenticated,
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
+import {
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -72,24 +73,12 @@ export class TripMembersController {
     summary: 'Get a membership by id',
     description: 'Returns a single membership record.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripMember identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripMember identifier.')
   @ApiOkResponse({
     description: 'The requested trip member.',
     type: TripMemberResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip member exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip member exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
   findOne(
@@ -134,25 +123,13 @@ export class TripMembersController {
     description:
       'Promotes a member to EDITOR or demotes them to VIEWER. Only the trip creator can do this.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripMember identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripMember identifier.')
   @ApiBody({ type: UpdateTripMemberDto })
   @ApiOkResponse({
     description: 'The updated trip member.',
     type: TripMemberResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip member exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip member exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -173,21 +150,9 @@ export class TripMembersController {
     description:
       'Revokes a user access to the trip. The trip itself is not affected.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripMember identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripMember identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip member exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip member exists with this id.')
   @ApiForbidden('Only the trip creator can manage members.')
   @ApiAuthenticated()
   @Delete(':id')

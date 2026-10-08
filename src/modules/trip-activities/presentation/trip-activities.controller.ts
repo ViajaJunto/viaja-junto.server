@@ -13,14 +13,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
   ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -28,11 +25,12 @@ import {
   ApiAuthenticated,
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
-import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
-  ErrorResponseDto,
-  ValidationErrorResponseDto,
-} from '../../../shared/http/dto/error-response.dto.js';
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
+import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
@@ -75,24 +73,12 @@ export class TripActivitiesController {
     description:
       'Returns one scheduled activity with its time, duration and expected cost.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripActivity identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripActivity identifier.')
   @ApiOkResponse({
     description: 'The requested planned activity.',
     type: TripActivityResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No planned activity exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No planned activity exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
   findOne(
@@ -132,25 +118,13 @@ export class TripActivitiesController {
     description:
       'Adjusts schedule, duration, cost or status. The stop and the catalog entry cannot be reassigned.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripActivity identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripActivity identifier.')
   @ApiBody({ type: UpdateTripActivityDto })
   @ApiOkResponse({
     description: 'The updated planned activity.',
     type: TripActivityResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No planned activity exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No planned activity exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -171,21 +145,9 @@ export class TripActivitiesController {
     description:
       'Removes the activity from the itinerary. The catalog entry is untouched.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripActivity identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripActivity identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No planned activity exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No planned activity exists with this id.')
   @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
   @ApiAuthenticated()
   @Delete(':id')

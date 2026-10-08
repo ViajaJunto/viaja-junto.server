@@ -13,15 +13,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -29,6 +26,10 @@ import {
   ApiAuthenticated,
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
+import {
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -73,24 +74,12 @@ export class BudgetsController {
     description:
       'Returns the budget with its total and the amount already committed to activities.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Budget identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Budget identifier.')
   @ApiOkResponse({
     description: 'The requested budget.',
     type: BudgetResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No budget exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No budget exists with this id.')
   @ApiAuthenticated()
   @Get(':id')
   findOne(
@@ -131,25 +120,13 @@ export class BudgetsController {
     description:
       'Adjusts the total or the amount committed to activities. Requires EDITOR permission on the trip.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Budget identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Budget identifier.')
   @ApiBody({ type: UpdateBudgetDto })
   @ApiOkResponse({
     description: 'The updated budget.',
     type: BudgetResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No budget exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No budget exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
@@ -170,21 +147,9 @@ export class BudgetsController {
     description:
       'Removes budget tracking from the trip. The trip and its activities are untouched.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Budget identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Budget identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No budget exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No budget exists with this id.')
   @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
   @ApiAuthenticated()
   @Delete(':id')
