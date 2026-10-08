@@ -5,7 +5,6 @@ import {
   IsIn,
   IsOptional,
   IsString,
-  IsUUID,
   Length,
   MaxLength,
 } from 'class-validator';
@@ -64,12 +63,4 @@ export class CreateTripDto {
   @IsOptional()
   @IsIn(['PLANNING', 'CONFIRMED', 'COMPLETED'])
   status?: 'PLANNING' | 'CONFIRMED' | 'COMPLETED';
-
-  @ApiProperty({
-    description: 'Identifier of the user who owns the trip.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
-  @IsUUID('4')
-  createdBy!: string;
 }

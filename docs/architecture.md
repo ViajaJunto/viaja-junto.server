@@ -302,10 +302,12 @@ Endpoints are documented with `@ApiBearerAuth` and expect
 | `GET /activity-catalog`, `GET /activity-catalog/{id}` | Activity discovery |
 | `GET /reviews`, `GET /reviews/{id}` | Reading community reviews |
 
-Everything else requires a token. `JwtAuthGuard` and the `@CurrentUser()`
-decorator are available in `src/modules/auth/presentation`; so far only
-`GET /auth/me` applies the guard, and the resource controllers still have to
-adopt it.
+Everything else requires a token: every controller applies `JwtAuthGuard`
+(`src/modules/auth/presentation`), and the catalog and review controllers apply
+it only to their write routes. The acting user always comes from the token
+through `@CurrentUser()`, never from the payload: `createdBy` of a trip and
+`userId` of a review are set by the server, and `PATCH/DELETE /users/{id}` only
+accept the caller's own id. Only a review's author can update or delete it.
 
 **Status codes.**
 

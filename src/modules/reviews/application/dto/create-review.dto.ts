@@ -12,14 +12,6 @@ import {
 /** Request body for creating a review. */
 export class CreateReviewDto {
   @ApiProperty({
-    description: 'Author of the review.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
-  @IsUUID('4')
-  userId!: string;
-
-  @ApiProperty({
     description: 'Catalog activity being reviewed.',
     format: 'uuid',
     example: 'c48a1f60-7b22-4d19-9e33-5a0b6d2c8f41',

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '../domain/user.entity.js';
 import type { UserRepository } from '../domain/user.repository.js';
@@ -22,6 +22,12 @@ type RepoMock = {
 };
 
 describe('UsersService', () => {
+  const self = { id: base.id, email: base.email };
+  const stranger = {
+    id: '99999999-9999-4999-8999-999999999999',
+    email: 'eve@example.com',
+  };
+
   let repository: RepoMock;
   let service: UsersService;
 
@@ -143,11 +149,11 @@ describe('UsersService', () => {
   });
 
   describe('update', () => {
-    it('updates an existing record', async () => {
+    it('lets users change their own account', async () => {
       repository.findById.mockResolvedValue(entity());
       repository.update.mockResolvedValue(entity());
 
-      await service.update(base.id, {});
+      await service.update(base.id, {}, self);
 
       expect(repository.update).toHaveBeenCalledWith(base.id, {});
     });
@@ -155,19 +161,26 @@ describe('UsersService', () => {
     it('does not touch the repository when the record is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update(base.id, {})).rejects.toBeInstanceOf(
+      await expect(service.update(base.id, {}, self)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it("forbids changing someone else's account", async () => {
+      await expect(
+        service.update(base.id, {}, stranger),
+      ).rejects.toBeInstanceOf(ForbiddenException);
       expect(repository.update).not.toHaveBeenCalled();
     });
   });
 
   describe('remove', () => {
-    it('deletes an existing record', async () => {
+    it('lets users delete their own account', async () => {
       repository.findById.mockResolvedValue(entity());
       repository.remove.mockResolvedValue(undefined);
 
-      await service.remove(base.id);
+      await service.remove(base.id, self);
 
       expect(repository.remove).toHaveBeenCalledWith(base.id);
     });
@@ -175,8 +188,15 @@ describe('UsersService', () => {
     it('does not delete when the record is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.remove(base.id)).rejects.toBeInstanceOf(
+      await expect(service.remove(base.id, self)).rejects.toBeInstanceOf(
         NotFoundException,
+      );
+      expect(repository.remove).not.toHaveBeenCalled();
+    });
+
+    it("forbids deleting someone else's account", async () => {
+      await expect(service.remove(base.id, stranger)).rejects.toBeInstanceOf(
+        ForbiddenException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
     });

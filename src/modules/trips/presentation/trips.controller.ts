@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -31,12 +32,16 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateTripDto } from '../application/dto/create-trip.dto.js';
 import { UpdateTripDto } from '../application/dto/update-trip.dto.js';
 import { TripResponseDto } from '../application/dto/trip-response.dto.js';
 import { TripsService } from '../application/trips.service.js';
 
 @ApiTags('Trips')
+@UseGuards(JwtAuthGuard)
 @Controller('trips')
 export class TripsController {
   constructor(private readonly service: TripsService) {}
@@ -112,8 +117,8 @@ export class TripsController {
   })
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateTripDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateTripDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({

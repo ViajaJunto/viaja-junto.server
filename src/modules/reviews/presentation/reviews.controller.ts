@@ -10,11 +10,13 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -32,6 +34,9 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateReviewDto } from '../application/dto/create-review.dto.js';
 import { UpdateReviewDto } from '../application/dto/update-review.dto.js';
 import { ReviewResponseDto } from '../application/dto/review-response.dto.js';
@@ -107,10 +112,11 @@ export class ReviewsController {
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateReviewDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateReviewDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
@@ -141,14 +147,23 @@ export class ReviewsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'Only the review author can do this.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateReviewDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateReviewDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
@@ -171,14 +186,22 @@ export class ReviewsController {
     description: 'No review exists with this id.',
     type: ErrorResponseDto,
   })
+  @ApiForbiddenResponse({
+    description: 'Only the review author can do this.',
+    type: ErrorResponseDto,
+  })
   @ApiBearerAuth('bearer')
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.remove(id, user);
   }
 }

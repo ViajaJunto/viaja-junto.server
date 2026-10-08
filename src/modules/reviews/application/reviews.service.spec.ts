@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Review } from '../domain/review.entity.js';
 import type { ReviewRepository } from '../domain/review.repository.js';
@@ -23,6 +23,12 @@ type RepoMock = {
 };
 
 describe('ReviewsService', () => {
+  const author = { id: base.userId, email: 'ana@example.com' };
+  const stranger = {
+    id: '99999999-9999-4999-8999-999999999999',
+    email: 'eve@example.com',
+  };
+
   let repository: RepoMock;
   let service: ReviewsService;
 
@@ -90,27 +96,43 @@ describe('ReviewsService', () => {
   });
 
   describe('create', () => {
-    it('forwards the payload to the repository', async () => {
+    it('takes the author from the authenticated caller', async () => {
       repository.create.mockResolvedValue(entity());
 
-      await service.create({
-        userId: '11111111-1111-4111-8111-111111111111',
-        activityId: '66666666-6666-4666-8666-666666666666',
-        rating: 5,
-      });
+      await service.create(
+        { activityId: '66666666-6666-4666-8666-666666666666', rating: 5 },
+        author,
+      );
 
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ rating: 5 }),
+        expect.objectContaining({ rating: 5, userId: author.id }),
+      );
+    });
+
+    it('ignores a userId smuggled into the payload', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.create(
+        {
+          activityId: '66666666-6666-4666-8666-666666666666',
+          rating: 5,
+          userId: stranger.id,
+        } as never,
+        author,
+      );
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: author.id }),
       );
     });
   });
 
   describe('update', () => {
-    it('updates an existing record', async () => {
+    it('lets the author update the review', async () => {
       repository.findById.mockResolvedValue(entity());
       repository.update.mockResolvedValue(entity());
 
-      await service.update(base.id, {});
+      await service.update(base.id, {}, author);
 
       expect(repository.update).toHaveBeenCalledWith(base.id, {});
     });
@@ -118,19 +140,28 @@ describe('ReviewsService', () => {
     it('does not touch the repository when the record is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update(base.id, {})).rejects.toBeInstanceOf(
+      await expect(service.update(base.id, {}, author)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('forbids anyone but the author', async () => {
+      repository.findById.mockResolvedValue(entity());
+
+      await expect(
+        service.update(base.id, {}, stranger),
+      ).rejects.toBeInstanceOf(ForbiddenException);
       expect(repository.update).not.toHaveBeenCalled();
     });
   });
 
   describe('remove', () => {
-    it('deletes an existing record', async () => {
+    it('lets the author delete the review', async () => {
       repository.findById.mockResolvedValue(entity());
       repository.remove.mockResolvedValue(undefined);
 
-      await service.remove(base.id);
+      await service.remove(base.id, author);
 
       expect(repository.remove).toHaveBeenCalledWith(base.id);
     });
@@ -138,8 +169,17 @@ describe('ReviewsService', () => {
     it('does not delete when the record is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.remove(base.id)).rejects.toBeInstanceOf(
+      await expect(service.remove(base.id, author)).rejects.toBeInstanceOf(
         NotFoundException,
+      );
+      expect(repository.remove).not.toHaveBeenCalled();
+    });
+
+    it('forbids anyone but the author', async () => {
+      repository.findById.mockResolvedValue(entity());
+
+      await expect(service.remove(base.id, stranger)).rejects.toBeInstanceOf(
+        ForbiddenException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
     });

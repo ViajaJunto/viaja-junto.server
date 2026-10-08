@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -31,12 +32,14 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateTripDestinationDto } from '../application/dto/create-trip-destination.dto.js';
 import { UpdateTripDestinationDto } from '../application/dto/update-trip-destination.dto.js';
 import { TripDestinationResponseDto } from '../application/dto/trip-destination-response.dto.js';
 import { TripDestinationsService } from '../application/trip-destinations.service.js';
 
 @ApiTags('Trip Destinations')
+@UseGuards(JwtAuthGuard)
 @Controller('trip-destinations')
 export class TripDestinationsController {
   constructor(private readonly service: TripDestinationsService) {}

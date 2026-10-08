@@ -3,6 +3,7 @@ import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-re
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripRepository } from '../domain/trip.repository.js';
 import { CreateTripDto } from './dto/create-trip.dto.js';
 import { UpdateTripDto } from './dto/update-trip.dto.js';
@@ -28,10 +29,14 @@ export class TripsService {
     return TripResponseDto.from(await this.getOrFail(id));
   }
 
-  async create(dto: CreateTripDto): Promise<TripResponseDto> {
+  async create(
+    dto: CreateTripDto,
+    user: AuthenticatedUser,
+  ): Promise<TripResponseDto> {
     return TripResponseDto.from(
       await this.repository.create({
         ...dto,
+        createdBy: user.id,
         status: dto.status ?? 'PLANNING',
       }),
     );

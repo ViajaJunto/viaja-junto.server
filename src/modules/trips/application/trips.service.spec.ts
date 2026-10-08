@@ -15,6 +15,8 @@ const base: Trip = {
   createdAt: new Date('2026-03-14T18:22:05.000Z'),
 };
 
+const user = { id: base.createdBy, email: 'ana@example.com' };
+
 const entity = (overrides: Partial<Trip> = {}): Trip => ({
   ...base,
   ...overrides,
@@ -95,13 +97,10 @@ describe('TripsService', () => {
     it('forwards the payload to the repository', async () => {
       repository.create.mockResolvedValue(entity());
 
-      await service.create({
-        name: 'Eurotrip 2026',
-        createdBy: '11111111-1111-4111-8111-111111111111',
-      });
+      await service.create({ name: 'Eurotrip 2026' }, user);
 
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'PLANNING' }),
+        expect.objectContaining({ status: 'PLANNING', createdBy: user.id }),
       );
     });
   });
@@ -149,11 +148,7 @@ describe('TripsService', () => {
   it('keeps an explicit status instead of the default', async () => {
     repository.create.mockResolvedValue(entity({ status: 'CONFIRMED' }));
 
-    await service.create({
-      name: 'Eurotrip 2026',
-      createdBy: '11111111-1111-4111-8111-111111111111',
-      status: 'CONFIRMED',
-    });
+    await service.create({ name: 'Eurotrip 2026', status: 'CONFIRMED' }, user);
 
     expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'CONFIRMED' }),

@@ -10,6 +10,11 @@ import { TripsController } from './trips.controller.js';
 describe('TripsController', () => {
   const id = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
 
+  const user = {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'ana@example.com',
+  };
+
   let service: Record<keyof TripsService, ReturnType<typeof vi.fn>>;
   let controller: TripsController;
 
@@ -45,12 +50,11 @@ describe('TripsController', () => {
   it('forwards the body on create', () => {
     const dto = {
       name: 'Eurotrip 2026',
-      createdBy: '11111111-1111-4111-8111-111111111111',
     };
 
-    controller.create(dto);
+    controller.create(dto, user);
 
-    expect(service.create).toHaveBeenCalledWith(dto);
+    expect(service.create).toHaveBeenCalledWith(dto, user);
   });
 
   it('forwards id and body on update', () => {

@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { ReviewRepository } from '../domain/review.repository.js';
 import { CreateReviewDto } from './dto/create-review.dto.js';
 import { UpdateReviewDto } from './dto/update-review.dto.js';
@@ -28,19 +33,40 @@ export class ReviewsService {
     return ReviewResponseDto.from(await this.getOrFail(id));
   }
 
-  async create(dto: CreateReviewDto): Promise<ReviewResponseDto> {
-    return ReviewResponseDto.from(await this.repository.create({ ...dto }));
+  /** The author is always the authenticated caller, never taken from the payload. */
+  async create(
+    dto: CreateReviewDto,
+    user: AuthenticatedUser,
+  ): Promise<ReviewResponseDto> {
+    return ReviewResponseDto.from(
+      await this.repository.create({ ...dto, userId: user.id }),
+    );
   }
 
-  async update(id: string, dto: UpdateReviewDto): Promise<ReviewResponseDto> {
-    await this.getOrFail(id);
+  async update(
+    id: string,
+    dto: UpdateReviewDto,
+    user: AuthenticatedUser,
+  ): Promise<ReviewResponseDto> {
+    await this.getOwnedOrFail(id, user);
 
     return ReviewResponseDto.from(await this.repository.update(id, { ...dto }));
   }
 
-  async remove(id: string): Promise<void> {
-    await this.getOrFail(id);
+  async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    await this.getOwnedOrFail(id, user);
     await this.repository.remove(id);
+  }
+
+  /** Only the author may change or delete a review. */
+  private async getOwnedOrFail(id: string, user: AuthenticatedUser) {
+    const found = await this.getOrFail(id);
+
+    if (found.userId !== user.id) {
+      throw new ForbiddenException('Only the author can change this review');
+    }
+
+    return found;
   }
 
   private async getOrFail(id: string) {

@@ -9,6 +9,10 @@ import { UsersController } from './users.controller.js';
  */
 describe('UsersController', () => {
   const id = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
+  const user = {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'ana@example.com',
+  };
 
   let service: Record<keyof UsersService, ReturnType<typeof vi.fn>>;
   let controller: UsersController;
@@ -43,15 +47,15 @@ describe('UsersController', () => {
   });
 
   it('forwards id and body on update', () => {
-    controller.update(id, {});
+    controller.update(id, {}, user);
 
-    expect(service.update).toHaveBeenCalledWith(id, {});
+    expect(service.update).toHaveBeenCalledWith(id, {}, user);
   });
 
   it('forwards the id on remove', () => {
-    controller.remove(id);
+    controller.remove(id, user);
 
-    expect(service.remove).toHaveBeenCalledWith(id);
+    expect(service.remove).toHaveBeenCalledWith(id, user);
   });
 
   it('returns whatever the service returns', () => {

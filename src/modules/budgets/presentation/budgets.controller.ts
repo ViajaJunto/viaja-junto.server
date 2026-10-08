@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -32,12 +33,14 @@ import {
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateBudgetDto } from '../application/dto/create-budget.dto.js';
 import { UpdateBudgetDto } from '../application/dto/update-budget.dto.js';
 import { BudgetResponseDto } from '../application/dto/budget-response.dto.js';
 import { BudgetsService } from '../application/budgets.service.js';
 
 @ApiTags('Budgets')
+@UseGuards(JwtAuthGuard)
 @Controller('budgets')
 export class BudgetsController {
   constructor(private readonly service: BudgetsService) {}
