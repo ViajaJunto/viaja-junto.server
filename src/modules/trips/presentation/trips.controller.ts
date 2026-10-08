@@ -14,9 +14,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
-  ApiForbiddenResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -24,9 +22,12 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -57,11 +58,7 @@ export class TripsController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get()
   findAll(
     @Query() query: PaginationQueryDto,
@@ -90,11 +87,7 @@ export class TripsController {
     description: 'No trip exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -117,15 +110,8 @@ export class TripsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The caller is not the creator of the trip.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller is not the creator of the trip.')
+  @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateTripDto, @CurrentUser() user: AuthenticatedUser) {
@@ -157,15 +143,8 @@ export class TripsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The caller is not the creator of the trip.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller is not the creator of the trip.')
+  @ApiAuthenticated()
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -195,15 +174,8 @@ export class TripsController {
     description: 'No trip exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The caller is not the creator of the trip.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller is not the creator of the trip.')
+  @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(

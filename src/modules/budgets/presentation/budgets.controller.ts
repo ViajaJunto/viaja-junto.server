@@ -14,9 +14,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
-  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -25,9 +23,12 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -58,11 +59,7 @@ export class BudgetsController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get()
   findAll(
     @Query() query: PaginationQueryDto,
@@ -94,11 +91,7 @@ export class BudgetsController {
     description: 'No budget exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -125,15 +118,8 @@ export class BudgetsController {
     description: 'This trip already has a budget.',
     type: ErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The caller has read-only (VIEWER) access to the trip.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateBudgetDto, @CurrentUser() user: AuthenticatedUser) {
@@ -168,15 +154,8 @@ export class BudgetsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The caller has read-only (VIEWER) access to the trip.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -206,15 +185,8 @@ export class BudgetsController {
     description: 'No budget exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The caller has read-only (VIEWER) access to the trip.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(

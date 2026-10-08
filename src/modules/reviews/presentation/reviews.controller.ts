@@ -14,9 +14,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
-  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -25,9 +23,12 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -107,11 +108,7 @@ export class ReviewsController {
     description: 'This user has already reviewed this activity.',
     type: ErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -150,15 +147,8 @@ export class ReviewsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'Only the review author can do this.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('Only the review author can do this.')
+  @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
@@ -189,15 +179,8 @@ export class ReviewsController {
     description: 'No review exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'Only the review author can do this.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('Only the review author can do this.')
+  @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)

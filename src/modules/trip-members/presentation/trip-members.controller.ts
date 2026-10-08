@@ -14,9 +14,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
-  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -25,9 +23,12 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -58,11 +59,7 @@ export class TripMembersController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get()
   findAll(
     @Query() query: PaginationQueryDto,
@@ -93,11 +90,7 @@ export class TripMembersController {
     description: 'No trip member exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -125,15 +118,8 @@ export class TripMembersController {
       'This user is already a member of the trip, or is the trip creator.',
     type: ErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'Only the trip creator can manage members.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('Only the trip creator can manage members.')
+  @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(
@@ -171,15 +157,8 @@ export class TripMembersController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'Only the trip creator can manage members.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('Only the trip creator can manage members.')
+  @ApiAuthenticated()
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -209,15 +188,8 @@ export class TripMembersController {
     description: 'No trip member exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'Only the trip creator can manage members.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('Only the trip creator can manage members.')
+  @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(

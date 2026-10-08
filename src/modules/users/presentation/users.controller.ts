@@ -13,18 +13,19 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
-  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -54,11 +55,7 @@ export class UsersController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get()
   findAll(@Query() query: PaginationQueryDto) {
     return this.service.findAll(query);
@@ -83,11 +80,7 @@ export class UsersController {
     description: 'No user exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
@@ -118,15 +111,8 @@ export class UsersController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The token belongs to a different user.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The token belongs to a different user.')
+  @ApiAuthenticated()
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -156,15 +142,8 @@ export class UsersController {
     description: 'No user exists with this id.',
     type: ErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'The token belongs to a different user.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The token belongs to a different user.')
+  @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(
