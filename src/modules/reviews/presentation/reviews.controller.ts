@@ -5,29 +5,30 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
-  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
+import {
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
   ErrorResponseDto,
@@ -66,26 +67,14 @@ export class ReviewsController {
     summary: 'Get a review by id',
     description: 'Returns a single review with its rating and comment. Public.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Review identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Review identifier.')
   @ApiOkResponse({
     description: 'The requested review.',
     type: ReviewResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No review exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No review exists with this id.')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@IdParam() id: string) {
     return this.service.findOne(id);
   }
 
@@ -107,11 +96,7 @@ export class ReviewsController {
     description: 'This user has already reviewed this activity.',
     type: ErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -127,42 +112,23 @@ export class ReviewsController {
     description:
       'Edits the rating or the comment. Only the author can do this.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Review identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Review identifier.')
   @ApiBody({ type: UpdateReviewDto })
   @ApiOkResponse({
     description: 'The updated review.',
     type: ReviewResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No review exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No review exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbiddenResponse({
-    description: 'Only the review author can do this.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('Only the review author can do this.')
+  @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @Body() dto: UpdateReviewDto,
     @CurrentUser() author: AuthenticatedUser,
   ) {
@@ -174,37 +140,15 @@ export class ReviewsController {
     description:
       'Removes the review and recalculates the activity average rating.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'Review identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('Review identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No review exists with this id.',
-    type: ErrorResponseDto,
-  })
-  @ApiForbiddenResponse({
-    description: 'Only the review author can do this.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No review exists with this id.')
+  @ApiForbidden('Only the review author can do this.')
+  @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() author: AuthenticatedUser,
-  ) {
+  remove(@IdParam() id: string, @CurrentUser() author: AuthenticatedUser) {
     return this.service.remove(id, author);
   }
 }

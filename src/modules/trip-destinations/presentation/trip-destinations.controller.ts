@@ -5,33 +5,34 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
-  ErrorResponseDto,
-  ValidationErrorResponseDto,
-} from '../../../shared/http/dto/error-response.dto.js';
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
+import {
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
+import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
+import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { CreateTripDestinationDto } from '../application/dto/create-trip-destination.dto.js';
 import { UpdateTripDestinationDto } from '../application/dto/update-trip-destination.dto.js';
@@ -57,14 +58,13 @@ export class TripDestinationsController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.service.findAll(query);
+  findAll(
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.findAll(query, user);
   }
 
   @ApiOperation({
@@ -72,32 +72,16 @@ export class TripDestinationsController {
     description:
       'Returns one stop of the itinerary with its arrival and departure dates.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripDestination identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripDestination identifier.')
   @ApiOkResponse({
     description: 'The requested trip destination.',
     type: TripDestinationResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip destination exists with this id.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip destination exists with this id.')
+  @ApiAuthenticated()
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(id);
+  findOne(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.findOne(id, user);
   }
 
   @ApiOperation({
@@ -114,15 +98,15 @@ export class TripDestinationsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateTripDestinationDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateTripDestinationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
@@ -130,69 +114,40 @@ export class TripDestinationsController {
     description:
       'Adjusts dates, notes or the position in the itinerary. The trip and the catalog entry cannot be reassigned.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripDestination identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripDestination identifier.')
   @ApiBody({ type: UpdateTripDestinationDto })
   @ApiOkResponse({
     description: 'The updated trip destination.',
     type: TripDestinationResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip destination exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip destination exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @Body() dto: UpdateTripDestinationDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.update(id, dto);
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
     summary: 'Remove a destination from a trip',
     description: 'Also removes every activity planned for that stop.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'TripDestination identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('TripDestination identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No trip destination exists with this id.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No trip destination exists with this id.')
+  @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.remove(id, user);
   }
 }

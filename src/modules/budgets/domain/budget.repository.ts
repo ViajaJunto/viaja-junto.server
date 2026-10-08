@@ -13,7 +13,8 @@ export type UpdateBudgetData = Partial<CreateBudgetData>;
  * are erased at compile time.
  */
 export abstract class BudgetRepository {
-  abstract findAll(page: PageRequest): Promise<Page<Budget>>;
+  /** Only records belonging to trips the user can see. */
+  abstract findAll(page: PageRequest, userId: string): Promise<Page<Budget>>;
   abstract findById(id: string): Promise<Budget | null>;
   abstract create(data: CreateBudgetData): Promise<Budget>;
   abstract update(id: string, data: UpdateBudgetData): Promise<Budget>;

@@ -1,3 +1,4 @@
+import { TripAccessModule } from '../trip-access/trip-access.module.js';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
 import { BudgetsService } from './application/budgets.service.js';
@@ -6,7 +7,7 @@ import { BudgetPrismaRepository } from './infrastructure/budget.prisma.repositor
 import { BudgetsController } from './presentation/budgets.controller.js';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, TripAccessModule],
   controllers: [BudgetsController],
   providers: [
     BudgetsService,
