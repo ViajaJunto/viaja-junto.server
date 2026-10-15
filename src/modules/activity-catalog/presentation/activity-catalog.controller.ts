@@ -10,7 +10,6 @@ import {
   Put,
   Query,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -25,10 +24,6 @@ import {
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import {
-  ApiAuthenticated,
-  ApiForbidden,
-} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
-import {
   ApiConflict,
   ApiIdParam,
   ApiNotFound,
@@ -41,7 +36,7 @@ import { ActivityCatalogResponseDto } from '../application/dto/activity-catalog-
 import { ActivityCatalogService } from '../application/activity-catalog.service.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
-import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { AdminOnly } from '../../catalog-access/presentation/admin-only.decorator.js';
 import { ApiPhotoUpload } from '../../../shared/storage/http/api-photo-upload.decorator.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
 import { photoFilePipe } from '../../../shared/storage/http/photo-file.pipe.js';
@@ -97,9 +92,7 @@ export class ActivityCatalogController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiAuthenticated()
-  @ApiForbidden('Only an administrator can change the catalogs.')
-  @UseGuards(JwtAuthGuard)
+  @AdminOnly()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(
@@ -125,9 +118,7 @@ export class ActivityCatalogController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiAuthenticated()
-  @ApiForbidden('Only an administrator can change the catalogs.')
-  @UseGuards(JwtAuthGuard)
+  @AdminOnly()
   @Patch(':id')
   update(
     @IdParam() id: string,
@@ -145,10 +136,8 @@ export class ActivityCatalogController {
   @ApiIdParam('ActivityCatalog identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
   @ApiNotFound('No activity exists with this id.')
-  @ApiAuthenticated()
-  @ApiForbidden('Only an administrator can change the catalogs.')
+  @AdminOnly()
   @ApiConflict('The entry is used by trips and cannot be deleted.')
-  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
@@ -165,10 +154,8 @@ export class ActivityCatalogController {
     description: 'The activity with its new `photoUrl`.',
     type: ActivityCatalogResponseDto,
   })
-  @ApiForbidden('Only an administrator can change the catalogs.')
-  @ApiAuthenticated()
+  @AdminOnly()
   @Put(':id/photo')
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(PhotoUploadInterceptor)
   updatePhoto(
     @IdParam() id: string,
