@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UsersService } from '../../users/application/users.service.js';
 import { CatalogAccessService } from './catalog-access.service.js';
@@ -27,5 +27,33 @@ describe('CatalogAccessService', () => {
     await expect(service.assertAdmin(userId)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+  });
+
+  describe('assertCanDelete', () => {
+    it('lets an administrator delete an unused entry', async () => {
+      users.getRole.mockResolvedValue('ADMIN');
+
+      await expect(
+        service.assertCanDelete(userId, () => Promise.resolve(0)),
+      ).resolves.toBeUndefined();
+    });
+
+    it('refuses an entry that trips still use', async () => {
+      users.getRole.mockResolvedValue('ADMIN');
+
+      await expect(
+        service.assertCanDelete(userId, () => Promise.resolve(2)),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('forbids a regular user without looking at the usages', async () => {
+      users.getRole.mockResolvedValue('USER');
+      const countUsages = vi.fn();
+
+      await expect(
+        service.assertCanDelete(userId, countUsages),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(countUsages).not.toHaveBeenCalled();
+    });
   });
 });

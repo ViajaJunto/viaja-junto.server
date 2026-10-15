@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { UsersService } from '../../users/application/users.service.js';
 
 /**
@@ -18,6 +22,23 @@ export class CatalogAccessService {
     if ((await this.users.getRole(userId)) !== 'ADMIN') {
       throw new ForbiddenException(
         'Only an administrator can change the catalogs',
+      );
+    }
+  }
+
+  /**
+   * Admin-only deletion of an entry that no trip references. `countUsages` is
+   * only called for an admin, so regular users never learn whether it is used.
+   */
+  async assertCanDelete(
+    userId: string,
+    countUsages: () => Promise<number>,
+  ): Promise<void> {
+    await this.assertAdmin(userId);
+
+    if ((await countUsages()) > 0) {
+      throw new ConflictException(
+        'This entry is used by trips and cannot be deleted',
       );
     }
   }

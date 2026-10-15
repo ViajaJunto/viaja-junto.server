@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
@@ -59,7 +55,8 @@ export class ActivityCatalogService {
     dto: UpdateActivityCatalogDto,
     user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
-    await this.getAsAdminOrFail(id, user);
+    await this.getOrFail(id);
+    await this.access.assertAdmin(user.id);
 
     return ActivityCatalogResponseDto.from(
       await this.repository.update(id, { ...dto }),
@@ -78,7 +75,8 @@ export class ActivityCatalogService {
     photo: UploadedPhoto,
     user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
-    const current = await this.getAsAdminOrFail(id, user);
+    const current = await this.getOrFail(id);
+    await this.access.assertAdmin(user.id);
     const photoUrl = await this.photos.upload({
       folder: 'activities',
       ownerId: id,
@@ -99,24 +97,12 @@ export class ActivityCatalogService {
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
-    await this.access.assertAdmin(user.id);
     const current = await this.getOrFail(id);
-
-    if ((await this.repository.countTripUsages(id)) > 0) {
-      throw new ConflictException(
-        'This entry is used by trips and cannot be deleted',
-      );
-    }
-
+    await this.access.assertCanDelete(user.id, () =>
+      this.repository.countTripUsages(id),
+    );
     await this.repository.remove(id);
     await this.photos.discard(current.photoUrl);
-  }
-
-  /** Checks the caller is an ADMIN before looking the entry up. */
-  private async getAsAdminOrFail(id: string, user: AuthenticatedUser) {
-    await this.access.assertAdmin(user.id);
-
-    return this.getOrFail(id);
   }
 
   private async getOrFail(id: string) {

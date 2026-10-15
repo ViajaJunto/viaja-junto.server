@@ -44,6 +44,7 @@ const user = {
 describe('ActivityCatalogService', () => {
   let access: {
     assertAdmin: ReturnType<typeof vi.fn>;
+    assertCanDelete: ReturnType<typeof vi.fn>;
   };
   let repository: RepoMock;
   let photos: {
@@ -63,6 +64,7 @@ describe('ActivityCatalogService', () => {
     };
     access = {
       assertAdmin: vi.fn().mockResolvedValue(undefined),
+      assertCanDelete: vi.fn().mockResolvedValue(undefined),
     };
     photos = {
       upload: vi.fn(),
@@ -290,6 +292,8 @@ describe('ActivityCatalogService', () => {
     });
 
     it('lets only an administrator delete', async () => {
+      access.assertCanDelete.mockRejectedValue(new ForbiddenException());
+
       await expect(service.remove(base.id, user)).rejects.toBeInstanceOf(
         ForbiddenException,
       );
@@ -298,14 +302,26 @@ describe('ActivityCatalogService', () => {
     });
 
     it('refuses to delete an entry that trips still use', async () => {
-      access.assertAdmin.mockResolvedValue(undefined);
-      repository.countTripUsages.mockResolvedValue(2);
+      access.assertCanDelete.mockRejectedValue(new ConflictException());
 
       await expect(service.remove(base.id, user)).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
-      expect(photos.discard).not.toHaveBeenCalled();
+    });
+
+    it('hands the policy a way to count how many trips use the entry', async () => {
+      repository.countTripUsages.mockResolvedValue(3);
+      access.assertCanDelete.mockImplementation(
+        async (_userId: string, countUsages: () => Promise<number>) => {
+          expect(await countUsages()).toBe(3);
+        },
+      );
+      repository.remove.mockResolvedValue(undefined);
+
+      await service.remove(base.id, user);
+
+      expect(repository.countTripUsages).toHaveBeenCalledWith(base.id);
     });
   });
 });

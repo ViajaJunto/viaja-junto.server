@@ -5,8 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -16,29 +14,26 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
-import {
-  ErrorResponseDto,
-  ValidationErrorResponseDto,
-} from '../../../shared/http/dto/error-response.dto.js';
+import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import {
   ApiAuthenticated,
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
-import { ApiConflict } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import {
+  ApiConflict,
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { CreateActivityCatalogDto } from '../application/dto/create-activity-catalog.dto.js';
 import { UpdateActivityCatalogDto } from '../application/dto/update-activity-catalog.dto.js';
@@ -77,26 +72,14 @@ export class ActivityCatalogController {
     description:
       'Returns a catalog activity with its location and average rating. Public.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'ActivityCatalog identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('ActivityCatalog identifier.')
   @ApiOkResponse({
     description: 'The requested activity.',
     type: ActivityCatalogResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No activity exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No activity exists with this id.')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@IdParam() id: string) {
     return this.service.findOne(id);
   }
 
@@ -114,11 +97,7 @@ export class ActivityCatalogController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @ApiForbidden('Only an administrator can change the catalogs.')
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -135,39 +114,23 @@ export class ActivityCatalogController {
     description:
       'Corrects details of a catalog entry. Administrators only. The average rating is derived from reviews and cannot be set here.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'ActivityCatalog identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('ActivityCatalog identifier.')
   @ApiBody({ type: UpdateActivityCatalogDto })
   @ApiOkResponse({
     description: 'The updated activity.',
     type: ActivityCatalogResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No activity exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No activity exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiAuthenticated()
   @ApiForbidden('Only an administrator can change the catalogs.')
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @Body() dto: UpdateActivityCatalogDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
@@ -179,35 +142,16 @@ export class ActivityCatalogController {
     description:
       'Administrators only. Fails with 409 while any trip still references this activity.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'ActivityCatalog identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('ActivityCatalog identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No activity exists with this id.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No activity exists with this id.')
+  @ApiAuthenticated()
   @ApiForbidden('Only an administrator can change the catalogs.')
   @ApiConflict('The entry is used by trips and cannot be deleted.')
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  remove(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.service.remove(id, user);
   }
 
@@ -227,7 +171,7 @@ export class ActivityCatalogController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(PhotoUploadInterceptor)
   updatePhoto(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @UploadedFile(photoFilePipe) file: UploadedPhoto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
