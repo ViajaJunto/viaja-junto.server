@@ -1,8 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
 import { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
 import { ActivityCatalogRepository } from '../domain/activity-catalog.repository.js';
@@ -15,6 +21,7 @@ export class ActivityCatalogService {
   constructor(
     private readonly repository: ActivityCatalogRepository,
     private readonly photos: PhotoStorageService,
+    private readonly access: CatalogAccessService,
   ) {}
 
   async findAll(
@@ -35,17 +42,24 @@ export class ActivityCatalogService {
 
   async create(
     dto: CreateActivityCatalogDto,
+    user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
+    await this.access.assertAdmin(user.id);
+
     return ActivityCatalogResponseDto.from(
-      await this.repository.create({ ...dto, type: dto.type ?? 'OTHER' }),
+      await this.repository.create({
+        ...dto,
+        type: dto.type ?? 'OTHER',
+      }),
     );
   }
 
   async update(
     id: string,
     dto: UpdateActivityCatalogDto,
+    user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
-    await this.getOrFail(id);
+    await this.getAsAdminOrFail(id, user);
 
     return ActivityCatalogResponseDto.from(
       await this.repository.update(id, { ...dto }),
@@ -62,8 +76,9 @@ export class ActivityCatalogService {
   async updatePhoto(
     id: string,
     photo: UploadedPhoto,
+    user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
-    const current = await this.getOrFail(id);
+    const current = await this.getAsAdminOrFail(id, user);
     const photoUrl = await this.photos.upload({
       folder: 'activities',
       ownerId: id,
@@ -83,10 +98,25 @@ export class ActivityCatalogService {
     return ActivityCatalogResponseDto.from(updated);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    await this.access.assertAdmin(user.id);
     const current = await this.getOrFail(id);
+
+    if ((await this.repository.countTripUsages(id)) > 0) {
+      throw new ConflictException(
+        'This entry is used by trips and cannot be deleted',
+      );
+    }
+
     await this.repository.remove(id);
     await this.photos.discard(current.photoUrl);
+  }
+
+  /** Checks the caller is an ADMIN before looking the entry up. */
+  private async getAsAdminOrFail(id: string, user: AuthenticatedUser) {
+    await this.access.assertAdmin(user.id);
+
+    return this.getOrFail(id);
   }
 
   private async getOrFail(id: string) {

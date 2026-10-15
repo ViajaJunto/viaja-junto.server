@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CatalogAccessModule } from '../catalog-access/catalog-access.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { DestinationCatalogService } from './application/destination-catalog.service.js';
 import { DestinationCatalogRepository } from './domain/destination-catalog.repository.js';
@@ -7,7 +8,7 @@ import { DestinationCatalogController } from './presentation/destination-catalog
 
 @Module({
   // Provides what JwtAuthGuard (photo upload) needs.
-  imports: [AuthModule],
+  imports: [AuthModule, CatalogAccessModule],
   controllers: [DestinationCatalogController],
   providers: [
     DestinationCatalogService,

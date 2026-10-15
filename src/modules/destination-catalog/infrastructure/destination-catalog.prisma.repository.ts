@@ -44,6 +44,12 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
     return this.prisma.destinationCatalog.update({ where: { id }, data });
   }
 
+  countTripUsages(id: string): Promise<number> {
+    return this.prisma.tripDestination.count({
+      where: { destinationCatalogId: id },
+    });
+  }
+
   async remove(id: string): Promise<void> {
     await this.prisma.destinationCatalog.delete({ where: { id } });
   }

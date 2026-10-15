@@ -24,6 +24,11 @@ enum MemberPermission {
   VIEWER
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 enum DestinationCategory {
   CITY
   BEACH
@@ -54,6 +59,8 @@ model User {
   // Stable Google account id ("sub"). Null only for accounts created before
   // Google sign-in existed; they are linked by verified email on first login.
   googleId  String?  @unique @map("google_id")
+  // Only an ADMIN may write to the shared catalogs; promote an account with SQL.
+  role      UserRole @default(USER)
   createdAt DateTime @default(now()) @map("created_at")
 
   createdTrips Trip[]       @relation("TripCreator")

@@ -23,5 +23,7 @@ export abstract class ActivityCatalogRepository {
     id: string,
     data: UpdateActivityCatalogData,
   ): Promise<ActivityCatalog>;
+  /** How many trip destinations/activities still use this entry. */
+  abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;
 }

@@ -34,11 +34,18 @@ import {
   ErrorResponseDto,
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
+import {
+  ApiAuthenticated,
+  ApiForbidden,
+} from '../../../shared/http/decorators/api-auth-responses.decorator.js';
+import { ApiConflict } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { CreateActivityCatalogDto } from '../application/dto/create-activity-catalog.dto.js';
 import { UpdateActivityCatalogDto } from '../application/dto/update-activity-catalog.dto.js';
 import { ActivityCatalogResponseDto } from '../application/dto/activity-catalog-response.dto.js';
 import { ActivityCatalogService } from '../application/activity-catalog.service.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
 import { ApiPhotoUpload } from '../../../shared/storage/http/api-photo-upload.decorator.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
@@ -96,7 +103,7 @@ export class ActivityCatalogController {
   @ApiOperation({
     summary: 'Add an activity to the catalog',
     description:
-      'Registers a tour, restaurant, lodging or transfer that trips can reference. Requires authentication.',
+      'Registers a tour, restaurant, lodging or transfer that trips can reference. Administrators only.',
   })
   @ApiBody({ type: CreateActivityCatalogDto })
   @ApiCreatedResponse({
@@ -112,17 +119,21 @@ export class ActivityCatalogController {
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @ApiForbidden('Only an administrator can change the catalogs.')
   @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateActivityCatalogDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateActivityCatalogDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
     summary: 'Update a catalog activity',
     description:
-      'Corrects details of a catalog entry. The average rating is derived from reviews and cannot be set here.',
+      'Corrects details of a catalog entry. Administrators only. The average rating is derived from reviews and cannot be set here.',
   })
   @ApiParam({
     name: 'id',
@@ -152,18 +163,21 @@ export class ActivityCatalogController {
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @ApiForbidden('Only an administrator can change the catalogs.')
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateActivityCatalogDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.update(id, dto);
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
     summary: 'Remove an activity from the catalog',
-    description: 'Fails while any trip still references this activity.',
+    description:
+      'Administrators only. Fails with 409 while any trip still references this activity.',
   })
   @ApiParam({
     name: 'id',
@@ -185,30 +199,38 @@ export class ActivityCatalogController {
     description: 'Missing or invalid access token.',
     type: ErrorResponseDto,
   })
+  @ApiForbidden('Only an administrator can change the catalogs.')
+  @ApiConflict('The entry is used by trips and cannot be deleted.')
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.remove(id, user);
   }
 
   @ApiOperation({
     summary: 'Upload the activity photo',
     description:
-      'Stores the image in object storage (S3) and sets `photoUrl` to its public URL. Replaces, and deletes, the previous photo. Requires authentication.',
+      'Stores the image in object storage (S3) and sets `photoUrl` to its public URL. Replaces, and deletes, the previous photo. Administrators only.',
   })
   @ApiPhotoUpload('ActivityCatalog')
   @ApiOkResponse({
     description: 'The activity with its new `photoUrl`.',
     type: ActivityCatalogResponseDto,
   })
+  @ApiForbidden('Only an administrator can change the catalogs.')
+  @ApiAuthenticated()
   @Put(':id/photo')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(PhotoUploadInterceptor)
   updatePhoto(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile(photoFilePipe) file: UploadedPhoto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.updatePhoto(id, file);
+    return this.service.updatePhoto(id, file, user);
   }
 }

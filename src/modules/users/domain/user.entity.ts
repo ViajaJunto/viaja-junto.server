@@ -5,5 +5,6 @@ export interface User {
   email: string;
   /** Google account id. Null for accounts not yet linked to Google. */
   googleId: string | null;
+  role: 'USER' | 'ADMIN';
   createdAt: Date;
 }
