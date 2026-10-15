@@ -41,7 +41,7 @@ describe('DestinationCatalogService', () => {
   };
   let repository: RepoMock;
   let photos: {
-    upload: ReturnType<typeof vi.fn>;
+    replace: ReturnType<typeof vi.fn>;
     discard: ReturnType<typeof vi.fn>;
   };
   let service: DestinationCatalogService;
@@ -60,7 +60,7 @@ describe('DestinationCatalogService', () => {
       assertCanDelete: vi.fn().mockResolvedValue(undefined),
     };
     photos = {
-      upload: vi.fn(),
+      replace: vi.fn(),
       discard: vi.fn().mockResolvedValue(undefined),
     };
     service = new DestinationCatalogService(
@@ -191,61 +191,38 @@ describe('DestinationCatalogService', () => {
     const photo = { buffer: Buffer.from('img'), mimetype: 'image/jpeg' };
     const newUrl = 'http://s3/bucket/destinations/new.jpg';
 
-    it('uploads under the destinations folder and stores the new URL', async () => {
-      repository.findById.mockResolvedValue(entity());
-      photos.upload.mockResolvedValue(newUrl);
+    it('replaces the stored photo and returns the saved record', async () => {
+      const oldUrl = 'http://s3/bucket/destinations/old.jpg';
+      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
       repository.update.mockResolvedValue(entity({ photoUrl: newUrl }));
+      photos.replace.mockImplementation(
+        ({ save }: { save: (url: string) => Promise<unknown> }) => save(newUrl),
+      );
 
       const result = await service.updatePhoto(base.id, photo, user);
 
-      expect(photos.upload).toHaveBeenCalledWith({
-        folder: 'destinations',
-        ownerId: base.id,
-        photo,
-      });
+      expect(photos.replace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          folder: 'destinations',
+          ownerId: base.id,
+          photo,
+          previousUrl: oldUrl,
+        }),
+      );
       expect(repository.update).toHaveBeenCalledWith(base.id, {
         photoUrl: newUrl,
       });
       expect(result.photoUrl).toBe(newUrl);
     });
 
-    it('discards the previous photo only after the record points elsewhere', async () => {
-      const oldUrl = 'http://s3/bucket/destinations/old.jpg';
-      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
-      photos.upload.mockResolvedValue(newUrl);
-      repository.update.mockResolvedValue(entity({ photoUrl: newUrl }));
-
-      await service.updatePhoto(base.id, photo, user);
-
-      expect(photos.discard).toHaveBeenCalledWith(oldUrl);
-      expect(photos.discard).not.toHaveBeenCalledWith(newUrl);
-      expect(repository.update.mock.invocationCallOrder[0]).toBeLessThan(
-        photos.discard.mock.invocationCallOrder[0],
-      );
-    });
-
-    it('rolls back the uploaded photo when the update fails', async () => {
-      const oldUrl = 'http://s3/bucket/destinations/old.jpg';
-      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
-      photos.upload.mockResolvedValue(newUrl);
-      repository.update.mockRejectedValue(new Error('db down'));
-
-      await expect(service.updatePhoto(base.id, photo, user)).rejects.toThrow(
-        'db down',
-      );
-
-      expect(photos.discard).toHaveBeenCalledWith(newUrl);
-      expect(photos.discard).not.toHaveBeenCalledWith(oldUrl);
-    });
-
-    it('does not upload anything for a missing record', async () => {
+    it('does not touch storage for a missing record', async () => {
       repository.findById.mockResolvedValue(null);
 
       await expect(
         service.updatePhoto(base.id, photo, user),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(photos.upload).not.toHaveBeenCalled();
+      expect(photos.replace).not.toHaveBeenCalled();
     });
   });
 
@@ -276,7 +253,7 @@ describe('DestinationCatalogService', () => {
       await expect(
         service.updatePhoto(base.id, photo, user),
       ).rejects.toBeInstanceOf(ForbiddenException);
-      expect(photos.upload).not.toHaveBeenCalled();
+      expect(photos.replace).not.toHaveBeenCalled();
     });
 
     it('lets only an administrator delete', async () => {

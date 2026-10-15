@@ -63,13 +63,7 @@ export class ActivityCatalogService {
     );
   }
 
-  /**
-   * Uploads a new photo and points the record at it.
-   *
-   * The previous photo is deleted only after the record is updated, and the
-   * new one is rolled back if that update fails, so the stored URL always
-   * resolves to an existing object.
-   */
+  /** Uploads a new photo and points the record at it. */
   async updatePhoto(
     id: string,
     photo: UploadedPhoto,
@@ -77,21 +71,13 @@ export class ActivityCatalogService {
   ): Promise<ActivityCatalogResponseDto> {
     const current = await this.getOrFail(id);
     await this.access.assertAdmin(user.id);
-    const photoUrl = await this.photos.upload({
+    const updated = await this.photos.replace({
       folder: 'activities',
       ownerId: id,
       photo,
+      previousUrl: current.photoUrl,
+      save: (photoUrl) => this.repository.update(id, { photoUrl }),
     });
-
-    let updated;
-    try {
-      updated = await this.repository.update(id, { photoUrl });
-    } catch (error) {
-      await this.photos.discard(photoUrl);
-      throw error;
-    }
-
-    await this.photos.discard(current.photoUrl);
 
     return ActivityCatalogResponseDto.from(updated);
   }
