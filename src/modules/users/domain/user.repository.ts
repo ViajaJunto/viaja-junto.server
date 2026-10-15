@@ -1,7 +1,8 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { User } from './user.entity.js';
 
-export type CreateUserData = Omit<User, 'id' | 'createdAt'>;
+/** The role is never set through the API: new accounts start as USER. */
+export type CreateUserData = Omit<User, 'id' | 'createdAt' | 'role'>;
 export type UpdateUserData = Partial<CreateUserData>;
 /** An account as known to Google: the Google id is always present. */
 export type GoogleUserData = Omit<CreateUserData, 'googleId'> & {

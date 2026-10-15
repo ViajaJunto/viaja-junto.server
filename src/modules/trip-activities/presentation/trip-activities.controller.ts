@@ -99,6 +99,7 @@ export class TripActivitiesController {
     type: ValidationErrorResponseDto,
   })
   @ApiForbidden('The caller has read-only (VIEWER) access to the trip.')
+  @ApiNotFound('The trip destination or the catalog activity does not exist.')
   @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)

@@ -9,6 +9,7 @@ const base: User = {
   name: 'Gustavo Fidelis',
   email: 'gustavo@exemplo.com',
   googleId: '109876543210987654321',
+  role: 'USER',
   createdAt: new Date('2026-03-14T18:22:05.000Z'),
 };
 
@@ -93,6 +94,20 @@ describe('UsersService', () => {
       await expect(service.findOne(base.id)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('getRole', () => {
+    it('returns the stored role', async () => {
+      repository.findById.mockResolvedValue(entity({ role: 'ADMIN' }));
+
+      await expect(service.getRole(base.id)).resolves.toBe('ADMIN');
+    });
+
+    it('treats a deleted account as a plain USER', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(service.getRole(base.id)).resolves.toBe('USER');
     });
   });
 
@@ -212,6 +227,7 @@ describe('UsersService', () => {
       'email',
       'id',
       'name',
+      'role',
     ]);
   });
 });

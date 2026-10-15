@@ -76,7 +76,7 @@ The relational model is composed of the following entities:
 ### 5.2 Data model summary
 
 ```
-user(#id, name, email, google_id, created_at)
+user(#id, name, email, google_id, role, created_at)
 
 trip(#id, name, description, start_date, end_date, status, *created_by->user, created_at)
 
@@ -169,6 +169,7 @@ No service or controller is touched.
 | `budgets` | `/budgets` | `budget` |
 | `reviews` | `/reviews` | `review` |
 | `trip-access` | — (no routes) | Trip-level authorization policy shared by the trip modules |
+| `catalog-access` | — (no routes) | Who may change the shared catalogs |
 
 
 ### 5.5 Database access (Prisma 7)
@@ -329,6 +330,30 @@ that does not exist, so ids cannot be probed. List endpoints only return rows
 belonging to trips the caller created or joined. The creator owns the trip
 implicitly and has no `trip_member` row, so the creator cannot be removed or
 downgraded, and adding the creator as a member answers `409`.
+
+**Catalog permissions.** The destination and activity catalogs are curated,
+shared data: every user and visitor reads them, and trips reference their
+entries. Only an `ADMIN` may create, edit (photo upload included) or delete
+entries (`CatalogAccessService`, `src/modules/catalog-access`); regular users
+just pick from the catalog when they plan their destinations and activities.
+A regular user receives `403` on `POST`, `PATCH`, `PUT /{id}/photo` and `DELETE`.
+
+`user.role` is `USER` (default) or `ADMIN`, and is read from the database on
+each request, so demoting an account takes effect immediately. The API never
+grants the role; promote an account with SQL:
+
+```sql
+UPDATE "user" SET role = 'ADMIN' WHERE email = 'someone@example.com';
+```
+
+Deleting an entry that a trip destination or planned activity still references
+answers `409`.
+
+**Database errors.** A global `PrismaExceptionFilter` turns the Prisma errors a
+client can cause into HTTP answers instead of a `500`: a unique violation
+(`P2002`) is `409`; a foreign key violation (`P2003`) is `404` when writing
+(the referenced record does not exist) and `409` when deleting (the record is
+still referenced); a missing record (`P2025`) is `404`.
 
 **Status codes.**
 

@@ -41,6 +41,10 @@ export class ActivityCatalogPrismaRepository implements ActivityCatalogRepositor
     return this.prisma.activityCatalog.update({ where: { id }, data });
   }
 
+  countTripUsages(id: string): Promise<number> {
+    return this.prisma.tripActivity.count({ where: { activityCatalogId: id } });
+  }
+
   async remove(id: string): Promise<void> {
     await this.prisma.activityCatalog.delete({ where: { id } });
   }

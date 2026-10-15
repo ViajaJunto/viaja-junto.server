@@ -1,8 +1,13 @@
-import { NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityCatalog } from '../domain/activity-catalog.entity.js';
 import type { ActivityCatalogRepository } from '../domain/activity-catalog.repository.js';
 import type { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
+import type { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
 import { ActivityCatalogService } from './activity-catalog.service.js';
 
 const base: ActivityCatalog = {
@@ -31,10 +36,19 @@ type RepoMock = {
   [K in keyof ActivityCatalogRepository]: ReturnType<typeof vi.fn>;
 };
 
+const user = {
+  id: '11111111-1111-4111-8111-111111111111',
+  email: 'ana@example.com',
+};
+
 describe('ActivityCatalogService', () => {
+  let access: {
+    assertAdmin: ReturnType<typeof vi.fn>;
+    assertCanDelete: ReturnType<typeof vi.fn>;
+  };
   let repository: RepoMock;
   let photos: {
-    upload: ReturnType<typeof vi.fn>;
+    replace: ReturnType<typeof vi.fn>;
     discard: ReturnType<typeof vi.fn>;
   };
   let service: ActivityCatalogService;
@@ -45,15 +59,21 @@ describe('ActivityCatalogService', () => {
       findById: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      countTripUsages: vi.fn().mockResolvedValue(0),
       remove: vi.fn(),
     };
+    access = {
+      assertAdmin: vi.fn().mockResolvedValue(undefined),
+      assertCanDelete: vi.fn().mockResolvedValue(undefined),
+    };
     photos = {
-      upload: vi.fn(),
+      replace: vi.fn(),
       discard: vi.fn().mockResolvedValue(undefined),
     };
     service = new ActivityCatalogService(
       repository as unknown as ActivityCatalogRepository,
       photos as unknown as PhotoStorageService,
+      access as unknown as CatalogAccessService,
     );
   });
 
@@ -113,7 +133,10 @@ describe('ActivityCatalogService', () => {
     it('forwards the payload to the repository', async () => {
       repository.create.mockResolvedValue(entity());
 
-      await service.create({ name: 'Museu do Louvre', type: 'TOUR' as const });
+      await service.create(
+        { name: 'Museu do Louvre', type: 'TOUR' as const },
+        user,
+      );
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'TOUR' }),
@@ -126,7 +149,7 @@ describe('ActivityCatalogService', () => {
       repository.findById.mockResolvedValue(entity());
       repository.update.mockResolvedValue(entity());
 
-      await service.update(base.id, {});
+      await service.update(base.id, {}, user);
 
       expect(repository.update).toHaveBeenCalledWith(base.id, {});
     });
@@ -134,7 +157,7 @@ describe('ActivityCatalogService', () => {
     it('does not touch the repository when the record is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update(base.id, {})).rejects.toBeInstanceOf(
+      await expect(service.update(base.id, {}, user)).rejects.toBeInstanceOf(
         NotFoundException,
       );
       expect(repository.update).not.toHaveBeenCalled();
@@ -146,7 +169,7 @@ describe('ActivityCatalogService', () => {
       repository.findById.mockResolvedValue(entity());
       repository.remove.mockResolvedValue(undefined);
 
-      await service.remove(base.id);
+      await service.remove(base.id, user);
 
       expect(repository.remove).toHaveBeenCalledWith(base.id);
     });
@@ -154,7 +177,7 @@ describe('ActivityCatalogService', () => {
     it('does not delete when the record is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.remove(base.id)).rejects.toBeInstanceOf(
+      await expect(service.remove(base.id, user)).rejects.toBeInstanceOf(
         NotFoundException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
@@ -168,7 +191,7 @@ describe('ActivityCatalogService', () => {
       );
       repository.remove.mockResolvedValue(undefined);
 
-      await service.remove(base.id);
+      await service.remove(base.id, user);
 
       expect(photos.discard).toHaveBeenCalledWith(
         'http://s3/bucket/activities/old.jpg',
@@ -180,61 +203,102 @@ describe('ActivityCatalogService', () => {
     const photo = { buffer: Buffer.from('img'), mimetype: 'image/jpeg' };
     const newUrl = 'http://s3/bucket/activities/new.jpg';
 
-    it('uploads under the activities folder and stores the new URL', async () => {
-      repository.findById.mockResolvedValue(entity());
-      photos.upload.mockResolvedValue(newUrl);
+    it('replaces the stored photo and returns the saved record', async () => {
+      const oldUrl = 'http://s3/bucket/activities/old.jpg';
+      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
       repository.update.mockResolvedValue(entity({ photoUrl: newUrl }));
+      photos.replace.mockImplementation(
+        ({ save }: { save: (url: string) => Promise<unknown> }) => save(newUrl),
+      );
 
-      const result = await service.updatePhoto(base.id, photo);
+      const result = await service.updatePhoto(base.id, photo, user);
 
-      expect(photos.upload).toHaveBeenCalledWith({
-        folder: 'activities',
-        ownerId: base.id,
-        photo,
-      });
+      expect(photos.replace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          folder: 'activities',
+          ownerId: base.id,
+          photo,
+          previousUrl: oldUrl,
+        }),
+      );
       expect(repository.update).toHaveBeenCalledWith(base.id, {
         photoUrl: newUrl,
       });
       expect(result.photoUrl).toBe(newUrl);
     });
 
-    it('discards the previous photo only after the record points elsewhere', async () => {
-      const oldUrl = 'http://s3/bucket/activities/old.jpg';
-      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
-      photos.upload.mockResolvedValue(newUrl);
-      repository.update.mockResolvedValue(entity({ photoUrl: newUrl }));
-
-      await service.updatePhoto(base.id, photo);
-
-      expect(photos.discard).toHaveBeenCalledWith(oldUrl);
-      expect(photos.discard).not.toHaveBeenCalledWith(newUrl);
-      expect(repository.update.mock.invocationCallOrder[0]).toBeLessThan(
-        photos.discard.mock.invocationCallOrder[0],
-      );
-    });
-
-    it('rolls back the uploaded photo when the update fails', async () => {
-      const oldUrl = 'http://s3/bucket/activities/old.jpg';
-      repository.findById.mockResolvedValue(entity({ photoUrl: oldUrl }));
-      photos.upload.mockResolvedValue(newUrl);
-      repository.update.mockRejectedValue(new Error('db down'));
-
-      await expect(service.updatePhoto(base.id, photo)).rejects.toThrow(
-        'db down',
-      );
-
-      expect(photos.discard).toHaveBeenCalledWith(newUrl);
-      expect(photos.discard).not.toHaveBeenCalledWith(oldUrl);
-    });
-
-    it('does not upload anything for a missing record', async () => {
+    it('does not touch storage for a missing record', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.updatePhoto(base.id, photo)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.updatePhoto(base.id, photo, user),
+      ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(photos.upload).not.toHaveBeenCalled();
+      expect(photos.replace).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('permissions', () => {
+    const photo = { buffer: Buffer.from('img'), mimetype: 'image/jpeg' };
+
+    beforeEach(() => {
+      access.assertAdmin.mockRejectedValue(new ForbiddenException());
+      repository.findById.mockResolvedValue(entity());
+    });
+
+    it('lets only an administrator create', async () => {
+      await expect(
+        service.create({ name: 'Nova entrada' } as never, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(access.assertAdmin).toHaveBeenCalledWith(user.id);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('lets only an administrator update', async () => {
+      await expect(service.update(base.id, {}, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('lets only an administrator upload a photo', async () => {
+      await expect(
+        service.updatePhoto(base.id, photo, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(photos.replace).not.toHaveBeenCalled();
+    });
+
+    it('lets only an administrator delete', async () => {
+      access.assertCanDelete.mockRejectedValue(new ForbiddenException());
+
+      await expect(service.remove(base.id, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repository.remove).not.toHaveBeenCalled();
+      expect(photos.discard).not.toHaveBeenCalled();
+    });
+
+    it('refuses to delete an entry that trips still use', async () => {
+      access.assertCanDelete.mockRejectedValue(new ConflictException());
+
+      await expect(service.remove(base.id, user)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(repository.remove).not.toHaveBeenCalled();
+    });
+
+    it('hands the policy a way to count how many trips use the entry', async () => {
+      repository.countTripUsages.mockResolvedValue(3);
+      access.assertCanDelete.mockImplementation(
+        async (_userId: string, countUsages: () => Promise<number>) => {
+          expect(await countUsages()).toBe(3);
+        },
+      );
+      repository.remove.mockResolvedValue(undefined);
+
+      await service.remove(base.id, user);
+
+      expect(repository.countTripUsages).toHaveBeenCalledWith(base.id);
     });
   });
 });

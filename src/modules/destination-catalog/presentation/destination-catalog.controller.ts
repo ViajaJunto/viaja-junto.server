@@ -5,41 +5,38 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Put,
   Query,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
+import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import {
-  ErrorResponseDto,
-  ValidationErrorResponseDto,
-} from '../../../shared/http/dto/error-response.dto.js';
+  ApiConflict,
+  ApiIdParam,
+  ApiNotFound,
+} from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { CreateDestinationCatalogDto } from '../application/dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from '../application/dto/update-destination-catalog.dto.js';
 import { DestinationCatalogResponseDto } from '../application/dto/destination-catalog-response.dto.js';
 import { DestinationCatalogService } from '../application/destination-catalog.service.js';
-import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
+import { AdminOnly } from '../../catalog-access/presentation/admin-only.decorator.js';
 import { ApiPhotoUpload } from '../../../shared/storage/http/api-photo-upload.decorator.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
 import { photoFilePipe } from '../../../shared/storage/http/photo-file.pipe.js';
@@ -73,33 +70,21 @@ export class DestinationCatalogController {
     description:
       'Returns a single catalog destination with its coordinates and average rating. Public.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'DestinationCatalog identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('DestinationCatalog identifier.')
   @ApiOkResponse({
     description: 'The requested destination.',
     type: DestinationCatalogResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No destination exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No destination exists with this id.')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@IdParam() id: string) {
     return this.service.findOne(id);
   }
 
   @ApiOperation({
     summary: 'Add a destination to the catalog',
     description:
-      'Registers a destination that any trip can then reference. Requires authentication.',
+      'Registers a destination that any trip can then reference. Administrators only.',
   })
   @ApiBody({ type: CreateDestinationCatalogDto })
   @ApiCreatedResponse({
@@ -110,108 +95,76 @@ export class DestinationCatalogController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
-  @UseGuards(JwtAuthGuard)
+  @AdminOnly()
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateDestinationCatalogDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateDestinationCatalogDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.create(dto, user);
   }
 
   @ApiOperation({
     summary: 'Update a catalog destination',
     description:
-      'Corrects the name, coordinates or description of a catalog entry. Requires authentication.',
+      'Corrects the name, coordinates or description of a catalog entry. Administrators only.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'DestinationCatalog identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('DestinationCatalog identifier.')
   @ApiBody({ type: UpdateDestinationCatalogDto })
   @ApiOkResponse({
     description: 'The updated destination.',
     type: DestinationCatalogResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No destination exists with this id.',
-    type: ErrorResponseDto,
-  })
+  @ApiNotFound('No destination exists with this id.')
   @ApiUnprocessableEntityResponse({
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
-  @UseGuards(JwtAuthGuard)
+  @AdminOnly()
   @Patch(':id')
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @Body() dto: UpdateDestinationCatalogDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.update(id, dto);
+    return this.service.update(id, dto, user);
   }
 
   @ApiOperation({
     summary: 'Remove a destination from the catalog',
-    description: 'Fails while any trip still references this destination.',
+    description:
+      'Administrators only. Fails with 409 while any trip still references this destination.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'DestinationCatalog identifier.',
-    format: 'uuid',
-    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-  })
+  @ApiIdParam('DestinationCatalog identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
-  @ApiBadRequestResponse({
-    description: 'The id in the path is not a valid UUID.',
-    type: ErrorResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'No destination exists with this id.',
-    type: ErrorResponseDto,
-  })
-  @ApiBearerAuth('bearer')
-  @ApiUnauthorizedResponse({
-    description: 'Missing or invalid access token.',
-    type: ErrorResponseDto,
-  })
-  @UseGuards(JwtAuthGuard)
+  @ApiNotFound('No destination exists with this id.')
+  @AdminOnly()
+  @ApiConflict('The entry is used by trips and cannot be deleted.')
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.remove(id);
+  remove(@IdParam() id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.service.remove(id, user);
   }
 
   @ApiOperation({
     summary: 'Upload the destination photo',
     description:
-      'Stores the image in object storage (S3) and sets `photoUrl` to its public URL. Replaces, and deletes, the previous photo. Requires authentication.',
+      'Stores the image in object storage (S3) and sets `photoUrl` to its public URL. Replaces, and deletes, the previous photo. Administrators only.',
   })
   @ApiPhotoUpload('DestinationCatalog')
   @ApiOkResponse({
     description: 'The destination with its new `photoUrl`.',
     type: DestinationCatalogResponseDto,
   })
+  @AdminOnly()
   @Put(':id/photo')
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(PhotoUploadInterceptor)
   updatePhoto(
-    @Param('id', ParseUUIDPipe) id: string,
+    @IdParam() id: string,
     @UploadedFile(photoFilePipe) file: UploadedPhoto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.updatePhoto(id, file);
+    return this.service.updatePhoto(id, file, user);
   }
 }

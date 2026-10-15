@@ -17,10 +17,17 @@ export interface UploadPhotoInput {
   photo: UploadedPhoto;
 }
 
+export interface ReplacePhotoInput<T> extends UploadPhotoInput {
+  /** The photo currently stored on the record, deleted once it is replaced. */
+  previousUrl: string | null | undefined;
+  /** Persists the new URL on the record and returns the updated record. */
+  save: (photoUrl: string) => Promise<T>;
+}
+
 /**
  * Photo use cases shared by every resource that has a `photoUrl`.
  *
- * Callers follow upload → persist the URL → discard the previous one, so a
+ * Replacing follows upload → persist the URL → discard the previous one, so a
  * failure at any step leaves the record pointing at a photo that exists.
  */
 @Injectable()
@@ -46,6 +53,31 @@ export class PhotoStorageService {
     });
 
     return stored.url;
+  }
+
+  /**
+   * Swaps a record's photo. The previous photo is deleted only after the
+   * record is saved, and the new one is rolled back if saving fails, so the
+   * stored URL always resolves to an existing object.
+   */
+  async replace<T>({
+    previousUrl,
+    save,
+    ...input
+  }: ReplacePhotoInput<T>): Promise<T> {
+    const photoUrl = await this.upload(input);
+
+    let saved: T;
+    try {
+      saved = await save(photoUrl);
+    } catch (error) {
+      await this.discard(photoUrl);
+      throw error;
+    }
+
+    await this.discard(previousUrl);
+
+    return saved;
   }
 
   /**

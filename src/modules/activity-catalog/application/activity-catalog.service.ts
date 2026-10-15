@@ -3,6 +3,8 @@ import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-re
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
 import { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
 import { ActivityCatalogRepository } from '../domain/activity-catalog.repository.js';
@@ -15,6 +17,7 @@ export class ActivityCatalogService {
   constructor(
     private readonly repository: ActivityCatalogRepository,
     private readonly photos: PhotoStorageService,
+    private readonly access: CatalogAccessService,
   ) {}
 
   async findAll(
@@ -35,56 +38,55 @@ export class ActivityCatalogService {
 
   async create(
     dto: CreateActivityCatalogDto,
+    user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
+    await this.access.assertAdmin(user.id);
+
     return ActivityCatalogResponseDto.from(
-      await this.repository.create({ ...dto, type: dto.type ?? 'OTHER' }),
+      await this.repository.create({
+        ...dto,
+        type: dto.type ?? 'OTHER',
+      }),
     );
   }
 
   async update(
     id: string,
     dto: UpdateActivityCatalogDto,
+    user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
     await this.getOrFail(id);
+    await this.access.assertAdmin(user.id);
 
     return ActivityCatalogResponseDto.from(
       await this.repository.update(id, { ...dto }),
     );
   }
 
-  /**
-   * Uploads a new photo and points the record at it.
-   *
-   * The previous photo is deleted only after the record is updated, and the
-   * new one is rolled back if that update fails, so the stored URL always
-   * resolves to an existing object.
-   */
+  /** Uploads a new photo and points the record at it. */
   async updatePhoto(
     id: string,
     photo: UploadedPhoto,
+    user: AuthenticatedUser,
   ): Promise<ActivityCatalogResponseDto> {
     const current = await this.getOrFail(id);
-    const photoUrl = await this.photos.upload({
+    await this.access.assertAdmin(user.id);
+    const updated = await this.photos.replace({
       folder: 'activities',
       ownerId: id,
       photo,
+      previousUrl: current.photoUrl,
+      save: (photoUrl) => this.repository.update(id, { photoUrl }),
     });
-
-    let updated;
-    try {
-      updated = await this.repository.update(id, { photoUrl });
-    } catch (error) {
-      await this.photos.discard(photoUrl);
-      throw error;
-    }
-
-    await this.photos.discard(current.photoUrl);
 
     return ActivityCatalogResponseDto.from(updated);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, user: AuthenticatedUser): Promise<void> {
     const current = await this.getOrFail(id);
+    await this.access.assertCanDelete(user.id, () =>
+      this.repository.countTripUsages(id),
+    );
     await this.repository.remove(id);
     await this.photos.discard(current.photoUrl);
   }

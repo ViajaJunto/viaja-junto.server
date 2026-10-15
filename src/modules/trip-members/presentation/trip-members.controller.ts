@@ -104,6 +104,7 @@ export class TripMembersController {
     type: ErrorResponseDto,
   })
   @ApiForbidden('Only the trip creator can manage members.')
+  @ApiNotFound('The trip or the invited user does not exist.')
   @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)

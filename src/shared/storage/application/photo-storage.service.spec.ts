@@ -48,6 +48,77 @@ describe('PhotoStorageService', () => {
     });
   });
 
+  describe('replace', () => {
+    const photo = { buffer: Buffer.from('img'), mimetype: 'image/jpeg' };
+    const oldUrl = 'http://cdn/destinations/abc/old.jpg';
+    const newUrl = 'http://cdn/destinations/abc/new.jpg';
+
+    beforeEach(() => {
+      storage.put.mockResolvedValue({
+        key: 'destinations/abc/new.jpg',
+        url: newUrl,
+      });
+      storage.keyFromUrl.mockImplementation((url: string) =>
+        url.replace('http://cdn/', ''),
+      );
+      storage.delete.mockResolvedValue(undefined);
+    });
+
+    it('saves the new URL and returns the saved record', async () => {
+      const save = vi.fn().mockResolvedValue({ photoUrl: newUrl });
+
+      const result = await service.replace({
+        folder: 'destinations',
+        ownerId: 'abc',
+        photo,
+        previousUrl: null,
+        save,
+      });
+
+      expect(save).toHaveBeenCalledWith(newUrl);
+      expect(result).toEqual({ photoUrl: newUrl });
+    });
+
+    it('discards the previous photo only after the record points elsewhere', async () => {
+      const save = vi.fn().mockResolvedValue({});
+
+      await service.replace({
+        folder: 'destinations',
+        ownerId: 'abc',
+        photo,
+        previousUrl: oldUrl,
+        save,
+      });
+
+      expect(storage.delete).toHaveBeenCalledWith('destinations/abc/old.jpg');
+      expect(storage.delete).not.toHaveBeenCalledWith(
+        'destinations/abc/new.jpg',
+      );
+      expect(save.mock.invocationCallOrder[0]).toBeLessThan(
+        storage.delete.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('rolls back the uploaded photo when saving fails', async () => {
+      const save = vi.fn().mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.replace({
+          folder: 'destinations',
+          ownerId: 'abc',
+          photo,
+          previousUrl: oldUrl,
+          save,
+        }),
+      ).rejects.toThrow('db down');
+
+      expect(storage.delete).toHaveBeenCalledWith('destinations/abc/new.jpg');
+      expect(storage.delete).not.toHaveBeenCalledWith(
+        'destinations/abc/old.jpg',
+      );
+    });
+  });
+
   describe('discard', () => {
     it.each([null, undefined, ''])('ignores an empty URL (%s)', async (url) => {
       await service.discard(url);

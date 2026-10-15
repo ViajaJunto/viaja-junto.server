@@ -26,6 +26,14 @@ export class UserResponseDto {
   email!: string;
 
   @ApiProperty({
+    description:
+      'USER, or ADMIN for accounts that may edit and delete any catalog entry.',
+    enum: ['USER', 'ADMIN'],
+    example: 'USER',
+  })
+  role!: 'USER' | 'ADMIN';
+
+  @ApiProperty({
     description: 'When the account was created.',
     type: String,
     format: 'date-time',
@@ -38,6 +46,7 @@ export class UserResponseDto {
       id: entity.id,
       name: entity.name,
       email: entity.email,
+      role: entity.role,
       createdAt: entity.createdAt,
     };
   }

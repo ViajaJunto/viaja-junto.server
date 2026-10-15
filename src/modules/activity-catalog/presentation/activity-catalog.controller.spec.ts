@@ -9,6 +9,10 @@ import { ActivityCatalogController } from './activity-catalog.controller.js';
  */
 describe('ActivityCatalogController', () => {
   const id = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
+  const user = {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'ana@example.com',
+  };
 
   let service: Record<keyof ActivityCatalogService, ReturnType<typeof vi.fn>>;
   let controller: ActivityCatalogController;
@@ -48,21 +52,21 @@ describe('ActivityCatalogController', () => {
   it('forwards the body on create', () => {
     const dto = { name: 'Museu do Louvre', type: 'TOUR' as const };
 
-    controller.create(dto);
+    controller.create(dto, user);
 
-    expect(service.create).toHaveBeenCalledWith(dto);
+    expect(service.create).toHaveBeenCalledWith(dto, user);
   });
 
   it('forwards id and body on update', () => {
-    controller.update(id, {});
+    controller.update(id, {}, user);
 
-    expect(service.update).toHaveBeenCalledWith(id, {});
+    expect(service.update).toHaveBeenCalledWith(id, {}, user);
   });
 
   it('forwards the id on remove', () => {
-    controller.remove(id);
+    controller.remove(id, user);
 
-    expect(service.remove).toHaveBeenCalledWith(id);
+    expect(service.remove).toHaveBeenCalledWith(id, user);
   });
 
   it('returns whatever the service returns', () => {
@@ -78,8 +82,8 @@ describe('ActivityCatalogController', () => {
       mimetype: 'image/png',
     };
 
-    controller.updatePhoto(id, file);
+    controller.updatePhoto(id, file, user);
 
-    expect(service.updatePhoto).toHaveBeenCalledWith(id, file);
+    expect(service.updatePhoto).toHaveBeenCalledWith(id, file, user);
   });
 });

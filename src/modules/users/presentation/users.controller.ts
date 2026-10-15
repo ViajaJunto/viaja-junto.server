@@ -22,6 +22,7 @@ import {
   ApiForbidden,
 } from '../../../shared/http/decorators/api-auth-responses.decorator.js';
 import {
+  ApiConflict,
   ApiIdParam,
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
@@ -85,6 +86,7 @@ export class UsersController {
     type: ValidationErrorResponseDto,
   })
   @ApiForbidden('The token belongs to a different user.')
+  @ApiConflict('Another account already uses this email.')
   @ApiAuthenticated()
   @Patch(':id')
   update(
@@ -104,6 +106,7 @@ export class UsersController {
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
   @ApiNotFound('No user exists with this id.')
   @ApiForbidden('The token belongs to a different user.')
+  @ApiConflict('The user still owns trips, which must be deleted first.')
   @ApiAuthenticated()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)

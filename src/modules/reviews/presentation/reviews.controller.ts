@@ -96,6 +96,7 @@ export class ReviewsController {
     description: 'This user has already reviewed this activity.',
     type: ErrorResponseDto,
   })
+  @ApiNotFound('The reviewed catalog activity does not exist.')
   @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Post()

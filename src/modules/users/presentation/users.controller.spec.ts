@@ -22,6 +22,7 @@ describe('UsersController', () => {
       findAll: vi.fn(),
       findOne: vi.fn(),
       findOrCreateFromGoogle: vi.fn(),
+      getRole: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
     };

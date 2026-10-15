@@ -33,6 +33,11 @@ export class UsersService {
     return UserResponseDto.from(await this.getOrFail(id));
   }
 
+  /** The role of an account; a deleted account counts as a plain USER. */
+  async getRole(id: string): Promise<'USER' | 'ADMIN'> {
+    return (await this.repository.findById(id))?.role ?? 'USER';
+  }
+
   /**
    * Resolves the account behind a Google sign-in, creating it on first use.
    *
