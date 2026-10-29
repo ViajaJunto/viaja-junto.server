@@ -94,6 +94,18 @@ export class TripsService {
       endDate: dto.endDate ?? current.endDate,
     });
 
+    // Expenses are stored in minor units of the trip currency (or with a rate
+    // to it), so changing it afterwards would silently change what they mean.
+    if (
+      dto.currency !== undefined &&
+      dto.currency !== current.currency &&
+      (await this.repository.hasExpenses(id))
+    ) {
+      throw new ConflictException(
+        'The currency cannot change once the trip has expenses',
+      );
+    }
+
     const updated = await this.repository.update(id, { ...dto });
     if (updated.status !== current.status) {
       this.events.publish({

@@ -1,20 +1,17 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module.js';
 import { env } from './shared/config/env.js';
-import { buildCorsOptions } from './shared/http/cors.js';
+import { configureHttp } from './shared/http/configure-http.js';
 import { buildOpenApiConfig } from './shared/http/openapi.js';
-import { buildValidationPipe } from './shared/http/validation.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.setGlobalPrefix(env.API_PREFIX);
-  app.enableCors(buildCorsOptions(env.CORS_ORIGINS));
-
-  app.useGlobalPipes(buildValidationPipe());
+  configureHttp(app);
 
   const document = SwaggerModule.createDocument(app, buildOpenApiConfig());
 

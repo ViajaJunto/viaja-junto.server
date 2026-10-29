@@ -58,6 +58,7 @@ describe('TripsService', () => {
       update: vi.fn(),
       remove: vi.fn(),
       findByInviteCode: vi.fn(),
+      hasExpenses: vi.fn().mockResolvedValue(false),
     };
     access = {
       assertCanRead: vi.fn().mockResolvedValue('CREATOR'),
@@ -506,6 +507,52 @@ describe('TripsService', () => {
         service.update(base.id, { status: 'CONFIRMED' }, user),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(events.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('currency change', () => {
+    it('lets the creator change the currency of a trip without expenses', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'BRL' }));
+      repository.update.mockResolvedValue(entity({ currency: 'EUR' }));
+
+      await service.update(base.id, { currency: 'EUR' }, user);
+
+      expect(repository.update).toHaveBeenCalledWith(base.id, {
+        currency: 'EUR',
+      });
+    });
+
+    it('refuses once the trip has expenses, which would change their meaning', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'BRL' }));
+      repository.hasExpenses.mockResolvedValue(true);
+
+      await expect(
+        service.update(base.id, { currency: 'EUR' }, user),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('does not even look for expenses when the currency stays the same', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'BRL' }));
+      repository.update.mockResolvedValue(entity());
+
+      await service.update(
+        base.id,
+        { currency: 'BRL', name: 'New name' },
+        user,
+      );
+
+      expect(repository.hasExpenses).not.toHaveBeenCalled();
+    });
+
+    it('still lets other fields change on a trip with expenses', async () => {
+      repository.findById.mockResolvedValue(entity());
+      repository.hasExpenses.mockResolvedValue(true);
+      repository.update.mockResolvedValue(entity());
+
+      await service.update(base.id, { name: 'Renamed' }, user);
+
+      expect(repository.update).toHaveBeenCalled();
     });
   });
 });

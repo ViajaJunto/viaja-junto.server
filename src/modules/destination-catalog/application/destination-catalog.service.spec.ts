@@ -53,6 +53,8 @@ describe('DestinationCatalogService', () => {
       create: vi.fn(),
       update: vi.fn(),
       countTripUsages: vi.fn().mockResolvedValue(0),
+      findExistingExternalIds: vi.fn().mockResolvedValue([]),
+      findTopRated: vi.fn().mockResolvedValue([]),
       remove: vi.fn(),
     };
     access = {
@@ -76,7 +78,14 @@ describe('DestinationCatalogService', () => {
 
       await service.findAll({ page: 3, limit: 15 });
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 30, take: 15 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 30, take: 15 },
+        {
+          text: undefined,
+          country: undefined,
+          category: undefined,
+        },
+      );
     });
 
     it('falls back to the default window when the query is empty', async () => {
@@ -84,7 +93,25 @@ describe('DestinationCatalogService', () => {
 
       await service.findAll({});
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 0, take: 20 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        {
+          text: undefined,
+          country: undefined,
+          category: undefined,
+        },
+      );
+    });
+
+    it('hands every discovery filter to the repository', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({ q: 'par', country: 'FR', category: 'CITY' });
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        { text: 'par', country: 'FR', category: 'CITY' },
+      );
     });
 
     it('wraps the page in the { data, meta } envelope', async () => {
@@ -119,6 +146,28 @@ describe('DestinationCatalogService', () => {
       await expect(service.findOne(base.id)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('findTop', () => {
+    it('maps the best rated destinations with their rating', async () => {
+      repository.findTopRated.mockResolvedValue([
+        { ...entity(), rating: 4.7, reviewCount: 38 },
+        { ...entity({ id: 'second' }), rating: 4.1, reviewCount: 3 },
+      ]);
+
+      const result = await service.findTop(5);
+
+      expect(repository.findTopRated).toHaveBeenCalledWith(5);
+      expect(result.map((d) => [d.rating, d.reviewCount])).toEqual([
+        [4.7, 38],
+        [4.1, 3],
+      ]);
+      expect(result[0]).toMatchObject({ id: base.id, name: base.name });
+    });
+
+    it('returns an empty list when nothing is rated yet', async () => {
+      await expect(service.findTop(10)).resolves.toEqual([]);
     });
   });
 
@@ -287,6 +336,54 @@ describe('DestinationCatalogService', () => {
       await service.remove(base.id, user);
 
       expect(repository.countTripUsages).toHaveBeenCalledWith(base.id);
+    });
+  });
+
+  describe('importPlace', () => {
+    const data = {
+      externalId: 'osm:node:1',
+      name: 'Paris',
+      category: 'CITY' as const,
+    };
+
+    it('adds a place from the external provider', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.importPlace(data, user);
+
+      expect(access.assertAdmin).toHaveBeenCalledWith(user.id);
+      expect(repository.findExistingExternalIds).toHaveBeenCalledWith([
+        'osm:node:1',
+      ]);
+      expect(repository.create).toHaveBeenCalledWith(data);
+    });
+
+    it('answers 409 instead of duplicating a place that was already imported', async () => {
+      repository.findExistingExternalIds.mockResolvedValue(['osm:node:1']);
+
+      await expect(service.importPlace(data, user)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('is for administrators only', async () => {
+      access.assertAdmin.mockRejectedValue(new ForbiddenException());
+
+      await expect(service.importPlace(data, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repository.findExistingExternalIds).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findImported', () => {
+    it('tells which external ids are already in the catalog', async () => {
+      repository.findExistingExternalIds.mockResolvedValue(['osm:node:2']);
+
+      await expect(
+        service.findImported(['osm:node:1', 'osm:node:2']),
+      ).resolves.toEqual(['osm:node:2']);
     });
   });
 });

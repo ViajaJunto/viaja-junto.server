@@ -231,6 +231,7 @@ describe('BudgetsService', () => {
         { type: 'FOOD' as const, expectedCost: 100 },
         { type: 'TOUR' as const, expectedCost: null },
       ],
+      expenses: [{ amount: 2500, currency: 'EUR', exchangeRate: null }],
     };
 
     it('derives what is planned from the trip’s activities', async () => {
@@ -245,6 +246,8 @@ describe('BudgetsService', () => {
         planned: 100,
         remaining: 900,
         unpricedActivities: 1,
+        spent: 25,
+        remainingAfterSpent: 975,
       });
     });
 
