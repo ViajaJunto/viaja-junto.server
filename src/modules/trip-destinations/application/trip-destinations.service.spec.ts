@@ -51,6 +51,7 @@ describe('TripDestinationsService', () => {
       update: vi.fn(),
       remove: vi.fn(),
       findByTrip: vi.fn(),
+      findTripDates: vi.fn().mockResolvedValue({}),
       reorder: vi.fn(),
     };
     access = {
@@ -245,6 +246,84 @@ describe('TripDestinationsService', () => {
         ForbiddenException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('date rules', () => {
+    const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+    beforeEach(() => {
+      repository.findTripDates.mockResolvedValue({
+        startDate: day('2026-07-01'),
+        endDate: day('2026-07-15'),
+      });
+      repository.create.mockResolvedValue(entity());
+      repository.update.mockResolvedValue(entity());
+    });
+
+    const create = (arrival?: Date, departure?: Date) =>
+      service.create(
+        {
+          tripId,
+          destinationCatalogId: base.destinationCatalogId,
+          arrival,
+          departure,
+        },
+        user,
+      );
+
+    it('creates a destination inside the trip dates', async () => {
+      await create(day('2026-07-02'), day('2026-07-04'));
+
+      expect(repository.findTripDates).toHaveBeenCalledWith(tripId);
+      expect(repository.create).toHaveBeenCalled();
+    });
+
+    it('rejects a departure before the arrival with 422', async () => {
+      await expect(
+        create(day('2026-07-05'), day('2026-07-04')),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects dates outside the trip with 422', async () => {
+      await expect(create(day('2026-08-01'))).rejects.toMatchObject({
+        response: {
+          message: [
+            'arrival must be within the trip dates (2026-07-01 to 2026-07-15)',
+          ],
+        },
+      });
+    });
+
+    it('checks an update against the dates already stored', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ arrival: day('2026-07-05'), departure: day('2026-07-08') }),
+      );
+
+      await expect(
+        service.update(base.id, { departure: day('2026-07-03') }, user),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('accepts an update that keeps the destination consistent', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ arrival: day('2026-07-05'), departure: day('2026-07-08') }),
+      );
+
+      await service.update(base.id, { departure: day('2026-07-10') }, user);
+
+      expect(repository.update).toHaveBeenCalled();
+    });
+
+    it('does not check the dates when the caller may not edit the trip', async () => {
+      access.assertCanEdit.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        create(day('2026-07-05'), day('2026-07-04')),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repository.findTripDates).not.toHaveBeenCalled();
     });
   });
 

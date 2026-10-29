@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TripActivity } from '../domain/trip-activity.entity.js';
 import type { TripActivityRepository } from '../domain/trip-activity.repository.js';
@@ -46,6 +50,7 @@ describe('TripActivitiesService', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      findDestinationStay: vi.fn().mockResolvedValue({}),
     };
     access = {
       assertCanRead: vi.fn().mockResolvedValue('CREATOR'),
@@ -277,5 +282,73 @@ describe('TripActivitiesService', () => {
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  describe('date rules', () => {
+    const stay = {
+      arrival: new Date('2026-07-01T00:00:00.000Z'),
+      departure: new Date('2026-07-03T00:00:00.000Z'),
+    };
+    const dto = (dateTime?: Date) => ({
+      tripDestinationId: base.tripDestinationId,
+      activityCatalogId: base.activityCatalogId,
+      dateTime,
+    });
+
+    beforeEach(() => {
+      repository.findDestinationStay.mockResolvedValue(stay);
+      repository.create.mockResolvedValue(entity());
+      repository.update.mockResolvedValue(entity());
+    });
+
+    it('creates an activity during the stay, including the departure day', async () => {
+      await service.create(dto(new Date('2026-07-03T22:00:00.000Z')), user);
+
+      expect(repository.findDestinationStay).toHaveBeenCalledWith(
+        base.tripDestinationId,
+      );
+      expect(repository.create).toHaveBeenCalled();
+    });
+
+    it('rejects an activity outside the stay with 422', async () => {
+      await expect(
+        service.create(dto(new Date('2026-07-04T09:00:00.000Z')), user),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts an activity without a date', async () => {
+      await service.create(dto(), user);
+
+      expect(repository.create).toHaveBeenCalled();
+    });
+
+    it('checks an update against the destination of the activity', async () => {
+      repository.findById.mockResolvedValue(entity());
+
+      await expect(
+        service.update(base.id, { dateTime: new Date('2026-06-01') }, user),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('keeps the stored date when an update does not change it', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ dateTime: new Date('2026-07-02T10:00:00.000Z') }),
+      );
+
+      await service.update(base.id, { status: 'CONFIRMED' }, user);
+
+      expect(repository.update).toHaveBeenCalled();
+    });
+
+    it('does not check the date when the caller may not edit the trip', async () => {
+      access.assertCanEdit.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.create(dto(new Date('2026-08-01')), user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repository.findDestinationStay).not.toHaveBeenCalled();
+    });
   });
 });

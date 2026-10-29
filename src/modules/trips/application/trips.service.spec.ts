@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Trip } from '../domain/trip.entity.js';
 import type { TripRepository } from '../domain/trip.repository.js';
@@ -212,6 +216,7 @@ describe('TripsService', () => {
 
   describe('update', () => {
     it('lets the creator update the trip', async () => {
+      repository.findById.mockResolvedValue(entity());
       repository.update.mockResolvedValue(entity());
 
       await service.update(base.id, {}, user);
@@ -256,6 +261,61 @@ describe('TripsService', () => {
         ForbiddenException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('date rules', () => {
+    const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+    it('rejects a trip that ends before it starts with 422', async () => {
+      await expect(
+        service.create(
+          {
+            name: 'Eurotrip',
+            startDate: day('2026-07-10'),
+            endDate: day('2026-07-01'),
+          },
+          user,
+        ),
+      ).rejects.toMatchObject({
+        response: { message: ['endDate must not be earlier than startDate'] },
+      });
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('checks an update against the dates already stored', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ startDate: day('2026-07-10'), endDate: day('2026-07-20') }),
+      );
+
+      await expect(
+        service.update(base.id, { endDate: day('2026-07-05') }, user),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('accepts an update that moves both dates together', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ startDate: day('2026-07-10'), endDate: day('2026-07-20') }),
+      );
+      repository.update.mockResolvedValue(entity());
+
+      await service.update(
+        base.id,
+        { startDate: day('2026-08-01'), endDate: day('2026-08-10') },
+        user,
+      );
+
+      expect(repository.update).toHaveBeenCalled();
+    });
+
+    it('does not load the trip when the caller is not the creator', async () => {
+      access.assertIsCreator.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.update(base.id, { endDate: day('2026-07-05') }, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repository.findById).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
+import { validateActivityDateTime } from '../domain/activity-schedule.js';
 import { TripActivityRepository } from '../domain/trip-activity.repository.js';
 import { ListTripActivitiesQueryDto } from './dto/list-trip-activities-query.dto.js';
 import { CreateTripActivityDto } from './dto/create-trip-activity.dto.js';
@@ -59,6 +64,7 @@ export class TripActivitiesService {
   ): Promise<TripActivityResponseDto> {
     const tripId = await this.access.tripIdOfDestination(dto.tripDestinationId);
     await this.access.assertCanEdit(tripId, user.id);
+    await this.assertValidDateTime(dto.tripDestinationId, dto.dateTime);
 
     return TripActivityResponseDto.from(
       await this.repository.create({ ...dto, status: dto.status ?? 'PENDING' }),
@@ -70,7 +76,11 @@ export class TripActivitiesService {
     dto: UpdateTripActivityDto,
     user: AuthenticatedUser,
   ): Promise<TripActivityResponseDto> {
-    await this.assertCanEditActivity(id, user);
+    const activity = await this.assertCanEditActivity(id, user);
+    await this.assertValidDateTime(
+      activity.tripDestinationId,
+      dto.dateTime ?? activity.dateTime,
+    );
 
     return TripActivityResponseDto.from(
       await this.repository.update(id, { ...dto }),
@@ -82,15 +92,28 @@ export class TripActivitiesService {
     await this.repository.remove(id);
   }
 
-  private async assertCanEditActivity(
-    id: string,
-    user: AuthenticatedUser,
-  ): Promise<void> {
+  private async assertCanEditActivity(id: string, user: AuthenticatedUser) {
     const activity = await this.getOrFail(id);
     const tripId = await this.access.tripIdOfDestination(
       activity.tripDestinationId,
     );
     await this.access.assertCanEdit(tripId, user.id);
+
+    return activity;
+  }
+
+  /** The activity must happen during the stay at its destination. */
+  private async assertValidDateTime(
+    tripDestinationId: string,
+    dateTime: Date | null | undefined,
+  ): Promise<void> {
+    const stay =
+      (await this.repository.findDestinationStay(tripDestinationId)) ?? {};
+    const errors = validateActivityDateTime(dateTime, stay);
+
+    if (errors.length > 0) {
+      throw new UnprocessableEntityException(errors);
+    }
   }
 
   private async getOrFail(id: string) {

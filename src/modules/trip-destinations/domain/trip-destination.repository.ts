@@ -1,4 +1,5 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
+import type { TripRange } from './destination-dates.js';
 import { TripDestination } from './trip-destination.entity.js';
 
 export interface TripDestinationFilter {
@@ -29,6 +30,8 @@ export abstract class TripDestinationRepository {
     id: string,
     data: UpdateTripDestinationData,
   ): Promise<TripDestination>;
+  /** The dates of a trip, or null when it does not exist. */
+  abstract findTripDates(tripId: string): Promise<TripRange | null>;
   /** Every destination of a trip, in itinerary order. */
   abstract findByTrip(tripId: string): Promise<TripDestination[]>;
   /**
