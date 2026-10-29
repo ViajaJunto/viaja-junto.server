@@ -324,6 +324,20 @@ each with the reviewer's name only (never their email or id). The
 `activity_review_count` migration backfills existing rows from their reviews and
 clears any rating that was typed in by hand before.
 
+**Top destinations (FR25).** Decision: a destination's rating is **derived**
+from the reviews of its activities rather than from separate destination
+reviews, so people review one thing (the activity) and the schema keeps a
+single review table. `GET /destination-catalog/top?limit=` (public, default 10,
+maximum 50) lists the best rated destinations, best first. An activity belongs
+to a destination when it is in a city with the destination's name and, if both
+sides state a country, in the same country (case-insensitive, trimmed). The
+rating is the mean of every review given to those activities — the activities'
+averages weighted by their review counts, to two decimals — and ties go to the
+destination with more reviews, then by name. Destinations without reviews are
+not listed. Because the match is by name, a destination's activities need a
+consistent `city`; destination reviews (BR05) can be added later without
+changing this endpoint's contract.
+
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its
 `startDate`; a destination's `departure` is not earlier than its `arrival`, and
