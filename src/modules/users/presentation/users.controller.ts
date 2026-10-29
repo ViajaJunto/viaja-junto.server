@@ -33,6 +33,7 @@ import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dt
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { VisitedCountryResponseDto } from '../application/dto/visited-country-response.dto.js';
 import { UpdateUserDto } from '../application/dto/update-user.dto.js';
 import { UserResponseDto } from '../application/dto/user-response.dto.js';
 import { UsersService } from '../application/users.service.js';
@@ -57,6 +58,18 @@ export class UsersController {
   @Get()
   findAll(@Query() query: PaginationQueryDto) {
     return this.service.findAll(query);
+  }
+
+  @ApiOperation({
+    summary: 'Countries the current user has visited',
+    description:
+      'The distinct countries of the destinations in the caller’s COMPLETED trips (as creator or member), sorted by name, each with its ISO 3166-1 alpha-2 code when known and the number of trips it appears in. Destinations without a country are skipped.',
+  })
+  @ApiOkResponse({ type: [VisitedCountryResponseDto] })
+  @ApiAuthenticated()
+  @Get('me/visited-countries')
+  visitedCountries(@CurrentUser() user: AuthenticatedUser) {
+    return this.service.findVisitedCountries(user.id);
   }
 
   @ApiOperation({

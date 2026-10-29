@@ -27,6 +27,14 @@ export class DestinationCatalogResponseDto {
   country!: string | null;
 
   @ApiProperty({
+    type: String,
+    description: 'ISO 3166-1 alpha-2 code of the country.',
+    example: 'FR',
+    nullable: true,
+  })
+  countryCode!: string | null;
+
+  @ApiProperty({
     description: 'Discovery category.',
     enum: ['CITY', 'BEACH', 'NATURE', 'CULTURAL'],
     example: 'CITY',
@@ -72,6 +80,7 @@ export class DestinationCatalogResponseDto {
       id: entity.id,
       name: entity.name,
       country: entity.country ?? null,
+      countryCode: entity.countryCode ?? null,
       category: entity.category ?? null,
       description: entity.description ?? null,
       latitude: entity.latitude ?? null,

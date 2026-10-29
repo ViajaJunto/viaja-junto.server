@@ -2,12 +2,17 @@ import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import {
+  buildActivityOrderBy,
+  buildActivityWhere,
+} from './activity-catalog.filters.js';
+import {
   ActivityCatalog,
   ActivityReview,
 } from '../domain/activity-catalog.entity.js';
 import {
   CreateActivityCatalogData,
   UpdateActivityCatalogData,
+  ActivityCatalogFilter,
   ActivityCatalogRepository,
 } from '../domain/activity-catalog.repository.js';
 
@@ -15,15 +20,21 @@ import {
 export class ActivityCatalogPrismaRepository implements ActivityCatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll({ skip, take }: PageRequest): Promise<Page<ActivityCatalog>> {
+  async findAll(
+    { skip, take }: PageRequest,
+    filter: ActivityCatalogFilter,
+  ): Promise<Page<ActivityCatalog>> {
+    const where = buildActivityWhere(filter);
+
     // One transaction so the page and the total come from the same snapshot.
     const [items, total] = await this.prisma.$transaction([
       this.prisma.activityCatalog.findMany({
+        where,
         skip,
         take,
-        orderBy: { name: 'asc' },
+        orderBy: buildActivityOrderBy(filter.sort),
       }),
-      this.prisma.activityCatalog.count(),
+      this.prisma.activityCatalog.count({ where }),
     ]);
 
     return { items, total };

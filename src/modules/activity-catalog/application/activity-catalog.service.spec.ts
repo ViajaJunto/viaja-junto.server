@@ -85,7 +85,17 @@ describe('ActivityCatalogService', () => {
 
       await service.findAll({ page: 3, limit: 15 });
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 30, take: 15 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 30, take: 15 },
+        {
+          text: undefined,
+          type: undefined,
+          minRating: undefined,
+          city: undefined,
+          country: undefined,
+          sort: undefined,
+        },
+      );
     });
 
     it('falls back to the default window when the query is empty', async () => {
@@ -93,7 +103,42 @@ describe('ActivityCatalogService', () => {
 
       await service.findAll({});
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 0, take: 20 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        {
+          text: undefined,
+          type: undefined,
+          minRating: undefined,
+          city: undefined,
+          country: undefined,
+          sort: undefined,
+        },
+      );
+    });
+
+    it('hands every discovery filter to the repository', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({
+        q: 'louvre',
+        type: 'TOUR',
+        minRating: 4,
+        city: 'Paris',
+        country: 'França',
+        sort: 'rating',
+      });
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        {
+          text: 'louvre',
+          type: 'TOUR',
+          minRating: 4,
+          city: 'Paris',
+          country: 'França',
+          sort: 'rating',
+        },
+      );
     });
 
     it('wraps the page in the { data, meta } envelope', async () => {

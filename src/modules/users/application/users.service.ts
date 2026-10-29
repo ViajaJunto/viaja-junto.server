@@ -10,6 +10,8 @@ import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js'
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import type { GoogleUserData } from '../domain/user.repository.js';
 import { UserRepository } from '../domain/user.repository.js';
+import { groupVisitedCountries } from '../domain/visited-countries.js';
+import { VisitedCountryResponseDto } from './dto/visited-country-response.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserResponseDto } from './dto/user-response.dto.js';
 
@@ -31,6 +33,18 @@ export class UsersService {
 
   async findOne(id: string): Promise<UserResponseDto> {
     return UserResponseDto.from(await this.getOrFail(id));
+  }
+
+  /**
+   * The countries of the destinations in the user's completed trips, as
+   * creator or member, for the map (FR11).
+   */
+  async findVisitedCountries(
+    userId: string,
+  ): Promise<VisitedCountryResponseDto[]> {
+    return groupVisitedCountries(
+      await this.repository.findVisitedPlaces(userId),
+    );
   }
 
   /** The role of an account; a deleted account counts as a plain USER. */
