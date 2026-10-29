@@ -24,6 +24,7 @@ import {
   ApiIdParam,
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { StrictRateLimit } from '../../../shared/http/throttling.js';
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import {
   ErrorResponseDto,
@@ -65,6 +66,7 @@ export class TripInviteController {
   })
   @ApiAuthenticated()
   @Post('join')
+  @StrictRateLimit()
   join(@Body() dto: JoinTripDto, @CurrentUser() user: AuthenticatedUser) {
     return this.service.join(dto, user);
   }
