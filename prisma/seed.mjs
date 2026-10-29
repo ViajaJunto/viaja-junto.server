@@ -22,6 +22,7 @@ const DESTINATIONS = [
     id: '7c1e9a52-3b4d-4f60-9a1e-2d8b5c6f0a11',
     name: 'Londres',
     country: 'Reino Unido',
+    countryCode: 'GB',
     category: 'CITY',
     description:
       'Capital do Reino Unido, do Big Ben, das cabines telefonicas vermelhas e de museus gratuitos.',
@@ -90,11 +91,12 @@ async function main() {
 
       await db.query(
         `INSERT INTO destination_catalog
-           (id, name, country, category, description, latitude, longitude, photo_url)
-         VALUES ($1, $2, $3, $4::"DestinationCategory", $5, $6, $7, $8)
+           (id, name, country, country_code, category, description, latitude, longitude, photo_url)
+         VALUES ($1, $2, $3, $4, $5::"DestinationCategory", $6, $7, $8, $9)
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
            country = EXCLUDED.country,
+           country_code = EXCLUDED.country_code,
            category = EXCLUDED.category,
            description = EXCLUDED.description,
            latitude = EXCLUDED.latitude,
@@ -105,6 +107,7 @@ async function main() {
           destination.id,
           destination.name,
           destination.country,
+          destination.countryCode,
           destination.category,
           destination.description,
           destination.latitude,

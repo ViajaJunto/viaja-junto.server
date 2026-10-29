@@ -1,6 +1,19 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { ActivityCatalog } from './activity-catalog.entity.js';
 
+/** Discovery filters; every field that is set narrows the result. */
+export interface ActivityCatalogFilter {
+  /** Case-insensitive text contained in the name. */
+  text?: string;
+  type?: ActivityCatalog['type'];
+  /** Average rating at or above this value. */
+  minRating?: number;
+  city?: string;
+  country?: string;
+  /** `name` (default) or best rated first. */
+  sort?: 'name' | 'rating';
+}
+
 export type CreateActivityCatalogData = Omit<
   ActivityCatalog,
   'id' | 'createdAt'
@@ -16,7 +29,10 @@ export type UpdateActivityCatalogData = Partial<CreateActivityCatalogData>;
  * are erased at compile time.
  */
 export abstract class ActivityCatalogRepository {
-  abstract findAll(page: PageRequest): Promise<Page<ActivityCatalog>>;
+  abstract findAll(
+    page: PageRequest,
+    filter: ActivityCatalogFilter,
+  ): Promise<Page<ActivityCatalog>>;
   abstract findById(id: string): Promise<ActivityCatalog | null>;
   abstract create(data: CreateActivityCatalogData): Promise<ActivityCatalog>;
   abstract update(

@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
-import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
@@ -15,6 +14,7 @@ import {
   ActivityCatalogRepository,
   CreateActivityCatalogData,
 } from '../domain/activity-catalog.repository.js';
+import { ListActivityCatalogQueryDto } from './dto/list-activity-catalog-query.dto.js';
 import { CreateActivityCatalogDto } from './dto/create-activity-catalog.dto.js';
 import { UpdateActivityCatalogDto } from './dto/update-activity-catalog.dto.js';
 import { ActivityCatalogResponseDto } from './dto/activity-catalog-response.dto.js';
@@ -28,10 +28,20 @@ export class ActivityCatalogService {
   ) {}
 
   async findAll(
-    query: PaginationQueryDto,
+    query: ListActivityCatalogQueryDto,
   ): Promise<PaginatedResponseDto<ActivityCatalogResponseDto>> {
     const { page, limit, skip, take } = toPageRequest(query);
-    const { items, total } = await this.repository.findAll({ skip, take });
+    const { items, total } = await this.repository.findAll(
+      { skip, take },
+      {
+        text: query.q,
+        type: query.type,
+        minRating: query.minRating,
+        city: query.city,
+        country: query.country,
+        sort: query.sort,
+      },
+    );
 
     return {
       data: items.map((item) => ActivityCatalogResponseDto.from(item)),

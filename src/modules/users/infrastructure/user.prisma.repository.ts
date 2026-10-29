@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
+import { accessibleTrips } from '../../../shared/database/trip-scope.js';
 import { User } from '../domain/user.entity.js';
+import type { VisitedPlace } from '../domain/visited-countries.js';
 import {
   CreateUserData,
   UpdateUserData,
@@ -36,6 +38,24 @@ export class UserPrismaRepository implements UserRepository {
 
   findByGoogleId(googleId: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { googleId } });
+  }
+
+  async findVisitedPlaces(userId: string): Promise<VisitedPlace[]> {
+    const destinations = await this.prisma.tripDestination.findMany({
+      where: {
+        trip: { AND: [accessibleTrips(userId), { status: 'COMPLETED' }] },
+      },
+      select: {
+        tripId: true,
+        destinationCatalog: { select: { country: true, countryCode: true } },
+      },
+    });
+
+    return destinations.map(({ tripId, destinationCatalog }) => ({
+      tripId,
+      country: destinationCatalog.country,
+      countryCode: destinationCatalog.countryCode,
+    }));
   }
 
   create(data: CreateUserData): Promise<User> {
