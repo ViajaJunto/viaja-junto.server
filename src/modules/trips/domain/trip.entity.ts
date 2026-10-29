@@ -10,6 +10,8 @@ export interface Trip {
   endDate?: Date | null;
   status: 'PLANNING' | 'CONFIRMED' | 'COMPLETED';
   createdBy: string;
+  /** ISO 4217 code of the money in this trip. */
+  currency: string;
   /** Short code the creator shares so other users can join. */
   inviteCode: string;
   createdAt: Date;

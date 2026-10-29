@@ -78,7 +78,7 @@ The relational model is composed of the following entities:
 ```
 user(#id, name, email, google_id, role, created_at)
 
-trip(#id, name, description, start_date, end_date, status, *created_by->user, invite_code, created_at)
+trip(#id, name, description, start_date, end_date, status, *created_by->user, currency, invite_code, created_at)
 
 trip_member(#id, *trip_id->trip, *user_id->user, permission, joined_at)
 
@@ -290,6 +290,17 @@ working while members who already joined keep their access. Anyone signed in can
 trip; the creator can raise the permission later through the trip members. An
 unknown code is `404`, a malformed one `422`, and joining twice (or joining your
 own trip) is `409`. The code is never part of the trip response.
+
+**Currency.** Each trip has an ISO 4217 `currency` (default `BRL`, validated
+against the standard list and stored upper-case). The budget has no column of
+its own: it reports the currency of its trip, and the expenses planned for
+`trip-expenses` are recorded in it too. Changing a trip's currency does not
+convert amounts that already exist. Conversion strategy: there is no external
+exchange-rate API, so the application works offline and its numbers stay
+auditable. An expense in another currency carries the **exchange rate to the
+trip currency that the user entered when recording it**; the expense library
+receives those rates through its `ExchangeRates` interface, and an expense in
+the trip currency needs none.
 
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its

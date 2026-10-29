@@ -12,7 +12,8 @@ export class CreateBudgetDto {
   tripId!: string;
 
   @ApiProperty({
-    description: 'Total amount available for the trip, in the group currency.',
+    description:
+      'Total amount available for the trip, in the currency of the trip.',
     minimum: 0,
     example: 8500,
   })

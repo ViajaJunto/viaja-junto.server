@@ -1,7 +1,7 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { Budget } from './budget.entity.js';
 
-export type CreateBudgetData = Omit<Budget, 'id' | 'createdAt'>;
+export type CreateBudgetData = Omit<Budget, 'id' | 'createdAt' | 'currency'>;
 export type UpdateBudgetData = Partial<CreateBudgetData>;
 
 /**
