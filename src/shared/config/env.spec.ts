@@ -179,4 +179,31 @@ describe('validateEnv', () => {
       );
     });
   });
+
+  describe('JWT_SECRET_PREVIOUS', () => {
+    it('is optional', () => {
+      expect(validateEnv(valid).JWT_SECRET_PREVIOUS).toBeUndefined();
+    });
+
+    it('treats a blank value as not set', () => {
+      expect(
+        validateEnv({ ...valid, JWT_SECRET_PREVIOUS: '' }).JWT_SECRET_PREVIOUS,
+      ).toBeUndefined();
+    });
+
+    it('accepts a secret of at least 32 characters', () => {
+      const previous = 'an-old-secret-that-is-at-least-32-chars!';
+
+      expect(
+        validateEnv({ ...valid, JWT_SECRET_PREVIOUS: previous })
+          .JWT_SECRET_PREVIOUS,
+      ).toBe(previous);
+    });
+
+    it('rejects one that is too short', () => {
+      expect(() =>
+        validateEnv({ ...valid, JWT_SECRET_PREVIOUS: 'short' }),
+      ).toThrow(/JWT_SECRET_PREVIOUS/);
+    });
+  });
 });

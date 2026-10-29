@@ -12,10 +12,16 @@ import { JwtAuthGuard } from '../../modules/auth/presentation/guards/jwt-auth.gu
 import { BudgetSummaryController } from '../../modules/budgets/presentation/budget-summary.controller.js';
 import { BudgetsController } from '../../modules/budgets/presentation/budgets.controller.js';
 import { DestinationCatalogController } from '../../modules/destination-catalog/presentation/destination-catalog.controller.js';
+import { NotificationsController } from '../../modules/notifications/presentation/notifications.controller.js';
+import { PlacesController } from '../../modules/places/presentation/places.controller.js';
 import { ReviewsController } from '../../modules/reviews/presentation/reviews.controller.js';
 import { TripActivitiesController } from '../../modules/trip-activities/presentation/trip-activities.controller.js';
 import { TripDestinationsController } from '../../modules/trip-destinations/presentation/trip-destinations.controller.js';
 import { TripItineraryController } from '../../modules/trip-destinations/presentation/trip-itinerary.controller.js';
+import {
+  TripExpenseSummaryController,
+  TripExpensesController,
+} from '../../modules/trip-expenses/presentation/trip-expenses.controller.js';
 import { TripMembersController } from '../../modules/trip-members/presentation/trip-members.controller.js';
 import { TripInviteController } from '../../modules/trips/presentation/trip-invite.controller.js';
 import { TripsController } from '../../modules/trips/presentation/trips.controller.js';
@@ -29,10 +35,14 @@ const controllers: Controller[] = [
   BudgetSummaryController,
   BudgetsController,
   DestinationCatalogController,
+  NotificationsController,
+  PlacesController,
   ReviewsController,
   TripActivitiesController,
   TripDestinationsController,
   TripItineraryController,
+  TripExpenseSummaryController,
+  TripExpensesController,
   TripMembersController,
   TripInviteController,
   TripsController,
@@ -45,8 +55,10 @@ const PUBLIC = new Set([
   'AuthController.googleCallback',
   'DestinationCatalogController.findAll',
   'DestinationCatalogController.findOne',
+  'DestinationCatalogController.findTop',
   'ActivityCatalogController.findAll',
   'ActivityCatalogController.findOne',
+  'ActivityCatalogController.findDetails',
   'ReviewsController.findAll',
   'ReviewsController.findOne',
 ]);

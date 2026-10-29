@@ -9,6 +9,7 @@ import type { Trip } from '../domain/trip.entity.js';
 import type { TripRepository } from '../domain/trip.repository.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import type { TripMembersService } from '../../trip-members/application/trip-members.service.js';
+import type { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { TripsService } from './trips.service.js';
 
@@ -46,6 +47,7 @@ describe('TripsService', () => {
   let repository: RepoMock;
   let access: AccessMock;
   let members: { addMember: ReturnType<typeof vi.fn> };
+  let events: { publish: ReturnType<typeof vi.fn> };
   let service: TripsService;
 
   beforeEach(() => {
@@ -56,6 +58,7 @@ describe('TripsService', () => {
       update: vi.fn(),
       remove: vi.fn(),
       findByInviteCode: vi.fn(),
+      hasExpenses: vi.fn().mockResolvedValue(false),
     };
     access = {
       assertCanRead: vi.fn().mockResolvedValue('CREATOR'),
@@ -65,10 +68,12 @@ describe('TripsService', () => {
       tripIdOfActivity: vi.fn(),
     };
     members = { addMember: vi.fn().mockResolvedValue({}) };
+    events = { publish: vi.fn() };
     service = new TripsService(
       repository as unknown as TripRepository,
       access as unknown as TripAccessService,
       members as unknown as TripMembersService,
+      events as unknown as TripEventPublisher,
     );
   });
 
@@ -428,6 +433,7 @@ describe('TripsService', () => {
         base.id,
         joiner.id,
         'VIEWER',
+        joiner.id,
       );
       expect(result).toMatchObject({ id: base.id, role: 'VIEWER' });
     });
@@ -465,6 +471,88 @@ describe('TripsService', () => {
       await expect(
         service.join({ code: 'K7M2QX9P' }, joiner),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('notifications', () => {
+    beforeEach(() => {
+      repository.findById.mockResolvedValue(entity({ status: 'PLANNING' }));
+    });
+
+    it('announces a change of status, naming both stages', async () => {
+      repository.update.mockResolvedValue(entity({ status: 'CONFIRMED' }));
+
+      await service.update(base.id, { status: 'CONFIRMED' }, user);
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'TRIP_STATUS_CHANGED',
+        tripId: base.id,
+        actorId: user.id,
+        details: { from: 'PLANNING', to: 'CONFIRMED' },
+      });
+    });
+
+    it('says nothing when the status stays the same', async () => {
+      repository.update.mockResolvedValue(entity({ status: 'PLANNING' }));
+
+      await service.update(base.id, { name: 'Renamed' }, user);
+
+      expect(events.publish).not.toHaveBeenCalled();
+    });
+
+    it('says nothing when the update is refused', async () => {
+      access.assertIsCreator.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.update(base.id, { status: 'CONFIRMED' }, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(events.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('currency change', () => {
+    it('lets the creator change the currency of a trip without expenses', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'BRL' }));
+      repository.update.mockResolvedValue(entity({ currency: 'EUR' }));
+
+      await service.update(base.id, { currency: 'EUR' }, user);
+
+      expect(repository.update).toHaveBeenCalledWith(base.id, {
+        currency: 'EUR',
+      });
+    });
+
+    it('refuses once the trip has expenses, which would change their meaning', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'BRL' }));
+      repository.hasExpenses.mockResolvedValue(true);
+
+      await expect(
+        service.update(base.id, { currency: 'EUR' }, user),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('does not even look for expenses when the currency stays the same', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'BRL' }));
+      repository.update.mockResolvedValue(entity());
+
+      await service.update(
+        base.id,
+        { currency: 'BRL', name: 'New name' },
+        user,
+      );
+
+      expect(repository.hasExpenses).not.toHaveBeenCalled();
+    });
+
+    it('still lets other fields change on a trip with expenses', async () => {
+      repository.findById.mockResolvedValue(entity());
+      repository.hasExpenses.mockResolvedValue(true);
+      repository.update.mockResolvedValue(entity());
+
+      await service.update(base.id, { name: 'Renamed' }, user);
+
+      expect(repository.update).toHaveBeenCalled();
     });
   });
 });

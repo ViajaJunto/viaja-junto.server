@@ -1,7 +1,17 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiFoundResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -9,6 +19,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { StrictRateLimit } from '../../../shared/http/throttling.js';
 import { env } from '../../../shared/config/env.js';
 import { ErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import { UserResponseDto } from '../../users/application/dto/user-response.dto.js';
@@ -36,6 +47,7 @@ export class AuthController {
   })
   @ApiFoundResponse({ description: 'Redirect to the Google consent screen.' })
   @Get('google')
+  @StrictRateLimit()
   @UseGuards(GoogleAuthGuard)
   googleSignIn(): void {
     // GoogleAuthGuard answers with the redirect; this body never runs.
@@ -53,6 +65,7 @@ export class AuthController {
     description: 'Redirect to the frontend with the token or an error.',
   })
   @Get('google/callback')
+  @StrictRateLimit()
   @UseGuards(GoogleAuthGuard)
   async googleCallback(
     @Req() request: Request,
@@ -100,6 +113,24 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.service.getProfile(user.id);
+  }
+
+  @ApiOperation({
+    summary: 'Sign out',
+    description:
+      'Ends **every** session of the caller: all the access tokens issued so far stop working immediately, on every device, not only the one used here. The client should also discard its token. Signing in again issues a new one.',
+  })
+  @ApiNoContentResponse({ description: 'Signed out. No content returned.' })
+  @ApiBearerAuth('bearer')
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid access token.',
+    type: ErrorResponseDto,
+  })
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  logout(@CurrentUser() user: AuthenticatedUser) {
+    return this.service.signOut(user.id);
   }
 }
 

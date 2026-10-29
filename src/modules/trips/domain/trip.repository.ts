@@ -25,6 +25,8 @@ export abstract class TripRepository {
   ): Promise<Page<UserTrip>>;
   abstract findById(id: string): Promise<Trip | null>;
   abstract findByInviteCode(inviteCode: string): Promise<Trip | null>;
+  /** Whether the trip has any shared expense recorded. */
+  abstract hasExpenses(tripId: string): Promise<boolean>;
   abstract create(data: CreateTripData): Promise<Trip>;
   abstract update(id: string, data: UpdateTripData): Promise<Trip>;
   abstract remove(id: string): Promise<void>;

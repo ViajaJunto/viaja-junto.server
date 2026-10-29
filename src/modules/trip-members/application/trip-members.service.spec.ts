@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TripMember } from '../domain/trip-member.entity.js';
 import type { TripMemberRepository } from '../domain/trip-member.repository.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import type { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { TripMembersService } from './trip-members.service.js';
 
@@ -39,6 +40,7 @@ type AccessMock = {
 describe('TripMembersService', () => {
   let repository: RepoMock;
   let access: AccessMock;
+  let events: { publish: ReturnType<typeof vi.fn> };
   let service: TripMembersService;
 
   beforeEach(() => {
@@ -57,9 +59,11 @@ describe('TripMembersService', () => {
       tripIdOfDestination: vi.fn().mockResolvedValue(tripId),
       tripIdOfActivity: vi.fn().mockResolvedValue(tripId),
     } as AccessMock;
+    events = { publish: vi.fn() };
     service = new TripMembersService(
       repository as unknown as TripMemberRepository,
       access as unknown as TripAccessService,
+      events as unknown as TripEventPublisher,
     );
   });
 
@@ -288,6 +292,90 @@ describe('TripMembersService', () => {
         service.addMember(tripId, base.userId, 'VIEWER'),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(repository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('notifications', () => {
+    it('announces a member who joins, as done by whoever invited them', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.addMember(tripId, base.userId, 'VIEWER', user.id);
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'MEMBER_JOINED',
+        tripId,
+        actorId: user.id,
+        subjectId: base.userId,
+        details: { permission: 'VIEWER' },
+      });
+    });
+
+    it('takes the person who joins with a code as the one who did it', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.addMember(tripId, base.userId, 'VIEWER');
+
+      expect(events.publish).toHaveBeenCalledWith(
+        expect.objectContaining({ actorId: base.userId }),
+      );
+    });
+
+    it('says nothing when the user is already a member', async () => {
+      repository.findByTripAndUser.mockResolvedValue(entity());
+
+      await expect(
+        service.addMember(tripId, base.userId, 'VIEWER'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(events.publish).not.toHaveBeenCalled();
+    });
+
+    it('announces a permission that changes, with the old and the new one', async () => {
+      repository.findById.mockResolvedValue(entity({ permission: 'VIEWER' }));
+      repository.update.mockResolvedValue(entity({ permission: 'EDITOR' }));
+
+      await service.update(base.id, { permission: 'EDITOR' }, user);
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'MEMBER_PERMISSION_CHANGED',
+        tripId: base.tripId,
+        actorId: user.id,
+        subjectId: base.userId,
+        details: { from: 'VIEWER', to: 'EDITOR' },
+      });
+    });
+
+    it('says nothing when the permission stays the same', async () => {
+      repository.findById.mockResolvedValue(entity({ permission: 'EDITOR' }));
+      repository.update.mockResolvedValue(entity({ permission: 'EDITOR' }));
+
+      await service.update(base.id, { permission: 'EDITOR' }, user);
+
+      expect(events.publish).not.toHaveBeenCalled();
+    });
+
+    it('announces a removed member and makes sure they hear it too', async () => {
+      repository.findById.mockResolvedValue(entity());
+      repository.remove.mockResolvedValue(undefined);
+
+      await service.remove(base.id, user);
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'MEMBER_REMOVED',
+        tripId: base.tripId,
+        actorId: user.id,
+        subjectId: base.userId,
+        alsoNotify: [base.userId],
+      });
+    });
+
+    it('says nothing when the removal is refused', async () => {
+      repository.findById.mockResolvedValue(entity());
+      access.assertIsCreator.mockRejectedValue(new ForbiddenException());
+
+      await expect(service.remove(base.id, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(events.publish).not.toHaveBeenCalled();
     });
   });
 });

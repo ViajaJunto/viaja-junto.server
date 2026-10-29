@@ -41,6 +41,9 @@ describe('UsersService', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      findSession: vi.fn(),
+      revokeTokens: vi.fn(),
+      findVisitedPlaces: vi.fn(),
     };
     service = new UsersService(repository as unknown as UserRepository);
   });
@@ -94,6 +97,71 @@ describe('UsersService', () => {
       await expect(service.findOne(base.id)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('getSession', () => {
+    it('reports when the tokens of an account start to count', async () => {
+      const validAfter = new Date('2026-07-01T10:00:00.000Z');
+      repository.findSession.mockResolvedValue({
+        tokensValidAfter: validAfter,
+      });
+
+      await expect(service.getSession(base.id)).resolves.toEqual({
+        tokensValidAfter: validAfter,
+      });
+    });
+
+    it('is null for an account that no longer exists', async () => {
+      repository.findSession.mockResolvedValue(null);
+
+      await expect(service.getSession(base.id)).resolves.toBeNull();
+    });
+  });
+
+  describe('revokeTokens', () => {
+    it('refuses every token issued so far, rounding up to the next whole second', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-07-01T10:00:00.250Z'));
+      repository.revokeTokens.mockResolvedValue(undefined);
+
+      await service.revokeTokens(base.id);
+
+      expect(repository.revokeTokens).toHaveBeenCalledWith(
+        base.id,
+        new Date('2026-07-01T10:00:01.000Z'),
+      );
+      vi.useRealTimers();
+    });
+
+    it('does not round a time that is already a whole second', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-07-01T10:00:00.000Z'));
+      repository.revokeTokens.mockResolvedValue(undefined);
+
+      await service.revokeTokens(base.id);
+
+      expect(repository.revokeTokens).toHaveBeenCalledWith(
+        base.id,
+        new Date('2026-07-01T10:00:00.000Z'),
+      );
+      vi.useRealTimers();
+    });
+  });
+
+  describe('findVisitedCountries', () => {
+    it('groups the places of the caller’s completed trips', async () => {
+      repository.findVisitedPlaces.mockResolvedValue([
+        { tripId: 't1', country: 'França', countryCode: 'FR' },
+        { tripId: 't2', country: 'França', countryCode: 'FR' },
+      ]);
+
+      const result = await service.findVisitedCountries(base.id);
+
+      expect(repository.findVisitedPlaces).toHaveBeenCalledWith(base.id);
+      expect(result).toEqual([
+        { country: 'França', countryCode: 'FR', tripCount: 2 },
+      ]);
     });
   });
 

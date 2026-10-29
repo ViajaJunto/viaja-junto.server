@@ -56,6 +56,22 @@ export class BudgetSummaryResponseDto implements BudgetSummary {
   remaining!: number | null;
 
   @ApiProperty({
+    description:
+      'What the trip’s recorded expenses add up to, each converted with the exchange rate it was paid at. Compare with `planned`.',
+    example: 980.5,
+  })
+  spent!: number;
+
+  @ApiProperty({
+    description:
+      'Total budget minus what was actually spent; negative when overspent, null without a budget.',
+    type: Number,
+    nullable: true,
+    example: 7519.5,
+  })
+  remainingAfterSpent!: number | null;
+
+  @ApiProperty({
     description: 'True when what is planned exceeds the total budget.',
     example: false,
   })

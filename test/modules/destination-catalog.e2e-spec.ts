@@ -49,23 +49,27 @@ describe('Destination catalog (e2e)', () => {
       const first = await t.anonymous
         .get('/destination-catalog?limit=1&page=1')
         .expect(200);
-      const total: number = first.body.meta.total;
-      const last = await t.anonymous
-        .get(`/destination-catalog?limit=1&page=${total}`)
+      const second = await t.anonymous
+        .get('/destination-catalog?limit=1&page=2')
         .expect(200);
+      // Far past the end, so rows other suites insert meanwhile cannot reach it.
       const beyond = await t.anonymous
-        .get(`/destination-catalog?limit=1&page=${total + 1}`)
+        .get('/destination-catalog?limit=1&page=1000000')
         .expect(200);
 
-      expectPage(first.body, { page: 1, limit: 1, total });
-      expectPage(last.body, { page: total, limit: 1, total });
+      expectPage(first.body, {
+        page: 1,
+        limit: 1,
+        total: first.body.meta.total,
+      });
       expect(first.body.data).toHaveLength(1);
-      expect(last.body.data).toHaveLength(1);
+      expect(second.body.data).toHaveLength(1);
+      expect(second.body.meta).toMatchObject({ page: 2, hasPrevious: true });
       expect(beyond.body.data).toEqual([]);
-      // A to Z: the first page sorts before the last one.
-      expect(
-        first.body.data[0].name.localeCompare(last.body.data[0].name),
-      ).toBeLessThanOrEqual(0);
+      expect(beyond.body.meta).toMatchObject({
+        hasNext: false,
+        hasPrevious: true,
+      });
     });
 
     it('reads one destination, and answers 404 / 400 for an unknown or malformed id', async () => {

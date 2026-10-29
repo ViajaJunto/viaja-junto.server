@@ -24,6 +24,9 @@ describe('DestinationCatalogController', () => {
     service = {
       findAll: vi.fn(),
       findOne: vi.fn(),
+      importPlace: vi.fn(),
+      findImported: vi.fn(),
+      findTop: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
@@ -88,5 +91,11 @@ describe('DestinationCatalogController', () => {
     controller.updatePhoto(id, file, user);
 
     expect(service.updatePhoto).toHaveBeenCalledWith(id, file, user);
+  });
+
+  it('asks for the top destinations with the requested limit', () => {
+    controller.findTop({ limit: 5 });
+
+    expect(service.findTop).toHaveBeenCalledWith(5);
   });
 });

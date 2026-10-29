@@ -28,6 +28,7 @@ import {
   ApiIdParam,
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
+import { StrictRateLimit } from '../../../shared/http/throttling.js';
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import {
@@ -100,6 +101,7 @@ export class ReviewsController {
   @ApiAuthenticated()
   @UseGuards(JwtAuthGuard)
   @Post()
+  @StrictRateLimit()
   @HttpCode(HttpStatus.CREATED)
   create(
     @Body() dto: CreateReviewDto,

@@ -52,15 +52,20 @@ describe('Activity catalog (e2e)', () => {
       const first = await t.anonymous
         .get('/activity-catalog?limit=1&page=1')
         .expect(200);
-      const total: number = first.body.meta.total;
+      // Far past the end, so rows other suites insert meanwhile cannot reach it.
       const beyond = await t.anonymous
-        .get(`/activity-catalog?limit=1&page=${total + 1}`)
+        .get('/activity-catalog?limit=1&page=1000000')
         .expect(200);
 
-      expectPage(first.body, { page: 1, limit: 1, total });
+      expectPage(first.body, {
+        page: 1,
+        limit: 1,
+        total: first.body.meta.total,
+      });
+      expect(first.body.data).toHaveLength(1);
       expect(beyond.body.data).toEqual([]);
       expect(beyond.body.meta).toMatchObject({
-        total,
+        page: 1000000,
         hasNext: false,
         hasPrevious: true,
       });

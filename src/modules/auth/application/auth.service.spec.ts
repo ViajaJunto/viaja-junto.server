@@ -18,7 +18,7 @@ const user = {
 
 type UsersMock = Pick<
   Record<keyof UsersService, ReturnType<typeof vi.fn>>,
-  'findOrCreateFromGoogle' | 'findOne'
+  'findOrCreateFromGoogle' | 'findOne' | 'revokeTokens'
 >;
 
 type IssuerMock = {
@@ -31,7 +31,11 @@ describe('AuthService', () => {
   let service: AuthService;
 
   beforeEach(() => {
-    users = { findOrCreateFromGoogle: vi.fn(), findOne: vi.fn() };
+    users = {
+      findOrCreateFromGoogle: vi.fn(),
+      findOne: vi.fn(),
+      revokeTokens: vi.fn().mockResolvedValue(undefined),
+    };
     tokens = { issue: vi.fn() };
     service = new AuthService(
       users as unknown as UsersService,
@@ -87,5 +91,11 @@ describe('AuthService', () => {
       await expect(service.getProfile(user.id)).resolves.toBe(user);
       expect(users.findOne).toHaveBeenCalledWith(user.id);
     });
+  });
+
+  it('signs a user out by revoking every token issued to them so far', async () => {
+    await service.signOut(user.id);
+
+    expect(users.revokeTokens).toHaveBeenCalledWith(user.id);
   });
 });

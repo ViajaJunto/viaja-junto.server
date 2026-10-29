@@ -23,6 +23,9 @@ describe('UsersController', () => {
       findOne: vi.fn(),
       findOrCreateFromGoogle: vi.fn(),
       getRole: vi.fn(),
+      getSession: vi.fn(),
+      revokeTokens: vi.fn(),
+      findVisitedCountries: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
     };
@@ -64,5 +67,15 @@ describe('UsersController', () => {
     service.findAll.mockReturnValue(page);
 
     expect(controller.findAll({})).toBe(page);
+  });
+
+  it('asks for the visited countries of the caller only', () => {
+    const countries = [{ country: 'França', countryCode: 'FR', tripCount: 1 }];
+    service.findVisitedCountries.mockReturnValue(countries);
+
+    const result = controller.visitedCountries(user);
+
+    expect(service.findVisitedCountries).toHaveBeenCalledWith(user.id);
+    expect(result).toBe(countries);
   });
 });
