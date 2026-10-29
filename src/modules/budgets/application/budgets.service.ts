@@ -5,9 +5,11 @@ import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-que
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
+import { summarizeBudget } from '../domain/budget-summary.js';
 import { BudgetRepository } from '../domain/budget.repository.js';
 import { CreateBudgetDto } from './dto/create-budget.dto.js';
 import { UpdateBudgetDto } from './dto/update-budget.dto.js';
+import { BudgetSummaryResponseDto } from './dto/budget-summary-response.dto.js';
 import { BudgetResponseDto } from './dto/budget-response.dto.js';
 
 @Injectable()
@@ -49,12 +51,7 @@ export class BudgetsService {
   ): Promise<BudgetResponseDto> {
     await this.access.assertCanEdit(dto.tripId, user.id);
 
-    return BudgetResponseDto.from(
-      await this.repository.create({
-        ...dto,
-        plannedActivities: dto.plannedActivities ?? 0,
-      }),
-    );
+    return BudgetResponseDto.from(await this.repository.create({ ...dto }));
   }
 
   async update(
@@ -72,6 +69,24 @@ export class BudgetsService {
     const budget = await this.getOrFail(id);
     await this.access.assertCanEdit(budget.tripId, user.id);
     await this.repository.remove(id);
+  }
+
+  /**
+   * Where the budget of a trip stands. `planned` is derived from the expected
+   * cost of the trip's activities, so it can never drift from the itinerary.
+   */
+  async summarize(
+    tripId: string,
+    user: AuthenticatedUser,
+  ): Promise<BudgetSummaryResponseDto> {
+    await this.access.assertCanRead(tripId, user.id);
+    const source = await this.repository.findSummarySource(tripId);
+
+    if (!source) {
+      throw new NotFoundException(`Trip with id "${tripId}" not found`);
+    }
+
+    return summarizeBudget(source);
   }
 
   private async getOrFail(id: string) {

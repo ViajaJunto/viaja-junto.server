@@ -90,7 +90,7 @@ activity_catalog(#id, name, description, activity_type, location, city, country,
 
 trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id->activity_catalog, date_time, duration_minutes, expected_cost, status)
 
-budget(#id, *trip_id->trip, total_value, planned_activities)
+budget(#id, *trip_id->trip, total_value, created_at)
 
 review(#id, *user_id->user, *activity_catalog_id->activity_catalog, rating, comment, created_at)
 ```
@@ -301,6 +301,17 @@ auditable. An expense in another currency carries the **exchange rate to the
 trip currency that the user entered when recording it**; the expense library
 receives those rates through its `ExchangeRates` interface, and an expense in
 the trip currency needs none.
+
+**Budget summary (FR16, FR17).** `GET /trips/{id}/budget/summary` answers where
+the budget stands: `totalValue`, `planned`, `remaining`, an `overBudget` flag,
+the activity count, how many activities have no cost, and the consumption per
+`ActivityType` (all five types, in a fixed order). `planned` is **derived** from
+the `expectedCost` of the trip's planned activities, never typed in: the old
+manual `plannedActivities` field (and its column) was removed so it cannot drift
+from the itinerary. Activities without a cost count as 0 and are reported in
+`unpricedActivities`; a trip without a budget still returns `planned`, with
+`totalValue` and `remaining` null. Amounts are summed in integer cents and are
+in the trip's currency. Any member of the trip can read it.
 
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its

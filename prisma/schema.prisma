@@ -175,11 +175,10 @@ model TripActivity {
 }
 
 model Budget {
-  id                String   @id @default(uuid())
-  tripId            String   @unique @map("trip_id")
-  totalValue        Float    @map("total_value")
-  plannedActivities Float    @default(0) @map("planned_activities")
-  createdAt         DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  tripId     String   @unique @map("trip_id")
+  totalValue Float    @map("total_value")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 

@@ -9,6 +9,7 @@ import { ActivityCatalogController } from '../../modules/activity-catalog/presen
 import { AuthController } from '../../modules/auth/presentation/auth.controller.js';
 import { GoogleAuthGuard } from '../../modules/auth/presentation/guards/google-auth.guard.js';
 import { JwtAuthGuard } from '../../modules/auth/presentation/guards/jwt-auth.guard.js';
+import { BudgetSummaryController } from '../../modules/budgets/presentation/budget-summary.controller.js';
 import { BudgetsController } from '../../modules/budgets/presentation/budgets.controller.js';
 import { DestinationCatalogController } from '../../modules/destination-catalog/presentation/destination-catalog.controller.js';
 import { ReviewsController } from '../../modules/reviews/presentation/reviews.controller.js';
@@ -25,6 +26,7 @@ type Controller = new (...args: never[]) => object;
 const controllers: Controller[] = [
   ActivityCatalogController,
   AuthController,
+  BudgetSummaryController,
   BudgetsController,
   DestinationCatalogController,
   ReviewsController,
