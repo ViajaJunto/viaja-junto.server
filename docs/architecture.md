@@ -82,7 +82,7 @@ trip(#id, name, description, start_date, end_date, status, *created_by->user, cu
 
 trip_member(#id, *trip_id->trip, *user_id->user, permission, joined_at)
 
-destination_catalog(#id, name, country, category, description, latitude, longitude, photo_url)
+destination_catalog(#id, name, country, country_code, category, description, latitude, longitude, photo_url)
 
 trip_destination(#id, *trip_id->trip, *destination_catalog_id->destination_catalog, arrival, departure, description, order)
 
@@ -337,6 +337,26 @@ destination with more reviews, then by name. Destinations without reviews are
 not listed. Because the match is by name, a destination's activities need a
 consistent `city`; destination reviews (BR05) can be added later without
 changing this endpoint's contract.
+
+**Catalog search (FR10, FR24).** Both catalogs are searchable by anyone, with
+filters that combine with AND and are ignored when blank:
+`GET /destination-catalog?q=&country=&category=` (`q` is a case-insensitive
+substring of the name; `country` is the country name or its ISO code) and
+`GET /activity-catalog?q=&type=&minRating=&city=&country=&sort=` (`minRating`
+leaves unrated activities out; `sort=rating` puts the best rated first and the
+unrated last, `name` is the default). User text is escaped before it reaches
+`ILIKE`, because Prisma does not do it for `contains`/`equals` with
+`mode: 'insensitive'`: without that, `q=%` would match every row. The catalogs
+are small, so no extra indexes were added; revisit with `pg_trgm` if they grow.
+
+**Visited countries (FR11).** `GET /users/me/visited-countries` lists the
+distinct countries of the destinations in the caller's `COMPLETED` trips, as
+creator or member, sorted by name, each with `countryCode` (ISO 3166-1 alpha-2,
+ready for the frontend map) and `tripCount`. Destinations are grouped by code,
+or by name when the catalog has no code, and destinations with neither are
+skipped. `destination_catalog.country_code` is optional, validated against the
+ISO list and stored upper-case; only an admin writes it, with the rest of the
+catalog.
 
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its

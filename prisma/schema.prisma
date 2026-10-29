@@ -110,6 +110,8 @@ model DestinationCatalog {
   id          String               @id @default(uuid())
   name        String
   country     String?
+  // ISO 3166-1 alpha-2 ("FR"), so the frontend map can colour the country directly.
+  countryCode String?              @map("country_code") @db.VarChar(2)
   category    DestinationCategory?
   description String?
   latitude    Float?

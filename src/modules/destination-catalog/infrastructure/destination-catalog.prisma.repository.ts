@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
+import { buildDestinationWhere } from './destination-catalog.filters.js';
 import {
   DestinationCatalog,
   RatedDestination,
@@ -8,6 +9,7 @@ import {
 import {
   CreateDestinationCatalogData,
   UpdateDestinationCatalogData,
+  DestinationCatalogFilter,
   DestinationCatalogRepository,
 } from '../domain/destination-catalog.repository.js';
 
@@ -15,18 +17,21 @@ import {
 export class DestinationCatalogPrismaRepository implements DestinationCatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll({
-    skip,
-    take,
-  }: PageRequest): Promise<Page<DestinationCatalog>> {
+  async findAll(
+    { skip, take }: PageRequest,
+    filter: DestinationCatalogFilter,
+  ): Promise<Page<DestinationCatalog>> {
+    const where = buildDestinationWhere(filter);
+
     // One transaction so the page and the total come from the same snapshot.
     const [items, total] = await this.prisma.$transaction([
       this.prisma.destinationCatalog.findMany({
+        where,
         skip,
         take,
         orderBy: { name: 'asc' },
       }),
-      this.prisma.destinationCatalog.count(),
+      this.prisma.destinationCatalog.count({ where }),
     ]);
 
     return { items, total };

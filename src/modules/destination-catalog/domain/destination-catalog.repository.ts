@@ -4,6 +4,15 @@ import {
   RatedDestination,
 } from './destination-catalog.entity.js';
 
+/** Discovery filters; every field that is set narrows the result. */
+export interface DestinationCatalogFilter {
+  /** Case-insensitive text contained in the name. */
+  text?: string;
+  /** Country name (case-insensitive) or ISO code. */
+  country?: string;
+  category?: NonNullable<DestinationCatalog['category']>;
+}
+
 export type CreateDestinationCatalogData = Omit<DestinationCatalog, 'id'>;
 export type UpdateDestinationCatalogData =
   Partial<CreateDestinationCatalogData>;
@@ -17,7 +26,10 @@ export type UpdateDestinationCatalogData =
  * are erased at compile time.
  */
 export abstract class DestinationCatalogRepository {
-  abstract findAll(page: PageRequest): Promise<Page<DestinationCatalog>>;
+  abstract findAll(
+    page: PageRequest,
+    filter: DestinationCatalogFilter,
+  ): Promise<Page<DestinationCatalog>>;
   abstract findById(id: string): Promise<DestinationCatalog | null>;
   abstract create(
     data: CreateDestinationCatalogData,

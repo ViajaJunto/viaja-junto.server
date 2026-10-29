@@ -41,6 +41,7 @@ describe('UsersService', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      findVisitedPlaces: vi.fn(),
     };
     service = new UsersService(repository as unknown as UserRepository);
   });
@@ -94,6 +95,22 @@ describe('UsersService', () => {
       await expect(service.findOne(base.id)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('findVisitedCountries', () => {
+    it('groups the places of the caller’s completed trips', async () => {
+      repository.findVisitedPlaces.mockResolvedValue([
+        { tripId: 't1', country: 'França', countryCode: 'FR' },
+        { tripId: 't2', country: 'França', countryCode: 'FR' },
+      ]);
+
+      const result = await service.findVisitedCountries(base.id);
+
+      expect(repository.findVisitedPlaces).toHaveBeenCalledWith(base.id);
+      expect(result).toEqual([
+        { country: 'França', countryCode: 'FR', tripCount: 2 },
+      ]);
     });
   });
 
