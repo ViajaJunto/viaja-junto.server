@@ -18,4 +18,6 @@ export interface DestinationCatalog {
   latitude?: number | null;
   longitude?: number | null;
   photoUrl?: string | null;
+  /** Id in the external places provider (`osm:node:123`) when imported. */
+  externalId?: string | null;
 }

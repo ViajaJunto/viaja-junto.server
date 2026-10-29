@@ -55,6 +55,15 @@ export class ActivityCatalogPrismaRepository implements ActivityCatalogRepositor
     return this.prisma.activityCatalog.update({ where: { id }, data });
   }
 
+  async findExistingExternalIds(externalIds: string[]): Promise<string[]> {
+    const rows = await this.prisma.activityCatalog.findMany({
+      where: { externalId: { in: externalIds } },
+      select: { externalId: true },
+    });
+
+    return rows.flatMap(({ externalId }) => externalId ?? []);
+  }
+
   async findLatestReviews(
     activityId: string,
     limit: number,

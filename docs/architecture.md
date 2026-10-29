@@ -82,9 +82,11 @@ trip(#id, name, description, start_date, end_date, status, *created_by->user, cu
 
 trip_member(#id, *trip_id->trip, *user_id->user, permission, joined_at)
 
-destination_catalog(#id, name, country, country_code, category, description, latitude, longitude, photo_url)
+destination_catalog(#id, name, country, country_code, category, description, latitude, longitude, photo_url, external_id)
 
 trip_destination(#id, *trip_id->trip, *destination_catalog_id->destination_catalog, arrival, departure, description, order)
+
+activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, external_id, source, average_rating, created_at)
 
 activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, review_count, created_at)
 
@@ -357,6 +359,30 @@ or by name when the catalog has no code, and destinations with neither are
 skipped. `destination_catalog.country_code` is optional, validated against the
 ISO list and stored upper-case; only an admin writes it, with the rest of the
 catalog.
+
+**External places (OpenStreetMap).** Administrators can find real-world places
+and import them into the catalogs, which cuts the effort of collecting data
+(reuse plan). The provider sits behind a `PlacesProvider` port in
+`src/modules/places`; the adapter is **OpenStreetMap via Nominatim**, chosen
+because it needs no API key or billing — it removes the price-change risk of
+the reuse plan — and a Google Places adapter could be added without touching
+the rest. Endpoints, all admin-only: `GET /places/search?q=&limit=` (each result
+says what an import would create and whether it is already in a catalog),
+`POST /places/import/activities` and `POST /places/import/destinations` with
+`{ "externalId": "osm:node:123" }`. The import fetches the place again from the
+provider, so only the id is trusted from the client; the activity type and the
+destination category are guessed from the OSM tags and can be corrected later.
+`external_id` is unique in each catalog, so importing the same place twice
+answers `409`.
+
+Nominatim's usage policy is followed in the adapter: an identifying
+`User-Agent` (`PLACES_USER_AGENT`, required to enable the feature — without it
+the endpoints answer `503`), at most one request per second, a timeout
+(`PLACES_TIMEOUT_MS`, default 5 s) and an in-memory cache of one hour, so
+repeating a search costs nothing. Provider failures become `504` (timeout),
+`503` (rate limited) or `502` (unreachable or unusable answer). Results carry the
+attribution "© OpenStreetMap contributors", which must be shown wherever they
+are displayed. The rate limit and the cache are per process.
 
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its

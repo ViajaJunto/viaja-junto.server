@@ -39,6 +39,8 @@ export abstract class ActivityCatalogRepository {
     id: string,
     data: UpdateActivityCatalogData,
   ): Promise<ActivityCatalog>;
+  /** Which of these external ids are already in the catalog. */
+  abstract findExistingExternalIds(externalIds: string[]): Promise<string[]>;
   /** The most recent reviews of an activity, newest first. */
   abstract findLatestReviews(
     activityId: string,

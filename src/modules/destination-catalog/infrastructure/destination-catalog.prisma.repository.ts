@@ -52,6 +52,15 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
     return this.prisma.destinationCatalog.update({ where: { id }, data });
   }
 
+  async findExistingExternalIds(externalIds: string[]): Promise<string[]> {
+    const rows = await this.prisma.destinationCatalog.findMany({
+      where: { externalId: { in: externalIds } },
+      select: { externalId: true },
+    });
+
+    return rows.flatMap(({ externalId }) => externalId ?? []);
+  }
+
   async findTopRated(limit: number): Promise<RatedDestination[]> {
     // An activity belongs to a destination when it is in a city of that name
     // (and in that country, when both sides say which). The rating is the

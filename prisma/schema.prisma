@@ -117,6 +117,8 @@ model DestinationCatalog {
   latitude    Float?
   longitude   Float?
   photoUrl    String?              @map("photo_url")
+  // Id in the external places provider ("osm:node:123"); set when imported, unique so an import is never duplicated.
+  externalId  String?              @unique @map("external_id")
 
   tripDestinations TripDestination[]
 
@@ -150,6 +152,8 @@ model ActivityCatalog {
   latitude      Float?
   longitude     Float?
   googlePlaceId String?      @map("google_place_id")
+  // Id in the external places provider ("osm:node:123"); set when imported, unique so an import is never duplicated.
+  externalId    String?      @unique @map("external_id")
   photoUrl      String?      @map("photo_url")
   source        String?
   // Derived from the reviews, in the same transaction that changes them.

@@ -24,6 +24,8 @@ describe('DestinationCatalogController', () => {
     service = {
       findAll: vi.fn(),
       findOne: vi.fn(),
+      importPlace: vi.fn(),
+      findImported: vi.fn(),
       findTop: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),

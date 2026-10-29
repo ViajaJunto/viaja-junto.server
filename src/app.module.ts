@@ -14,6 +14,7 @@ import { TripDestinationsModule } from './modules/trip-destinations/trip-destina
 import { ActivityCatalogModule } from './modules/activity-catalog/activity-catalog.module.js';
 import { TripActivitiesModule } from './modules/trip-activities/trip-activities.module.js';
 import { BudgetsModule } from './modules/budgets/budgets.module.js';
+import { PlacesModule } from './modules/places/places.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 
 @Module({
@@ -30,6 +31,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module.js';
     TripActivitiesModule,
     BudgetsModule,
     ReviewsModule,
+    PlacesModule,
   ],
   controllers: [AppController],
   providers: [

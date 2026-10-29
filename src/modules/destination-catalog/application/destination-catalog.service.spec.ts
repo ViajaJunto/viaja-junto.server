@@ -53,6 +53,7 @@ describe('DestinationCatalogService', () => {
       create: vi.fn(),
       update: vi.fn(),
       countTripUsages: vi.fn().mockResolvedValue(0),
+      findExistingExternalIds: vi.fn().mockResolvedValue([]),
       findTopRated: vi.fn().mockResolvedValue([]),
       remove: vi.fn(),
     };
@@ -335,6 +336,54 @@ describe('DestinationCatalogService', () => {
       await service.remove(base.id, user);
 
       expect(repository.countTripUsages).toHaveBeenCalledWith(base.id);
+    });
+  });
+
+  describe('importPlace', () => {
+    const data = {
+      externalId: 'osm:node:1',
+      name: 'Paris',
+      category: 'CITY' as const,
+    };
+
+    it('adds a place from the external provider', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.importPlace(data, user);
+
+      expect(access.assertAdmin).toHaveBeenCalledWith(user.id);
+      expect(repository.findExistingExternalIds).toHaveBeenCalledWith([
+        'osm:node:1',
+      ]);
+      expect(repository.create).toHaveBeenCalledWith(data);
+    });
+
+    it('answers 409 instead of duplicating a place that was already imported', async () => {
+      repository.findExistingExternalIds.mockResolvedValue(['osm:node:1']);
+
+      await expect(service.importPlace(data, user)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('is for administrators only', async () => {
+      access.assertAdmin.mockRejectedValue(new ForbiddenException());
+
+      await expect(service.importPlace(data, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repository.findExistingExternalIds).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findImported', () => {
+    it('tells which external ids are already in the catalog', async () => {
+      repository.findExistingExternalIds.mockResolvedValue(['osm:node:2']);
+
+      await expect(
+        service.findImported(['osm:node:1', 'osm:node:2']),
+      ).resolves.toEqual(['osm:node:2']);
     });
   });
 });

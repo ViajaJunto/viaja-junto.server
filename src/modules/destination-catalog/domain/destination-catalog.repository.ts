@@ -38,6 +38,8 @@ export abstract class DestinationCatalogRepository {
     id: string,
     data: UpdateDestinationCatalogData,
   ): Promise<DestinationCatalog>;
+  /** Which of these external ids are already in the catalog. */
+  abstract findExistingExternalIds(externalIds: string[]): Promise<string[]>;
   /**
    * The best rated destinations, best first. A destination is rated by the
    * reviews of the catalog activities located in it; destinations without
