@@ -29,7 +29,7 @@ import {
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import { ListActivityCatalogQueryDto } from '../application/dto/list-activity-catalog-query.dto.js';
 import { CreateActivityCatalogDto } from '../application/dto/create-activity-catalog.dto.js';
 import { UpdateActivityCatalogDto } from '../application/dto/update-activity-catalog.dto.js';
 import { ActivityCatalogResponseDto } from '../application/dto/activity-catalog-response.dto.js';
@@ -50,7 +50,7 @@ export class ActivityCatalogController {
   @ApiOperation({
     summary: 'Browse activities',
     description:
-      'Returns a paginated, alphabetically sorted list of activities in the shared catalog. Public — this is what powers discovery.',
+      'Returns a paginated list of activities in the shared catalog, A to Z by default. Narrow it with `q` (name), `type`, `minRating`, `city` and `country`, and order it with `sort=rating` to see the best rated first. Public — this is what powers discovery.',
   })
   @ApiPaginatedResponse(ActivityCatalogResponseDto, 'Page of activity records.')
   @ApiUnprocessableEntityResponse({
@@ -58,7 +58,7 @@ export class ActivityCatalogController {
     type: ValidationErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: ListActivityCatalogQueryDto) {
     return this.service.findAll(query);
   }
 

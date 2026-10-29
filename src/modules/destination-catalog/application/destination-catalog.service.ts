@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
-import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
 import { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
 import { DestinationCatalogRepository } from '../domain/destination-catalog.repository.js';
+import { ListDestinationCatalogQueryDto } from './dto/list-destination-catalog-query.dto.js';
 import { CreateDestinationCatalogDto } from './dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from './dto/update-destination-catalog.dto.js';
 import { DestinationCatalogResponseDto } from './dto/destination-catalog-response.dto.js';
@@ -21,10 +21,13 @@ export class DestinationCatalogService {
   ) {}
 
   async findAll(
-    query: PaginationQueryDto,
+    query: ListDestinationCatalogQueryDto,
   ): Promise<PaginatedResponseDto<DestinationCatalogResponseDto>> {
     const { page, limit, skip, take } = toPageRequest(query);
-    const { items, total } = await this.repository.findAll({ skip, take });
+    const { items, total } = await this.repository.findAll(
+      { skip, take },
+      { text: query.q, country: query.country, category: query.category },
+    );
 
     return {
       data: items.map((item) => DestinationCatalogResponseDto.from(item)),

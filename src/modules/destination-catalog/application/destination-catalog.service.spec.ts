@@ -76,7 +76,14 @@ describe('DestinationCatalogService', () => {
 
       await service.findAll({ page: 3, limit: 15 });
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 30, take: 15 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 30, take: 15 },
+        {
+          text: undefined,
+          country: undefined,
+          category: undefined,
+        },
+      );
     });
 
     it('falls back to the default window when the query is empty', async () => {
@@ -84,7 +91,25 @@ describe('DestinationCatalogService', () => {
 
       await service.findAll({});
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 0, take: 20 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        {
+          text: undefined,
+          country: undefined,
+          category: undefined,
+        },
+      );
+    });
+
+    it('hands every discovery filter to the repository', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({ q: 'par', country: 'FR', category: 'CITY' });
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        { text: 'par', country: 'FR', category: 'CITY' },
+      );
     });
 
     it('wraps the page in the { data, meta } envelope', async () => {

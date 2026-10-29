@@ -29,7 +29,7 @@ import {
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import { ListDestinationCatalogQueryDto } from '../application/dto/list-destination-catalog-query.dto.js';
 import { CreateDestinationCatalogDto } from '../application/dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from '../application/dto/update-destination-catalog.dto.js';
 import { DestinationCatalogResponseDto } from '../application/dto/destination-catalog-response.dto.js';
@@ -50,7 +50,7 @@ export class DestinationCatalogController {
   @ApiOperation({
     summary: 'Browse destinations',
     description:
-      'Returns a paginated, alphabetically sorted list of destinations in the shared catalog. Public — visitors can browse without an account.',
+      'Returns a paginated, alphabetically sorted list of destinations in the shared catalog. Narrow it with `q` (name, case-insensitive), `country` (name or ISO code) and `category`. Public — visitors can browse without an account.',
   })
   @ApiPaginatedResponse(
     DestinationCatalogResponseDto,
@@ -61,7 +61,7 @@ export class DestinationCatalogController {
     type: ValidationErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: ListDestinationCatalogQueryDto) {
     return this.service.findAll(query);
   }
 
