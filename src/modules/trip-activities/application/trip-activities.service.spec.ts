@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TripActivity } from '../domain/trip-activity.entity.js';
 import type { TripActivityRepository } from '../domain/trip-activity.repository.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import type { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { TripActivitiesService } from './trip-activities.service.js';
 
@@ -41,6 +42,7 @@ type AccessMock = {
 describe('TripActivitiesService', () => {
   let repository: RepoMock;
   let access: AccessMock;
+  let events: { publish: ReturnType<typeof vi.fn> };
   let service: TripActivitiesService;
 
   beforeEach(() => {
@@ -59,9 +61,11 @@ describe('TripActivitiesService', () => {
       tripIdOfDestination: vi.fn().mockResolvedValue(tripId),
       tripIdOfActivity: vi.fn().mockResolvedValue(tripId),
     } as AccessMock;
+    events = { publish: vi.fn() };
     service = new TripActivitiesService(
       repository as unknown as TripActivityRepository,
       access as unknown as TripAccessService,
+      events as unknown as TripEventPublisher,
     );
   });
 
@@ -349,6 +353,59 @@ describe('TripActivitiesService', () => {
         service.create(dto(new Date('2026-08-01')), user),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(repository.findDestinationStay).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('notifications', () => {
+    it('announces an activity that is added, on the trip of its destination', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.create(
+        {
+          tripDestinationId: base.tripDestinationId,
+          activityCatalogId: base.activityCatalogId,
+        },
+        user,
+      );
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'ACTIVITY_ADDED',
+        tripId,
+        actorId: user.id,
+        subjectId: base.id,
+      });
+    });
+
+    it('announces an edit and a removal', async () => {
+      repository.findById.mockResolvedValue(entity());
+      repository.update.mockResolvedValue(entity());
+      repository.remove.mockResolvedValue(undefined);
+
+      await service.update(base.id, { status: 'CONFIRMED' }, user);
+      await service.remove(base.id, user);
+
+      expect(events.publish).toHaveBeenNthCalledWith(1, {
+        type: 'ACTIVITY_UPDATED',
+        tripId,
+        actorId: user.id,
+        subjectId: base.id,
+      });
+      expect(events.publish).toHaveBeenNthCalledWith(2, {
+        type: 'ACTIVITY_REMOVED',
+        tripId,
+        actorId: user.id,
+        subjectId: base.id,
+      });
+    });
+
+    it('says nothing when the caller may not edit the trip', async () => {
+      repository.findById.mockResolvedValue(entity());
+      access.assertCanEdit.mockRejectedValue(new ForbiddenException());
+
+      await expect(service.remove(base.id, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(events.publish).not.toHaveBeenCalled();
     });
   });
 });

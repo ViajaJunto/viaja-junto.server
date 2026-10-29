@@ -94,6 +94,8 @@ trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id-
 
 budget(#id, *trip_id->trip, total_value, created_at)
 
+notification(#id, *user_id->user, *trip_id->trip, *actor_id->user, type, payload, read_at, created_at)
+
 trip_expense(#id, *trip_id->trip, *payer_id->user, amount, currency, exchange_rate, description, spent_on, split_type, *created_by->user, created_at)
 
 trip_expense_share(#id, *expense_id->trip_expense, *user_id->user, position, weight, amount)
@@ -318,6 +320,28 @@ from the itinerary. Activities without a cost count as 0 and are reported in
 `unpricedActivities`; a trip without a budget still returns `planned`, with
 `totalValue` and `remaining` null. Amounts are summed in integer cents and are
 in the trip's currency. Any member of the trip can read it.
+
+**Notifications (FR21).** When something relevant happens on a trip, everyone
+on it is told in-app, **except who did it**. The services announce changes
+through a `TripEventPublisher` port (`src/shared/events`), implemented with
+`@nestjs/event-emitter`; they know nothing about who listens. The `notifications`
+module listens and writes one `notification` per recipient, with a small flat
+`payload` (`tripName`, `actorName`, the `subjectId` that changed and a few
+details). Events: a member joins (by invitation or with a code), is removed (the
+removed member is told too, although no longer on the trip) or has the
+permission changed (`from`/`to`); a destination or an activity is added, edited
+(a reorder counts) or removed; the budget is created, updated or removed
+(`action`); the trip status changes (`from`/`to`).
+
+`GET /notifications` lists the caller's own, **unread first**, newest first
+within each group; `GET /notifications/unread-count` feeds the bell;
+`PATCH /notifications/{id}/read` is idempotent and answers `404` for a
+notification that is not the caller's, and `PATCH /notifications/read-all`
+returns how many were unread. Delivery is best effort: the listener runs
+asynchronously and a failure to notify is logged, never turned into an error on
+the change that caused it. Notifications are deleted with the trip, and keep
+working if the person who caused one deletes their account (`actor_id` becomes
+null). Notifications about expenses (`trip-expenses`) can be added the same way.
 
 **Shared expenses library.** `src/shared/expenses` (reuse plan: a generic,
 reusable component) splits costs, keeps balances and works out who owes whom.

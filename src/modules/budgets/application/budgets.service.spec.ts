@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Budget } from '../domain/budget.entity.js';
 import type { BudgetRepository } from '../domain/budget.repository.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import type { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { BudgetsService } from './budgets.service.js';
 
@@ -35,6 +36,7 @@ type AccessMock = {
 describe('BudgetsService', () => {
   let repository: RepoMock;
   let access: AccessMock;
+  let events: { publish: ReturnType<typeof vi.fn> };
   let service: BudgetsService;
 
   beforeEach(() => {
@@ -53,9 +55,11 @@ describe('BudgetsService', () => {
       tripIdOfDestination: vi.fn().mockResolvedValue(tripId),
       tripIdOfActivity: vi.fn().mockResolvedValue(tripId),
     } as AccessMock;
+    events = { publish: vi.fn() };
     service = new BudgetsService(
       repository as unknown as BudgetRepository,
       access as unknown as TripAccessService,
+      events as unknown as TripEventPublisher,
     );
   });
 
@@ -262,6 +266,46 @@ describe('BudgetsService', () => {
       await expect(service.summarize(tripId, user)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('notifications', () => {
+    it.each([
+      [
+        'created',
+        async (svc: BudgetsService) =>
+          svc.create({ tripId, totalValue: 100 }, user),
+      ],
+      [
+        'updated',
+        async (svc: BudgetsService) =>
+          svc.update(base.id, { totalValue: 200 }, user),
+      ],
+      ['removed', async (svc: BudgetsService) => svc.remove(base.id, user)],
+    ])('announces a budget that is %s', async (action, run) => {
+      repository.create.mockResolvedValue(entity());
+      repository.findById.mockResolvedValue(entity());
+      repository.update.mockResolvedValue(entity());
+      repository.remove.mockResolvedValue(undefined);
+
+      await run(service);
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'BUDGET_CHANGED',
+        tripId,
+        actorId: user.id,
+        subjectId: expect.any(String),
+        details: { action },
+      });
+    });
+
+    it('says nothing when the caller may not edit the trip', async () => {
+      access.assertCanEdit.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.create({ tripId, totalValue: 100 }, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(events.publish).not.toHaveBeenCalled();
     });
   });
 });

@@ -18,14 +18,17 @@ import { TripDestinationsModule } from './modules/trip-destinations/trip-destina
 import { ActivityCatalogModule } from './modules/activity-catalog/activity-catalog.module.js';
 import { TripActivitiesModule } from './modules/trip-activities/trip-activities.module.js';
 import { BudgetsModule } from './modules/budgets/budgets.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { PlacesModule } from './modules/places/places.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { TripExpensesModule } from './modules/trip-expenses/trip-expenses.module.js';
+import { TripEventsModule } from './shared/events/trip-events.module.js';
 
 @Module({
   imports: [
     ThrottlerModule.forRoot(buildThrottlerOptions(rateLimitsFromEnv())),
     PrismaModule,
+    TripEventsModule,
     HealthModule,
     StorageModule,
     AuthModule,
@@ -40,6 +43,7 @@ import { TripExpensesModule } from './modules/trip-expenses/trip-expenses.module
     ReviewsModule,
     TripExpensesModule,
     PlacesModule,
+    NotificationsModule,
   ],
   providers: [
     // Runs before the route guards, so a flood of unauthenticated requests

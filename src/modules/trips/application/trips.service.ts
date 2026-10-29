@@ -8,6 +8,7 @@ import {
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripMembersService } from '../../trip-members/application/trip-members.service.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
@@ -37,6 +38,7 @@ export class TripsService {
     private readonly repository: TripRepository,
     private readonly access: TripAccessService,
     private readonly members: TripMembersService,
+    private readonly events: TripEventPublisher,
   ) {}
 
   async findAll(
@@ -104,10 +106,17 @@ export class TripsService {
       );
     }
 
-    return TripResponseDto.from(
-      await this.repository.update(id, { ...dto }),
-      'OWNER',
-    );
+    const updated = await this.repository.update(id, { ...dto });
+    if (updated.status !== current.status) {
+      this.events.publish({
+        type: 'TRIP_STATUS_CHANGED',
+        tripId: id,
+        actorId: user.id,
+        details: { from: current.status, to: updated.status },
+      });
+    }
+
+    return TripResponseDto.from(updated, 'OWNER');
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
@@ -155,7 +164,7 @@ export class TripsService {
       );
     }
 
-    await this.members.addMember(trip.id, user.id, 'VIEWER');
+    await this.members.addMember(trip.id, user.id, 'VIEWER', user.id);
 
     return TripResponseDto.from(trip, 'VIEWER');
   }

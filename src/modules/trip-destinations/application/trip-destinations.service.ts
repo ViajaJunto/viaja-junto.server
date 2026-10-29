@@ -6,6 +6,7 @@ import {
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { validateDestinationDates } from '../domain/destination-dates.js';
@@ -21,6 +22,7 @@ export class TripDestinationsService {
   constructor(
     private readonly repository: TripDestinationRepository,
     private readonly access: TripAccessService,
+    private readonly events: TripEventPublisher,
   ) {}
 
   async findAll(
@@ -60,9 +62,15 @@ export class TripDestinationsService {
     await this.access.assertCanEdit(dto.tripId, user.id);
     await this.assertValidDates(dto.tripId, dto);
 
-    return TripDestinationResponseDto.from(
-      await this.repository.create({ ...dto }),
-    );
+    const created = await this.repository.create({ ...dto });
+    this.events.publish({
+      type: 'DESTINATION_ADDED',
+      tripId: dto.tripId,
+      actorId: user.id,
+      subjectId: created.id,
+    });
+
+    return TripDestinationResponseDto.from(created);
   }
 
   async update(
@@ -77,9 +85,15 @@ export class TripDestinationsService {
       departure: dto.departure ?? destination.departure,
     });
 
-    return TripDestinationResponseDto.from(
-      await this.repository.update(id, { ...dto }),
-    );
+    const updated = await this.repository.update(id, { ...dto });
+    this.events.publish({
+      type: 'DESTINATION_UPDATED',
+      tripId: destination.tripId,
+      actorId: user.id,
+      subjectId: id,
+    });
+
+    return TripDestinationResponseDto.from(updated);
   }
 
   /**
@@ -109,15 +123,27 @@ export class TripDestinationsService {
       );
     }
 
-    return (await this.repository.reorder(tripId, dto.destinationIds)).map(
-      (item) => TripDestinationResponseDto.from(item),
-    );
+    const reordered = await this.repository.reorder(tripId, dto.destinationIds);
+    this.events.publish({
+      type: 'DESTINATION_UPDATED',
+      tripId,
+      actorId: user.id,
+      details: { action: 'reordered' },
+    });
+
+    return reordered.map((item) => TripDestinationResponseDto.from(item));
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
     const destination = await this.getOrFail(id);
     await this.access.assertCanEdit(destination.tripId, user.id);
     await this.repository.remove(id);
+    this.events.publish({
+      type: 'DESTINATION_REMOVED',
+      tripId: destination.tripId,
+      actorId: user.id,
+      subjectId: id,
+    });
   }
 
   /** Arrival/departure must be ordered and inside the trip's own dates. */

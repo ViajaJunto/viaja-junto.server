@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TripDestination } from '../domain/trip-destination.entity.js';
 import type { TripDestinationRepository } from '../domain/trip-destination.repository.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import type { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { TripDestinationsService } from './trip-destinations.service.js';
 
@@ -41,6 +42,7 @@ type AccessMock = {
 describe('TripDestinationsService', () => {
   let repository: RepoMock;
   let access: AccessMock;
+  let events: { publish: ReturnType<typeof vi.fn> };
   let service: TripDestinationsService;
 
   beforeEach(() => {
@@ -61,9 +63,11 @@ describe('TripDestinationsService', () => {
       tripIdOfDestination: vi.fn().mockResolvedValue(tripId),
       tripIdOfActivity: vi.fn().mockResolvedValue(tripId),
     } as AccessMock;
+    events = { publish: vi.fn() };
     service = new TripDestinationsService(
       repository as unknown as TripDestinationRepository,
       access as unknown as TripAccessService,
+      events as unknown as TripEventPublisher,
     );
   });
 
@@ -374,6 +378,73 @@ describe('TripDestinationsService', () => {
         service.reorder(tripId, { destinationIds }, user),
       ).rejects.toBeInstanceOf(UnprocessableEntityException);
       expect(repository.reorder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('notifications', () => {
+    it('announces a destination that is added', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.create(
+        { tripId, destinationCatalogId: base.destinationCatalogId },
+        user,
+      );
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'DESTINATION_ADDED',
+        tripId,
+        actorId: user.id,
+        subjectId: base.id,
+      });
+    });
+
+    it('announces an edit and a removal', async () => {
+      repository.findById.mockResolvedValue(entity());
+      repository.update.mockResolvedValue(entity());
+      repository.remove.mockResolvedValue(undefined);
+
+      await service.update(base.id, { description: 'x' }, user);
+      await service.remove(base.id, user);
+
+      expect(events.publish).toHaveBeenNthCalledWith(1, {
+        type: 'DESTINATION_UPDATED',
+        tripId: base.tripId,
+        actorId: user.id,
+        subjectId: base.id,
+      });
+      expect(events.publish).toHaveBeenNthCalledWith(2, {
+        type: 'DESTINATION_REMOVED',
+        tripId: base.tripId,
+        actorId: user.id,
+        subjectId: base.id,
+      });
+    });
+
+    it('announces a new itinerary order as an edit', async () => {
+      const first = entity({ id: '11111111-1111-4111-8111-aaaaaaaaaaaa' });
+      repository.findByTrip.mockResolvedValue([first]);
+      repository.reorder.mockResolvedValue([first]);
+
+      await service.reorder(tripId, { destinationIds: [first.id] }, user);
+
+      expect(events.publish).toHaveBeenCalledWith({
+        type: 'DESTINATION_UPDATED',
+        tripId,
+        actorId: user.id,
+        details: { action: 'reordered' },
+      });
+    });
+
+    it('says nothing when the caller may not edit the trip', async () => {
+      access.assertCanEdit.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.create(
+          { tripId, destinationCatalogId: base.destinationCatalogId },
+          user,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(events.publish).not.toHaveBeenCalled();
     });
   });
 });

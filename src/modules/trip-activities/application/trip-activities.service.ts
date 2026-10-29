@@ -6,6 +6,7 @@ import {
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { validateActivityDateTime } from '../domain/activity-schedule.js';
@@ -20,6 +21,7 @@ export class TripActivitiesService {
   constructor(
     private readonly repository: TripActivityRepository,
     private readonly access: TripAccessService,
+    private readonly events: TripEventPublisher,
   ) {}
 
   async findAll(
@@ -66,9 +68,18 @@ export class TripActivitiesService {
     await this.access.assertCanEdit(tripId, user.id);
     await this.assertValidDateTime(dto.tripDestinationId, dto.dateTime);
 
-    return TripActivityResponseDto.from(
-      await this.repository.create({ ...dto, status: dto.status ?? 'PENDING' }),
-    );
+    const created = await this.repository.create({
+      ...dto,
+      status: dto.status ?? 'PENDING',
+    });
+    this.events.publish({
+      type: 'ACTIVITY_ADDED',
+      tripId,
+      actorId: user.id,
+      subjectId: created.id,
+    });
+
+    return TripActivityResponseDto.from(created);
   }
 
   async update(
@@ -76,20 +87,32 @@ export class TripActivitiesService {
     dto: UpdateTripActivityDto,
     user: AuthenticatedUser,
   ): Promise<TripActivityResponseDto> {
-    const activity = await this.assertCanEditActivity(id, user);
+    const { activity, tripId } = await this.assertCanEditActivity(id, user);
     await this.assertValidDateTime(
       activity.tripDestinationId,
       dto.dateTime ?? activity.dateTime,
     );
 
-    return TripActivityResponseDto.from(
-      await this.repository.update(id, { ...dto }),
-    );
+    const updated = await this.repository.update(id, { ...dto });
+    this.events.publish({
+      type: 'ACTIVITY_UPDATED',
+      tripId,
+      actorId: user.id,
+      subjectId: id,
+    });
+
+    return TripActivityResponseDto.from(updated);
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
-    await this.assertCanEditActivity(id, user);
+    const { tripId } = await this.assertCanEditActivity(id, user);
     await this.repository.remove(id);
+    this.events.publish({
+      type: 'ACTIVITY_REMOVED',
+      tripId,
+      actorId: user.id,
+      subjectId: id,
+    });
   }
 
   private async assertCanEditActivity(id: string, user: AuthenticatedUser) {
@@ -99,7 +122,7 @@ export class TripActivitiesService {
     );
     await this.access.assertCanEdit(tripId, user.id);
 
-    return activity;
+    return { activity, tripId };
   }
 
   /** The activity must happen during the stay at its destination. */

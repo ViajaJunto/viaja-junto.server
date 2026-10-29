@@ -67,6 +67,10 @@ export function buildOpenApiConfig() {
     )
     .addTag('Reviews', 'Community ratings of catalogue activities.')
     .addTag(
+      'Notifications',
+      'In-app notifications about changes on a user’s trips.',
+    )
+    .addTag(
       'Places',
       'Finding real-world places in OpenStreetMap to import into the catalogues (administrators).',
     )
