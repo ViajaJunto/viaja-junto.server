@@ -42,7 +42,7 @@ export function buildOpenApiConfig() {
       'https://github.com/BernardoLykawka/viaja-junto.server',
     )
     .addServer('http://localhost:3000', 'Local development')
-    .addTag('Health', 'Liveness probe.')
+    .addTag('Health', 'Health check for containers and load balancers.')
     .addTag('Auth', 'Sign-in with Google and the current session.')
     .addTag('Users', 'Accounts and profile management.')
     .addTag('Trips', 'Trips and their planning stage.')
@@ -62,6 +62,10 @@ export function buildOpenApiConfig() {
     .addTag('Trip Activities', 'Activities scheduled inside a trip stop.')
     .addTag('Budgets', 'Budget tracking per trip.')
     .addTag('Reviews', 'Community ratings of catalogue activities.')
+    .addTag(
+      'Places',
+      'Finding real-world places in OpenStreetMap to import into the catalogues (administrators).',
+    )
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'bearer',

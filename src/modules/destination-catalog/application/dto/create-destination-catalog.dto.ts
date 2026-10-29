@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsIn,
+  IsISO31661Alpha2,
   IsNumber,
   IsOptional,
   IsString,
@@ -32,6 +34,20 @@ export class CreateDestinationCatalogDto {
   @IsString()
   @MaxLength(100)
   country?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'ISO 3166-1 alpha-2 code of the country. Lets the frontend map colour the country; also used to group the countries a user visited.',
+    example: 'FR',
+    minLength: 2,
+    maxLength: 2,
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsISO31661Alpha2()
+  countryCode?: string;
 
   @ApiPropertyOptional({
     description: 'Used by the discovery filters.',
