@@ -48,6 +48,7 @@ describe('TripMembersService', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      findByTripAndUser: vi.fn().mockResolvedValue(null),
     };
     access = {
       assertCanRead: vi.fn().mockResolvedValue('CREATOR'),
@@ -261,5 +262,32 @@ describe('TripMembersService', () => {
       service.create({ tripId, userId: user.id, permission: 'VIEWER' }, user),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  describe('addMember', () => {
+    it('adds a user to a trip', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.addMember(tripId, base.userId, 'VIEWER');
+
+      expect(repository.findByTripAndUser).toHaveBeenCalledWith(
+        tripId,
+        base.userId,
+      );
+      expect(repository.create).toHaveBeenCalledWith({
+        tripId,
+        userId: base.userId,
+        permission: 'VIEWER',
+      });
+    });
+
+    it('answers 409 when the user is already a member', async () => {
+      repository.findByTripAndUser.mockResolvedValue(entity());
+
+      await expect(
+        service.addMember(tripId, base.userId, 'VIEWER'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
   });
 });

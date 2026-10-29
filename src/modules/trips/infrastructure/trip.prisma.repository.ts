@@ -50,6 +50,10 @@ export class TripPrismaRepository implements TripRepository {
     return this.prisma.trip.findUnique({ where: { id } });
   }
 
+  findByInviteCode(inviteCode: string): Promise<Trip | null> {
+    return this.prisma.trip.findUnique({ where: { inviteCode } });
+  }
+
   create(data: CreateTripData): Promise<Trip> {
     return this.prisma.trip.create({ data });
   }

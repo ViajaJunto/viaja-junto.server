@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
+import { inviteCode } from './helpers.js';
 import { AppModule } from './../src/app.module.js';
 import { buildValidationPipe } from './../src/shared/http/validation.js';
 import { PrismaService } from './../src/shared/database/prisma.service.js';
@@ -60,14 +61,28 @@ describe('Dashboard and scoped lists (e2e)', () => {
 
     // Created one after the other so "newest first" is deterministic.
     const older = await prisma.trip.create({
-      data: { name: `Older ${run}`, createdBy: owner.id, status: 'COMPLETED' },
+      data: {
+        inviteCode: inviteCode(),
+        name: `Older ${run}`,
+        createdBy: owner.id,
+        status: 'COMPLETED',
+      },
     });
     const newer = await prisma.trip.create({
-      data: { name: `Newer ${run}`, createdBy: owner.id, status: 'PLANNING' },
+      data: {
+        inviteCode: inviteCode(),
+        name: `Newer ${run}`,
+        createdBy: owner.id,
+        status: 'PLANNING',
+      },
     });
     tripId = newer.id;
     const foreign = await prisma.trip.create({
-      data: { name: `Foreign ${run}`, createdBy: stranger.id },
+      data: {
+        inviteCode: inviteCode(),
+        name: `Foreign ${run}`,
+        createdBy: stranger.id,
+      },
     });
     otherTripId = foreign.id;
     await prisma.trip.update({

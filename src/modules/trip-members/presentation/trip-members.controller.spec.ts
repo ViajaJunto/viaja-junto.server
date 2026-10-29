@@ -24,6 +24,7 @@ describe('TripMembersController', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      addMember: vi.fn(),
     };
     controller = new TripMembersController(
       service as unknown as TripMembersService,

@@ -78,7 +78,7 @@ The relational model is composed of the following entities:
 ```
 user(#id, name, email, google_id, role, created_at)
 
-trip(#id, name, description, start_date, end_date, status, *created_by->user, created_at)
+trip(#id, name, description, start_date, end_date, status, *created_by->user, invite_code, created_at)
 
 trip_member(#id, *trip_id->trip, *user_id->user, permission, joined_at)
 
@@ -279,6 +279,17 @@ the caller's `role` (`OWNER`, `EDITOR` or `VIEWER`) and an optional
 in the new order and rewrites `order` as 0..n-1; the ids must be exactly the
 trip's destinations (`422` otherwise), and it needs the Editor permission or the
 creator.
+
+**Invite codes (FR18).** Every trip has a unique, 8-character invite code
+(`trip.invite_code`, generated on create, alphabet without look-alikes such as
+`I`, `L`, `O`, `0`, `1`; case-insensitive). The creator reads it with
+`GET /trips/{id}/invite-code` and replaces it with
+`POST /trips/{id}/invite-code/regenerate`, after which the old code stops
+working while members who already joined keep their access. Anyone signed in can
+`POST /trips/join` with `{ "code": "..." }` to become a `VIEWER` and receive the
+trip; the creator can raise the permission later through the trip members. An
+unknown code is `404`, a malformed one `422`, and joining twice (or joining your
+own trip) is `409`. The code is never part of the trip response.
 
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its
