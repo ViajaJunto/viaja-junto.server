@@ -65,7 +65,25 @@ export class TripMembersService {
       );
     }
 
-    return TripMemberResponseDto.from(await this.repository.create({ ...dto }));
+    return this.addMember(dto.tripId, dto.userId, dto.permission);
+  }
+
+  /**
+   * Adds a user to a trip, once. Shared by the creator's invitation and by
+   * joining with an invite code; callers are responsible for authorization.
+   */
+  async addMember(
+    tripId: string,
+    userId: string,
+    permission: CreateTripMemberDto['permission'],
+  ): Promise<TripMemberResponseDto> {
+    if (await this.repository.findByTripAndUser(tripId, userId)) {
+      throw new ConflictException('This user is already a member of the trip');
+    }
+
+    return TripMemberResponseDto.from(
+      await this.repository.create({ tripId, userId, permission }),
+    );
   }
 
   async update(

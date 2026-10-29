@@ -45,6 +45,15 @@ export class TripMemberPrismaRepository implements TripMemberRepository {
     return this.prisma.tripMember.findUnique({ where: { id } });
   }
 
+  findByTripAndUser(
+    tripId: string,
+    userId: string,
+  ): Promise<TripMember | null> {
+    return this.prisma.tripMember.findUnique({
+      where: { tripId_userId: { tripId, userId } },
+    });
+  }
+
   create(data: CreateTripMemberData): Promise<TripMember> {
     return this.prisma.tripMember.create({ data });
   }

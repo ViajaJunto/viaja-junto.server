@@ -26,10 +26,10 @@ export class BudgetResponseDto {
   totalValue!: number;
 
   @ApiProperty({
-    description: 'Amount committed to planned activities.',
-    example: 1240.75,
+    description: 'ISO 4217 currency of the amounts, inherited from the trip.',
+    example: 'BRL',
   })
-  plannedActivities!: number;
+  currency!: string;
 
   @ApiProperty({
     description: 'When the budget was created.',
@@ -44,7 +44,7 @@ export class BudgetResponseDto {
       id: entity.id,
       tripId: entity.tripId,
       totalValue: entity.totalValue,
-      plannedActivities: entity.plannedActivities,
+      currency: entity.currency,
       createdAt: entity.createdAt,
     };
   }

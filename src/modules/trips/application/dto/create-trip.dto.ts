@@ -1,13 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDate,
   IsIn,
+  IsISO4217CurrencyCode,
   IsOptional,
   IsString,
   Length,
   MaxLength,
 } from 'class-validator';
+import {
+  DEFAULT_CURRENCY,
+  normalizeCurrency,
+} from '../../../../shared/domain/currency.js';
 
 /** Request body for creating a trip. The creator is the authenticated caller. */
 export class CreateTripDto {
@@ -63,4 +68,19 @@ export class CreateTripDto {
   @IsOptional()
   @IsIn(['PLANNING', 'CONFIRMED', 'COMPLETED'])
   status?: 'PLANNING' | 'CONFIRMED' | 'COMPLETED';
+
+  @ApiPropertyOptional({
+    description:
+      'ISO 4217 currency of the trip (e.g. BRL, EUR, USD). The budget and the expenses of the trip are in this currency. Changing it does not convert amounts that already exist.',
+    default: DEFAULT_CURRENCY,
+    example: 'EUR',
+    minLength: 3,
+    maxLength: 3,
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizeCurrency(value) : value,
+  )
+  @IsISO4217CurrencyCode()
+  currency?: string;
 }

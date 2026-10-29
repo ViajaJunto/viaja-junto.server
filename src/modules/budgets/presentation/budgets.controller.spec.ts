@@ -24,6 +24,7 @@ describe('BudgetsController', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      summarize: vi.fn(),
     };
     controller = new BudgetsController(service as unknown as BudgetsService);
   });

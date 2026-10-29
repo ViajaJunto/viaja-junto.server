@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsUUID, Min } from 'class-validator';
 
 /** Request body for creating a budget. */
 export class CreateBudgetDto {
@@ -12,23 +12,12 @@ export class CreateBudgetDto {
   tripId!: string;
 
   @ApiProperty({
-    description: 'Total amount available for the trip, in the group currency.',
+    description:
+      'Total amount available for the trip, in the currency of the trip.',
     minimum: 0,
     example: 8500,
   })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   totalValue!: number;
-
-  @ApiPropertyOptional({
-    description:
-      'Amount already committed to planned activities. Defaults to 0.',
-    minimum: 0,
-    default: 0,
-    example: 1240.75,
-  })
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  plannedActivities?: number;
 }

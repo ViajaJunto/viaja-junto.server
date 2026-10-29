@@ -4,11 +4,12 @@ import { AuthModule } from '../auth/auth.module.js';
 import { BudgetsService } from './application/budgets.service.js';
 import { BudgetRepository } from './domain/budget.repository.js';
 import { BudgetPrismaRepository } from './infrastructure/budget.prisma.repository.js';
+import { BudgetSummaryController } from './presentation/budget-summary.controller.js';
 import { BudgetsController } from './presentation/budgets.controller.js';
 
 @Module({
   imports: [AuthModule, TripAccessModule],
-  controllers: [BudgetsController],
+  controllers: [BudgetsController, BudgetSummaryController],
   providers: [
     BudgetsService,
     // Dependency inversion: the application depends on the domain contract,

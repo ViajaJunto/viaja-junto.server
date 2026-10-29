@@ -3,6 +3,7 @@ import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { accessibleTrips } from '../../../shared/database/trip-scope.js';
+import type { TripRange } from '../domain/destination-dates.js';
 import { TripDestination } from '../domain/trip-destination.entity.js';
 import {
   CreateTripDestinationData,
@@ -54,6 +55,13 @@ export class TripDestinationPrismaRepository implements TripDestinationRepositor
     data: UpdateTripDestinationData,
   ): Promise<TripDestination> {
     return this.prisma.tripDestination.update({ where: { id }, data });
+  }
+
+  findTripDates(tripId: string): Promise<TripRange | null> {
+    return this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { startDate: true, endDate: true },
+    });
   }
 
   findByTrip(tripId: string): Promise<TripDestination[]> {

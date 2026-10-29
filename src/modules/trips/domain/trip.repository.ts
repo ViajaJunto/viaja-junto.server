@@ -24,6 +24,7 @@ export abstract class TripRepository {
     filter: TripFilter,
   ): Promise<Page<UserTrip>>;
   abstract findById(id: string): Promise<Trip | null>;
+  abstract findByInviteCode(inviteCode: string): Promise<Trip | null>;
   abstract create(data: CreateTripData): Promise<Trip>;
   abstract update(id: string, data: UpdateTripData): Promise<Trip>;
   abstract remove(id: string): Promise<void>;

@@ -24,6 +24,10 @@ export abstract class TripMemberRepository {
     filter: TripMemberFilter,
   ): Promise<Page<TripMember>>;
   abstract findById(id: string): Promise<TripMember | null>;
+  abstract findByTripAndUser(
+    tripId: string,
+    userId: string,
+  ): Promise<TripMember | null>;
   abstract create(data: CreateTripMemberData): Promise<TripMember>;
   abstract update(id: string, data: UpdateTripMemberData): Promise<TripMember>;
   abstract remove(id: string): Promise<void>;

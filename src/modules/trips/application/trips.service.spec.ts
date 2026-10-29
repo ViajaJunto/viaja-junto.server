@@ -1,8 +1,14 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Trip } from '../domain/trip.entity.js';
 import type { TripRepository } from '../domain/trip.repository.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
+import type { TripMembersService } from '../../trip-members/application/trip-members.service.js';
 import type { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { TripsService } from './trips.service.js';
 
@@ -14,6 +20,8 @@ const base: Trip = {
   endDate: null,
   status: 'PLANNING',
   createdBy: '11111111-1111-4111-8111-111111111111',
+  currency: 'BRL',
+  inviteCode: 'K7M2QX9P',
   createdAt: new Date('2026-03-14T18:22:05.000Z'),
 };
 
@@ -37,6 +45,7 @@ const user: AuthenticatedUser = {
 describe('TripsService', () => {
   let repository: RepoMock;
   let access: AccessMock;
+  let members: { addMember: ReturnType<typeof vi.fn> };
   let service: TripsService;
 
   beforeEach(() => {
@@ -46,6 +55,7 @@ describe('TripsService', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      findByInviteCode: vi.fn(),
     };
     access = {
       assertCanRead: vi.fn().mockResolvedValue('CREATOR'),
@@ -54,9 +64,11 @@ describe('TripsService', () => {
       tripIdOfDestination: vi.fn(),
       tripIdOfActivity: vi.fn(),
     };
+    members = { addMember: vi.fn().mockResolvedValue({}) };
     service = new TripsService(
       repository as unknown as TripRepository,
       access as unknown as TripAccessService,
+      members as unknown as TripMembersService,
     );
   });
 
@@ -196,6 +208,30 @@ describe('TripsService', () => {
       );
     });
 
+    it('defaults the currency to BRL', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.create({ name: 'Eurotrip 2026' }, user);
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'BRL' }),
+      );
+    });
+
+    it('keeps the currency the creator chose', async () => {
+      repository.create.mockResolvedValue(entity({ currency: 'EUR' }));
+
+      const result = await service.create(
+        { name: 'Eurotrip 2026', currency: 'EUR' },
+        user,
+      );
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'EUR' }),
+      );
+      expect(result.currency).toBe('EUR');
+    });
+
     it('keeps an explicit status instead of the default', async () => {
       repository.create.mockResolvedValue(entity({ status: 'CONFIRMED' }));
 
@@ -212,6 +248,7 @@ describe('TripsService', () => {
 
   describe('update', () => {
     it('lets the creator update the trip', async () => {
+      repository.findById.mockResolvedValue(entity());
       repository.update.mockResolvedValue(entity());
 
       await service.update(base.id, {}, user);
@@ -256,6 +293,178 @@ describe('TripsService', () => {
         ForbiddenException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('date rules', () => {
+    const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+    it('rejects a trip that ends before it starts with 422', async () => {
+      await expect(
+        service.create(
+          {
+            name: 'Eurotrip',
+            startDate: day('2026-07-10'),
+            endDate: day('2026-07-01'),
+          },
+          user,
+        ),
+      ).rejects.toMatchObject({
+        response: { message: ['endDate must not be earlier than startDate'] },
+      });
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('checks an update against the dates already stored', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ startDate: day('2026-07-10'), endDate: day('2026-07-20') }),
+      );
+
+      await expect(
+        service.update(base.id, { endDate: day('2026-07-05') }, user),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('accepts an update that moves both dates together', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ startDate: day('2026-07-10'), endDate: day('2026-07-20') }),
+      );
+      repository.update.mockResolvedValue(entity());
+
+      await service.update(
+        base.id,
+        { startDate: day('2026-08-01'), endDate: day('2026-08-10') },
+        user,
+      );
+
+      expect(repository.update).toHaveBeenCalled();
+    });
+
+    it('does not load the trip when the caller is not the creator', async () => {
+      access.assertIsCreator.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.update(base.id, { endDate: day('2026-07-05') }, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repository.findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('invite code', () => {
+    it('gives every new trip a well-formed invite code', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.create({ name: 'Eurotrip 2026' }, user);
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inviteCode: expect.stringMatching(/^[A-HJKMNP-Z2-9]{8}$/),
+        }),
+      );
+    });
+
+    it('does not expose the code in the trip response', async () => {
+      repository.findById.mockResolvedValue(entity());
+
+      const result = await service.findOne(base.id, user);
+
+      expect(result).not.toHaveProperty('inviteCode');
+    });
+
+    it('shows the code to the creator', async () => {
+      repository.findById.mockResolvedValue(entity());
+
+      await expect(service.getInviteCode(base.id, user)).resolves.toEqual({
+        code: 'K7M2QX9P',
+      });
+      expect(access.assertIsCreator).toHaveBeenCalledWith(base.id, user.id);
+    });
+
+    it('hides the code from everyone but the creator', async () => {
+      access.assertIsCreator.mockRejectedValue(new ForbiddenException());
+
+      await expect(service.getInviteCode(base.id, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repository.findById).not.toHaveBeenCalled();
+    });
+
+    it('regenerates the code, so the previous one stops working', async () => {
+      repository.update.mockImplementation((_id, data) =>
+        Promise.resolve(entity({ inviteCode: data.inviteCode })),
+      );
+
+      const { code } = await service.regenerateInviteCode(base.id, user);
+
+      expect(code).toMatch(/^[A-HJKMNP-Z2-9]{8}$/);
+      expect(repository.update).toHaveBeenCalledWith(base.id, {
+        inviteCode: code,
+      });
+    });
+
+    it('lets only the creator regenerate', async () => {
+      access.assertIsCreator.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.regenerateInviteCode(base.id, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('join', () => {
+    const joiner = {
+      id: '99999999-9999-4999-8999-999999999999',
+      email: 'eve@example.com',
+    };
+
+    it('adds the caller as a VIEWER and returns the trip', async () => {
+      repository.findByInviteCode.mockResolvedValue(entity());
+
+      const result = await service.join({ code: 'K7M2QX9P' }, joiner);
+
+      expect(members.addMember).toHaveBeenCalledWith(
+        base.id,
+        joiner.id,
+        'VIEWER',
+      );
+      expect(result).toMatchObject({ id: base.id, role: 'VIEWER' });
+    });
+
+    it('accepts the code in any case and with stray spaces', async () => {
+      repository.findByInviteCode.mockResolvedValue(entity());
+
+      await service.join({ code: '  k7m2qx9p ' }, joiner);
+
+      expect(repository.findByInviteCode).toHaveBeenCalledWith('K7M2QX9P');
+    });
+
+    it('answers 404 for an unknown code', async () => {
+      repository.findByInviteCode.mockResolvedValue(null);
+
+      await expect(
+        service.join({ code: 'AAAAAAAA' }, joiner),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(members.addMember).not.toHaveBeenCalled();
+    });
+
+    it('answers 409 when the creator tries to join their own trip', async () => {
+      repository.findByInviteCode.mockResolvedValue(entity());
+
+      await expect(
+        service.join({ code: 'K7M2QX9P' }, user),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(members.addMember).not.toHaveBeenCalled();
+    });
+
+    it('lets a conflict from an existing membership through', async () => {
+      repository.findByInviteCode.mockResolvedValue(entity());
+      members.addMember.mockRejectedValue(new ConflictException());
+
+      await expect(
+        service.join({ code: 'K7M2QX9P' }, joiner),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 });

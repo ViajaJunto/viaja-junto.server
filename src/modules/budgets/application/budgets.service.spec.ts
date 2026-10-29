@@ -10,7 +10,7 @@ const base: Budget = {
   id: '88888888-8888-4888-8888-888888888888',
   tripId: '22222222-2222-4222-8222-222222222222',
   totalValue: 8500,
-  plannedActivities: 0,
+  currency: 'BRL',
   createdAt: new Date('2026-03-16T14:00:00.000Z'),
 };
 
@@ -44,6 +44,7 @@ describe('BudgetsService', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      findSummarySource: vi.fn(),
     };
     access = {
       assertCanRead: vi.fn().mockResolvedValue('CREATOR'),
@@ -108,6 +109,14 @@ describe('BudgetsService', () => {
       expect(access.assertCanRead).toHaveBeenCalledWith(tripId, user.id);
     });
 
+    it('reports the currency of the trip', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'EUR' }));
+
+      const result = await service.findOne(base.id, user);
+
+      expect(result.currency).toBe('EUR');
+    });
+
     it('throws NotFoundException when the record does not exist', async () => {
       repository.findById.mockResolvedValue(null);
 
@@ -134,7 +143,7 @@ describe('BudgetsService', () => {
 
       expect(access.assertCanEdit).toHaveBeenCalledWith(tripId, user.id);
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ tripId, plannedActivities: 0 }),
+        expect.objectContaining({ tripId }),
       );
     });
 
@@ -207,6 +216,49 @@ describe('BudgetsService', () => {
         ForbiddenException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('summarize', () => {
+    const source = {
+      currency: 'EUR',
+      totalValue: 1000,
+      activities: [
+        { type: 'FOOD' as const, expectedCost: 100 },
+        { type: 'TOUR' as const, expectedCost: null },
+      ],
+    };
+
+    it('derives what is planned from the trip’s activities', async () => {
+      repository.findSummarySource.mockResolvedValue(source);
+
+      const result = await service.summarize(tripId, user);
+
+      expect(access.assertCanRead).toHaveBeenCalledWith(tripId, user.id);
+      expect(result).toMatchObject({
+        currency: 'EUR',
+        totalValue: 1000,
+        planned: 100,
+        remaining: 900,
+        unpricedActivities: 1,
+      });
+    });
+
+    it('does not read anything for someone with no access to the trip', async () => {
+      access.assertCanRead.mockRejectedValue(new NotFoundException());
+
+      await expect(service.summarize(tripId, user)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repository.findSummarySource).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 when the trip disappeared', async () => {
+      repository.findSummarySource.mockResolvedValue(null);
+
+      await expect(service.summarize(tripId, user)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

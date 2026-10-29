@@ -78,7 +78,7 @@ The relational model is composed of the following entities:
 ```
 user(#id, name, email, google_id, role, created_at)
 
-trip(#id, name, description, start_date, end_date, status, *created_by->user, created_at)
+trip(#id, name, description, start_date, end_date, status, *created_by->user, currency, invite_code, created_at)
 
 trip_member(#id, *trip_id->trip, *user_id->user, permission, joined_at)
 
@@ -90,7 +90,7 @@ activity_catalog(#id, name, description, activity_type, location, city, country,
 
 trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id->activity_catalog, date_time, duration_minutes, expected_cost, status)
 
-budget(#id, *trip_id->trip, total_value, planned_activities)
+budget(#id, *trip_id->trip, total_value, created_at)
 
 review(#id, *user_id->user, *activity_catalog_id->activity_catalog, rating, comment, created_at)
 ```
@@ -279,6 +279,48 @@ the caller's `role` (`OWNER`, `EDITOR` or `VIEWER`) and an optional
 in the new order and rewrites `order` as 0..n-1; the ids must be exactly the
 trip's destinations (`422` otherwise), and it needs the Editor permission or the
 creator.
+
+**Invite codes (FR18).** Every trip has a unique, 8-character invite code
+(`trip.invite_code`, generated on create, alphabet without look-alikes such as
+`I`, `L`, `O`, `0`, `1`; case-insensitive). The creator reads it with
+`GET /trips/{id}/invite-code` and replaces it with
+`POST /trips/{id}/invite-code/regenerate`, after which the old code stops
+working while members who already joined keep their access. Anyone signed in can
+`POST /trips/join` with `{ "code": "..." }` to become a `VIEWER` and receive the
+trip; the creator can raise the permission later through the trip members. An
+unknown code is `404`, a malformed one `422`, and joining twice (or joining your
+own trip) is `409`. The code is never part of the trip response.
+
+**Currency.** Each trip has an ISO 4217 `currency` (default `BRL`, validated
+against the standard list and stored upper-case). The budget has no column of
+its own: it reports the currency of its trip, and the expenses planned for
+`trip-expenses` are recorded in it too. Changing a trip's currency does not
+convert amounts that already exist. Conversion strategy: there is no external
+exchange-rate API, so the application works offline and its numbers stay
+auditable. An expense in another currency carries the **exchange rate to the
+trip currency that the user entered when recording it**; the expense library
+receives those rates through its `ExchangeRates` interface, and an expense in
+the trip currency needs none.
+
+**Budget summary (FR16, FR17).** `GET /trips/{id}/budget/summary` answers where
+the budget stands: `totalValue`, `planned`, `remaining`, an `overBudget` flag,
+the activity count, how many activities have no cost, and the consumption per
+`ActivityType` (all five types, in a fixed order). `planned` is **derived** from
+the `expectedCost` of the trip's planned activities, never typed in: the old
+manual `plannedActivities` field (and its column) was removed so it cannot drift
+from the itinerary. Activities without a cost count as 0 and are reported in
+`unpricedActivities`; a trip without a budget still returns `planned`, with
+`totalValue` and `remaining` null. Amounts are summed in integer cents and are
+in the trip's currency. Any member of the trip can read it.
+
+**Date rules.** Dates are checked in the domain layer and answer `422` with one
+message per violated rule: a trip's `endDate` is not earlier than its
+`startDate`; a destination's `departure` is not earlier than its `arrival`, and
+both fall inside the trip's dates when the trip has them; a planned activity's
+`dateTime` falls within its destination's stay, whole days in UTC, so the
+departure day still counts. A `PATCH` is validated against the values already
+stored, not only the ones sent. Changing a trip's dates does not revalidate
+destinations that already exist.
 
 **Authentication.** Google is the only sign-in method; there are no
 passwords. It is built on Passport.js (`passport-google-oauth20` and

@@ -24,6 +24,9 @@ describe('TripsController', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      join: vi.fn(),
+      getInviteCode: vi.fn(),
+      regenerateInviteCode: vi.fn(),
     };
     controller = new TripsController(service as unknown as TripsService);
   });
