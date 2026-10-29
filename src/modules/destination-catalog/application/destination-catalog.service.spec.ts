@@ -53,6 +53,7 @@ describe('DestinationCatalogService', () => {
       create: vi.fn(),
       update: vi.fn(),
       countTripUsages: vi.fn().mockResolvedValue(0),
+      findTopRated: vi.fn().mockResolvedValue([]),
       remove: vi.fn(),
     };
     access = {
@@ -144,6 +145,28 @@ describe('DestinationCatalogService', () => {
       await expect(service.findOne(base.id)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('findTop', () => {
+    it('maps the best rated destinations with their rating', async () => {
+      repository.findTopRated.mockResolvedValue([
+        { ...entity(), rating: 4.7, reviewCount: 38 },
+        { ...entity({ id: 'second' }), rating: 4.1, reviewCount: 3 },
+      ]);
+
+      const result = await service.findTop(5);
+
+      expect(repository.findTopRated).toHaveBeenCalledWith(5);
+      expect(result.map((d) => [d.rating, d.reviewCount])).toEqual([
+        [4.7, 38],
+        [4.1, 3],
+      ]);
+      expect(result[0]).toMatchObject({ id: base.id, name: base.name });
+    });
+
+    it('returns an empty list when nothing is rated yet', async () => {
+      await expect(service.findTop(10)).resolves.toEqual([]);
     });
   });
 
