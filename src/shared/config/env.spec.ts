@@ -148,4 +148,35 @@ describe('validateEnv', () => {
       ).toThrow(/S3_PUBLIC_URL/);
     });
   });
+
+  describe('CORS_ORIGINS', () => {
+    it('defaults to the local frontend', () => {
+      expect(validateEnv(valid).CORS_ORIGINS).toEqual([
+        'http://localhost:5173',
+      ]);
+    });
+
+    it('splits a comma-separated list and trims the entries', () => {
+      const env = validateEnv({
+        ...valid,
+        CORS_ORIGINS: 'http://localhost:5173, https://app.example.com ,',
+      });
+
+      expect(env.CORS_ORIGINS).toEqual([
+        'http://localhost:5173',
+        'https://app.example.com',
+      ]);
+    });
+
+    it.each([
+      'https://app.example.com/',
+      'https://app.example.com/path',
+      '*',
+      'app.example.com',
+    ])('rejects %s, which is not a bare origin', (origin) => {
+      expect(() => validateEnv({ ...valid, CORS_ORIGINS: origin })).toThrow(
+        /CORS_ORIGINS/,
+      );
+    });
+  });
 });

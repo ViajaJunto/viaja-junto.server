@@ -13,6 +13,38 @@ const blankAsUndefined = (value: unknown) => (value === '' ? undefined : value);
 const optionalString = z.preprocess(blankAsUndefined, z.string().optional());
 const optionalUrl = z.preprocess(blankAsUndefined, z.url().optional());
 
+/**
+ * Comma-separated list of browser origins ("http://localhost:5173,https://app.example.com").
+ * Each entry must be a bare origin: scheme, host and optional port, no path
+ * and no trailing slash, since that is the exact form browsers send in `Origin`.
+ */
+const corsOrigins = z.preprocess(
+  (value) =>
+    typeof value === 'string'
+      ? value
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter(Boolean)
+      : value,
+  z
+    .array(
+      z.string().refine(
+        (origin) => {
+          try {
+            return new URL(origin).origin === origin;
+          } catch {
+            return false;
+          }
+        },
+        {
+          message:
+            'must be an origin such as http://localhost:5173 (no path, no trailing slash)',
+        },
+      ),
+    )
+    .min(1, 'at least one origin is required'),
+);
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -43,6 +75,9 @@ const envSchema = z.object({
 
   // Frontend page that receives the access token after a Google sign-in.
   AUTH_REDIRECT_URL: z.url().default('http://localhost:5173/auth/callback'),
+
+  // Browser origins allowed to call the API (CORS), comma-separated.
+  CORS_ORIGINS: corsOrigins.default(['http://localhost:5173']),
 
   JWT_SECRET: z
     .string()

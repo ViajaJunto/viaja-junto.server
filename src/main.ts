@@ -5,12 +5,14 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module.js';
 import { env } from './shared/config/env.js';
+import { buildCorsOptions } from './shared/http/cors.js';
 import { buildOpenApiConfig } from './shared/http/openapi.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix(env.API_PREFIX);
+  app.enableCors(buildCorsOptions(env.CORS_ORIGINS));
 
   app.useGlobalPipes(
     new ValidationPipe({
