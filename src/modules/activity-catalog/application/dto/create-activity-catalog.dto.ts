@@ -33,13 +33,16 @@ export class CreateActivityCatalogDto {
   @MaxLength(2000)
   description?: string;
 
-  @ApiProperty({
-    description: 'Category used for filtering and for budget breakdown.',
+  @ApiPropertyOptional({
+    description:
+      'Category used for filtering and for budget breakdown. Defaults to OTHER.',
     enum: ['TOUR', 'FOOD', 'LODGING', 'TRANSPORT', 'OTHER'],
+    default: 'OTHER',
     example: 'TOUR',
   })
+  @IsOptional()
   @IsIn(['TOUR', 'FOOD', 'LODGING', 'TRANSPORT', 'OTHER'])
-  type!: 'TOUR' | 'FOOD' | 'LODGING' | 'TRANSPORT' | 'OTHER';
+  type?: 'TOUR' | 'FOOD' | 'LODGING' | 'TRANSPORT' | 'OTHER';
 
   @ApiPropertyOptional({
     description: 'Street address or meeting point.',

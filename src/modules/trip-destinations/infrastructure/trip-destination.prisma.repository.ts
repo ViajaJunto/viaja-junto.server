@@ -32,7 +32,7 @@ export class TripDestinationPrismaRepository implements TripDestinationRepositor
         where,
         skip,
         take,
-        orderBy: { order: { sort: 'asc', nulls: 'last' } },
+        orderBy: [{ order: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
       }),
       this.prisma.tripDestination.count({
         where,

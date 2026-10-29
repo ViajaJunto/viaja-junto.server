@@ -18,7 +18,7 @@ export class ActivityCatalogPrismaRepository implements ActivityCatalogRepositor
       this.prisma.activityCatalog.findMany({
         skip,
         take,
-        orderBy: { name: 'asc' },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
       }),
       this.prisma.activityCatalog.count(),
     ]);
