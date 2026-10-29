@@ -30,7 +30,9 @@ import {
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import { TopDestinationResponseDto } from '../application/dto/top-destination-response.dto.js';
+import { TopDestinationsQueryDto } from '../application/dto/top-destinations-query.dto.js';
+import { ListDestinationCatalogQueryDto } from '../application/dto/list-destination-catalog-query.dto.js';
 import { CreateDestinationCatalogDto } from '../application/dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from '../application/dto/update-destination-catalog.dto.js';
 import { DestinationCatalogResponseDto } from '../application/dto/destination-catalog-response.dto.js';
@@ -51,7 +53,7 @@ export class DestinationCatalogController {
   @ApiOperation({
     summary: 'Browse destinations',
     description:
-      'Returns a paginated, alphabetically sorted list of destinations in the shared catalog. Public — visitors can browse without an account.',
+      'Returns a paginated, alphabetically sorted list of destinations in the shared catalog. Narrow it with `q` (name, case-insensitive), `country` (name or ISO code) and `category`. Public — visitors can browse without an account.',
   })
   @ApiPaginatedResponse(
     DestinationCatalogResponseDto,
@@ -62,8 +64,23 @@ export class DestinationCatalogController {
     type: ValidationErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: ListDestinationCatalogQueryDto) {
     return this.service.findAll(query);
+  }
+
+  @ApiOperation({
+    summary: 'Top rated destinations',
+    description:
+      'The best rated destinations, best first, for the home page. A destination is rated by the reviews of the catalog activities located in it (same city, and same country when both are known); destinations without reviews are not listed. Public.',
+  })
+  @ApiOkResponse({ type: [TopDestinationResponseDto] })
+  @ApiUnprocessableEntityResponse({
+    description: 'Invalid limit.',
+    type: ValidationErrorResponseDto,
+  })
+  @Get('top')
+  findTop(@Query() query: TopDestinationsQueryDto) {
+    return this.service.findTop(query.limit);
   }
 
   @ApiOperation({

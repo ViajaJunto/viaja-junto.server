@@ -100,7 +100,19 @@ const envSchema = z.object({
   // Access token lifetime, in seconds.
   JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
 
-  // ── Object storage (S3) ────────────────────────────────────────────────
+  // ── External places (OpenStreetMap / Nominatim) ────────────────────────
+  // Optional: without PLACES_USER_AGENT the API still boots and the places
+  // search/import endpoints answer 503. Nominatim's usage policy requires a
+  // User-Agent that identifies the application, e.g.
+  // "ViajaJunto/1.0 (contact@example.com)".
+  PLACES_USER_AGENT: optionalString,
+
+  PLACES_BASE_URL: z.url().default('https://nominatim.openstreetmap.org'),
+
+  // Give up on the provider after this long, in milliseconds.
+  PLACES_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+
+  // ── Object storage (S3) ──────────────────────────────────────────────── ────────────────────────────────────────────────
   // Optional: without S3_BUCKET the API still boots and photo uploads answer
   // 503. Credentials are never read from here — the AWS SDK resolves them
   // from its default chain (env vars, ECS task role, ~/.aws).

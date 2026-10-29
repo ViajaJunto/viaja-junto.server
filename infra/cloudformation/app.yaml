@@ -45,6 +45,13 @@ Parameters:
     Description: >-
       Browser origins allowed to call the API (CORS), comma-separated, with no
       trailing slash.
+  PlacesUserAgent:
+    Type: String
+    Default: ''
+    Description: >-
+      User-Agent sent to OpenStreetMap (Nominatim), which its usage policy
+      requires to identify the application, e.g. "ViajaJunto/1.0 (you@example.com)".
+      Leave empty to disable the places endpoints (they answer 503).
   PublicStorageUrl:
     Type: String
     Default: http://localhost:4566
@@ -215,6 +222,8 @@ Resources:
               Value: !Ref AuthRedirectUrl
             - Name: CORS_ORIGINS
               Value: !Ref CorsOrigins
+            - Name: PLACES_USER_AGENT
+              Value: !Ref PlacesUserAgent
             - Name: JWT_EXPIRES_IN
               Value: '3600'
             # S3 endpoint and credentials are not set here: ECS (and

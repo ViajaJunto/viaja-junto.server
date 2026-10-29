@@ -30,9 +30,10 @@ import {
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
+import { ListActivityCatalogQueryDto } from '../application/dto/list-activity-catalog-query.dto.js';
 import { CreateActivityCatalogDto } from '../application/dto/create-activity-catalog.dto.js';
 import { UpdateActivityCatalogDto } from '../application/dto/update-activity-catalog.dto.js';
+import { ActivityCatalogDetailsResponseDto } from '../application/dto/activity-catalog-details-response.dto.js';
 import { ActivityCatalogResponseDto } from '../application/dto/activity-catalog-response.dto.js';
 import { ActivityCatalogService } from '../application/activity-catalog.service.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
@@ -51,7 +52,7 @@ export class ActivityCatalogController {
   @ApiOperation({
     summary: 'Browse activities',
     description:
-      'Returns a paginated, alphabetically sorted list of activities in the shared catalog. Public — this is what powers discovery.',
+      'Returns a paginated list of activities in the shared catalog, A to Z by default. Narrow it with `q` (name), `type`, `minRating`, `city` and `country`, and order it with `sort=rating` to see the best rated first. Public — this is what powers discovery.',
   })
   @ApiPaginatedResponse(ActivityCatalogResponseDto, 'Page of activity records.')
   @ApiUnprocessableEntityResponse({
@@ -59,7 +60,7 @@ export class ActivityCatalogController {
     type: ValidationErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: ListActivityCatalogQueryDto) {
     return this.service.findAll(query);
   }
 
@@ -77,6 +78,19 @@ export class ActivityCatalogController {
   @Get(':id')
   findOne(@IdParam() id: string) {
     return this.service.findOne(id);
+  }
+
+  @ApiOperation({
+    summary: 'Public page of an activity',
+    description:
+      'The activity with its average rating, how many reviews it is based on and the 10 most recent reviews (newest first). Reviewers appear by name only — never by email. Public.',
+  })
+  @ApiIdParam('ActivityCatalog identifier.')
+  @ApiOkResponse({ type: ActivityCatalogDetailsResponseDto })
+  @ApiNotFound('No activity exists with this id.')
+  @Get(':id/details')
+  findDetails(@IdParam() id: string) {
+    return this.service.findDetails(id);
   }
 
   @ApiOperation({

@@ -74,6 +74,7 @@ services:
       AUTH_REDIRECT_URL: ${AUTH_REDIRECT_URL:-http://localhost:5173/auth/callback}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
+      PLACES_USER_AGENT: ${PLACES_USER_AGENT:-}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3600}
     ports:

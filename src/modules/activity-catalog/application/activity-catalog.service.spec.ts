@@ -24,6 +24,7 @@ const base: ActivityCatalog = {
   photoUrl: null,
   source: 'MANUAL',
   averageRating: 4.6,
+  reviewCount: 12,
   createdAt: new Date('2026-02-01T12:00:00.000Z'),
 };
 
@@ -60,6 +61,8 @@ describe('ActivityCatalogService', () => {
       create: vi.fn(),
       update: vi.fn(),
       countTripUsages: vi.fn().mockResolvedValue(0),
+      findExistingExternalIds: vi.fn().mockResolvedValue([]),
+      findLatestReviews: vi.fn().mockResolvedValue([]),
       remove: vi.fn(),
     };
     access = {
@@ -83,7 +86,17 @@ describe('ActivityCatalogService', () => {
 
       await service.findAll({ page: 3, limit: 15 });
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 30, take: 15 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 30, take: 15 },
+        {
+          text: undefined,
+          type: undefined,
+          minRating: undefined,
+          city: undefined,
+          country: undefined,
+          sort: undefined,
+        },
+      );
     });
 
     it('falls back to the default window when the query is empty', async () => {
@@ -91,7 +104,42 @@ describe('ActivityCatalogService', () => {
 
       await service.findAll({});
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 0, take: 20 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        {
+          text: undefined,
+          type: undefined,
+          minRating: undefined,
+          city: undefined,
+          country: undefined,
+          sort: undefined,
+        },
+      );
+    });
+
+    it('hands every discovery filter to the repository', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({
+        q: 'louvre',
+        type: 'TOUR',
+        minRating: 4,
+        city: 'Paris',
+        country: 'França',
+        sort: 'rating',
+      });
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        {
+          text: 'louvre',
+          type: 'TOUR',
+          minRating: 4,
+          city: 'Paris',
+          country: 'França',
+          sort: 'rating',
+        },
+      );
     });
 
     it('wraps the page in the { data, meta } envelope', async () => {
@@ -126,6 +174,69 @@ describe('ActivityCatalogService', () => {
       await expect(service.findOne(base.id)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('findDetails', () => {
+    const review = {
+      id: '5b0c7c1e-2f4a-4e0b-9a55-6d2f1c8e7a10',
+      rating: 5,
+      comment: 'Imperdível',
+      createdAt: new Date('2026-05-01T10:00:00.000Z'),
+      authorName: 'Gustavo Fidelis',
+    };
+
+    it('returns the activity with its rating, count and latest reviews', async () => {
+      repository.findById.mockResolvedValue(entity());
+      repository.findLatestReviews.mockResolvedValue([review]);
+
+      const result = await service.findDetails(base.id);
+
+      expect(result).toMatchObject({
+        id: base.id,
+        averageRating: 4.6,
+        reviewCount: 12,
+        latestReviews: [{ rating: 5, authorName: 'Gustavo Fidelis' }],
+      });
+      expect(repository.findLatestReviews).toHaveBeenCalledWith(base.id, 10);
+    });
+
+    it('never exposes a reviewer’s email or id', async () => {
+      repository.findById.mockResolvedValue(entity());
+      repository.findLatestReviews.mockResolvedValue([review]);
+
+      const { latestReviews } = await service.findDetails(base.id);
+
+      expect(Object.keys(latestReviews[0]).sort()).toEqual([
+        'authorName',
+        'comment',
+        'createdAt',
+        'id',
+        'rating',
+      ]);
+    });
+
+    it('answers 404 for an unknown activity without reading reviews', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(service.findDetails(base.id)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repository.findLatestReviews).not.toHaveBeenCalled();
+    });
+
+    it('reports no reviews for a new activity', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ averageRating: null, reviewCount: 0 }),
+      );
+
+      const result = await service.findDetails(base.id);
+
+      expect(result).toMatchObject({
+        averageRating: null,
+        reviewCount: 0,
+        latestReviews: [],
+      });
     });
   });
 
@@ -299,6 +410,55 @@ describe('ActivityCatalogService', () => {
       await service.remove(base.id, user);
 
       expect(repository.countTripUsages).toHaveBeenCalledWith(base.id);
+    });
+  });
+
+  describe('importPlace', () => {
+    const data = {
+      externalId: 'osm:node:1',
+      name: 'Louvre',
+      type: 'TOUR' as const,
+      source: 'OSM',
+    };
+
+    it('adds a place from the external provider', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.importPlace(data, user);
+
+      expect(access.assertAdmin).toHaveBeenCalledWith(user.id);
+      expect(repository.findExistingExternalIds).toHaveBeenCalledWith([
+        'osm:node:1',
+      ]);
+      expect(repository.create).toHaveBeenCalledWith(data);
+    });
+
+    it('answers 409 instead of duplicating a place that was already imported', async () => {
+      repository.findExistingExternalIds.mockResolvedValue(['osm:node:1']);
+
+      await expect(service.importPlace(data, user)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('is for administrators only', async () => {
+      access.assertAdmin.mockRejectedValue(new ForbiddenException());
+
+      await expect(service.importPlace(data, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(repository.findExistingExternalIds).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findImported', () => {
+    it('tells which external ids are already in the catalog', async () => {
+      repository.findExistingExternalIds.mockResolvedValue(['osm:node:2']);
+
+      await expect(
+        service.findImported(['osm:node:1', 'osm:node:2']),
+      ).resolves.toEqual(['osm:node:2']);
     });
   });
 });

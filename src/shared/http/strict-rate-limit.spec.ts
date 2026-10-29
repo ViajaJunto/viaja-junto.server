@@ -3,6 +3,7 @@ import { ActivityCatalogController } from '../../modules/activity-catalog/presen
 import { AuthController } from '../../modules/auth/presentation/auth.controller.js';
 import { DestinationCatalogController } from '../../modules/destination-catalog/presentation/destination-catalog.controller.js';
 import { HealthController } from '../../modules/health/presentation/health.controller.js';
+import { PlacesController } from '../../modules/places/presentation/places.controller.js';
 import { ReviewsController } from '../../modules/reviews/presentation/reviews.controller.js';
 import { TripInviteController } from '../../modules/trips/presentation/trip-invite.controller.js';
 import { env } from '../config/env.js';
@@ -27,6 +28,10 @@ describe('strict rate limits', () => {
     [DestinationCatalogController, 'updatePhoto'],
   ] as const)('%o.%s allows only the strict budget', (controller, name) => {
     expect(limitOf(handler(controller, name))).toBe(env.THROTTLE_STRICT_LIMIT);
+  });
+
+  it('allows the places search and imports, which spend a rate-limited external API, only the strict budget', () => {
+    expect(limitOf(PlacesController)).toBe(env.THROTTLE_STRICT_LIMIT);
   });
 
   it('leaves ordinary routes on the default budget', () => {
