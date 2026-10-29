@@ -150,7 +150,9 @@ model ActivityCatalog {
   googlePlaceId String?      @map("google_place_id")
   photoUrl      String?      @map("photo_url")
   source        String?
+  // Derived from the reviews, in the same transaction that changes them.
   averageRating Float?       @map("average_rating")
+  reviewCount   Int          @default(0) @map("review_count")
   createdAt     DateTime     @default(now()) @map("created_at")
 
   tripActivities TripActivity[]

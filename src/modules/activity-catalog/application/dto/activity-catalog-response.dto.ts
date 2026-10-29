@@ -111,6 +111,14 @@ export class ActivityCatalogResponseDto {
   averageRating!: number | null;
 
   @ApiProperty({
+    description: 'How many reviews the average is based on. Read only.',
+    minimum: 0,
+    example: 12,
+    readOnly: true,
+  })
+  reviewCount!: number;
+
+  @ApiProperty({
     description: 'When the entry was added.',
     type: String,
     format: 'date-time',
@@ -133,6 +141,7 @@ export class ActivityCatalogResponseDto {
       photoUrl: entity.photoUrl ?? null,
       source: entity.source ?? null,
       averageRating: entity.averageRating ?? null,
+      reviewCount: entity.reviewCount,
       createdAt: entity.createdAt,
     };
   }

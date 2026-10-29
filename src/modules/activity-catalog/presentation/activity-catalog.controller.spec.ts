@@ -21,6 +21,7 @@ describe('ActivityCatalogController', () => {
     service = {
       findAll: vi.fn(),
       findOne: vi.fn(),
+      findDetails: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
@@ -85,5 +86,11 @@ describe('ActivityCatalogController', () => {
     controller.updatePhoto(id, file, user);
 
     expect(service.updatePhoto).toHaveBeenCalledWith(id, file, user);
+  });
+
+  it('forwards the id on findDetails', () => {
+    controller.findDetails(id);
+
+    expect(service.findDetails).toHaveBeenCalledWith(id);
   });
 });

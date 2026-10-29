@@ -1,9 +1,9 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
-import { ActivityCatalog } from './activity-catalog.entity.js';
+import { ActivityCatalog, ActivityReview } from './activity-catalog.entity.js';
 
 export type CreateActivityCatalogData = Omit<
   ActivityCatalog,
-  'id' | 'createdAt'
+  'id' | 'createdAt' | 'reviewCount'
 >;
 export type UpdateActivityCatalogData = Partial<CreateActivityCatalogData>;
 
@@ -23,6 +23,11 @@ export abstract class ActivityCatalogRepository {
     id: string,
     data: UpdateActivityCatalogData,
   ): Promise<ActivityCatalog>;
+  /** The most recent reviews of an activity, newest first. */
+  abstract findLatestReviews(
+    activityId: string,
+    limit: number,
+  ): Promise<ActivityReview[]>;
   /** How many trip destinations/activities still use this entry. */
   abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;

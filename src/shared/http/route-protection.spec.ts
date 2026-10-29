@@ -47,6 +47,7 @@ const PUBLIC = new Set([
   'DestinationCatalogController.findOne',
   'ActivityCatalogController.findAll',
   'ActivityCatalogController.findOne',
+  'ActivityCatalogController.findDetails',
   'ReviewsController.findAll',
   'ReviewsController.findOne',
 ]);
