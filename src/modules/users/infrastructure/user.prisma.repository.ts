@@ -12,6 +12,7 @@ import {
   CreateUserData,
   UpdateUserData,
   UserRepository,
+  UserSession,
 } from '../domain/user.repository.js';
 
 @Injectable()
@@ -42,6 +43,20 @@ export class UserPrismaRepository implements UserRepository {
 
   findByGoogleId(googleId: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { googleId } });
+  }
+
+  findSession(id: string): Promise<UserSession | null> {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { tokensValidAfter: true },
+    });
+  }
+
+  async revokeTokens(id: string, validAfter: Date): Promise<void> {
+    await this.prisma.user.update({
+      where: { id },
+      data: { tokensValidAfter: validAfter },
+    });
   }
 
   async findVisitedPlaces(userId: string): Promise<VisitedPlace[]> {

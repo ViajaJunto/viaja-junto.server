@@ -3,6 +3,11 @@ import { User } from './user.entity.js';
 import type { VisitedPlace } from './visited-countries.js';
 
 /** The role is never set through the API: new accounts start as USER. */
+/** The part of an account that decides whether its tokens are still valid. */
+export interface UserSession {
+  tokensValidAfter: Date | null;
+}
+
 export type CreateUserData = Omit<User, 'id' | 'createdAt' | 'role'>;
 export type UpdateUserData = Partial<CreateUserData>;
 /** An account as known to Google: the Google id is always present. */
@@ -23,6 +28,10 @@ export abstract class UserRepository {
   abstract findById(id: string): Promise<User | null>;
   abstract findByEmail(email: string): Promise<User | null>;
   abstract findByGoogleId(googleId: string): Promise<User | null>;
+  /** What the API needs to decide whether a token is still good; null if the account is gone. */
+  abstract findSession(id: string): Promise<UserSession | null>;
+  /** Refuses every access token issued before `validAfter`. */
+  abstract revokeTokens(id: string, validAfter: Date): Promise<void>;
   /** Destinations of the user's completed trips (as creator or member). */
   abstract findVisitedPlaces(userId: string): Promise<VisitedPlace[]>;
   abstract create(data: CreateUserData): Promise<User>;

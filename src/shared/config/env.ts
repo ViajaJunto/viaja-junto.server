@@ -97,6 +97,18 @@ const envSchema = z.object({
     .string()
     .min(32, 'JWT_SECRET must be at least 32 characters long'),
 
+  // The secret that was in use before the last rotation. Tokens signed with it
+  // are still accepted (new ones are always signed with JWT_SECRET), so a
+  // rotation does not sign everyone out; remove it once old tokens have
+  // expired (JWT_EXPIRES_IN).
+  JWT_SECRET_PREVIOUS: z.preprocess(
+    blankAsUndefined,
+    z
+      .string()
+      .min(32, 'JWT_SECRET_PREVIOUS must be at least 32 characters long')
+      .optional(),
+  ),
+
   // Access token lifetime, in seconds.
   JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
 

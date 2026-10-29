@@ -1,7 +1,17 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiFoundResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -103,6 +113,24 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.service.getProfile(user.id);
+  }
+
+  @ApiOperation({
+    summary: 'Sign out',
+    description:
+      'Ends **every** session of the caller: all the access tokens issued so far stop working immediately, on every device, not only the one used here. The client should also discard its token. Signing in again issues a new one.',
+  })
+  @ApiNoContentResponse({ description: 'Signed out. No content returned.' })
+  @ApiBearerAuth('bearer')
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid access token.',
+    type: ErrorResponseDto,
+  })
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  logout(@CurrentUser() user: AuthenticatedUser) {
+    return this.service.signOut(user.id);
   }
 }
 
