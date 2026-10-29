@@ -73,6 +73,7 @@ services:
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3000/api/auth/google/callback}
       AUTH_REDIRECT_URL: ${AUTH_REDIRECT_URL:-http://localhost:5173/auth/callback}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3600}
     ports:
@@ -83,14 +84,14 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      # Uses the liveness route behind the global prefix. Node 22 has fetch
-      # built in, so the runtime image needs no curl or wget.
+      # /health also checks the database. Node 22 has fetch built in, so the
+      # runtime image needs no curl or wget.
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/${API_PREFIX:-api}').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/${API_PREFIX:-api}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s

@@ -79,6 +79,20 @@ const envSchema = z.object({
   // Browser origins allowed to call the API (CORS), comma-separated.
   CORS_ORIGINS: corsOrigins.default(['http://localhost:5173']),
 
+  // ── Rate limiting ──────────────────────────────────────────────────────
+  // Requests allowed per client IP in each window (seconds). Reads, writes
+  // (POST/PATCH/PUT/DELETE) and the sensitive routes (sign-in, joining with a
+  // code, uploads, reviews, places search) have their own, stricter budgets.
+  THROTTLE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
+  THROTTLE_LIMIT: z.coerce.number().int().positive().default(300),
+  THROTTLE_WRITE_LIMIT: z.coerce.number().int().positive().default(60),
+  THROTTLE_STRICT_LIMIT: z.coerce.number().int().positive().default(10),
+
+  // How many reverse proxies (load balancer...) sit in front of the API, so
+  // the client IP is read from X-Forwarded-For instead of the proxy's address.
+  // 0 = none (the connection address is the client).
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+
   JWT_SECRET: z
     .string()
     .min(32, 'JWT_SECRET must be at least 32 characters long'),

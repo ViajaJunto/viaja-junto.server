@@ -21,6 +21,7 @@ import {
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import { StrictRateLimit } from '../../../shared/http/throttling.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import {
@@ -156,6 +157,7 @@ export class ActivityCatalogController {
   })
   @AdminOnly()
   @Put(':id/photo')
+  @StrictRateLimit()
   @UseInterceptors(PhotoUploadInterceptor)
   updatePhoto(
     @IdParam() id: string,
