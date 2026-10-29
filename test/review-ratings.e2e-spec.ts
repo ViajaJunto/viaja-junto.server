@@ -198,7 +198,9 @@ describe('Review ratings (e2e)', () => {
   });
 
   it('answers 404 for an unknown activity page', async () => {
-    await details(randomUUID()).expect(404);
+    const response = await details(randomUUID());
+
+    expect(response.status).toBe(404);
   });
 
   it('stays consistent when many reviews arrive at once', async () => {
