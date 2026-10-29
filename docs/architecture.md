@@ -313,6 +313,43 @@ from the itinerary. Activities without a cost count as 0 and are reported in
 `totalValue` and `remaining` null. Amounts are summed in integer cents and are
 in the trip's currency. Any member of the trip can read it.
 
+**Shared expenses library.** `src/shared/expenses` (reuse plan: a generic,
+reusable component) splits costs, keeps balances and works out who owes whom.
+It is framework-free — no Nest, no Prisma, no network — and is imported only
+through `index.ts`, so it can be lifted into its own package. Its API:
+
+| Function | What it does |
+| -------- | ------------ |
+| `createLedger(currency)` | An empty ledger whose balances are kept in `currency`. |
+| `addExpense(ledger, expense, rates?)` | Records an expense (validated up front) and returns a **new** ledger. |
+| `settleBalance(ledger, { from, to, amount }, rates?)` | Records that `from` paid `to`; returns a new ledger. |
+| `calculateSummary(ledger, rates?)` | `total`, a `Balance` per person (`paid`, `owed`, `settled`, `net`) and the `transfers` that settle everyone. |
+
+- *Money* is an integer in minor units (cents; whole yen) plus an ISO 4217 code,
+  so no floating point touches a balance. Digits per currency come from ICU.
+- *Splits* are `equal`, `exact` (stated amounts that must add up) or
+  `proportional` (weights: percentages, nights, head-count). Rounding uses the
+  **largest remainder method**: everyone gets the whole part of their exact
+  share and the leftover cents go, one each, to the biggest fractional
+  remainders, ties to whoever is listed first. Shares always add up to the
+  expense and the result is deterministic.
+- *Currencies*: an expense in another currency is converted to the ledger
+  currency through the caller's `ExchangeRates` (units of `to` per unit of
+  `from`), rounded half up to the minor unit. A missing rate is an error, never
+  a guess; the library never fetches rates.
+- *Settling up*: balances always add up to zero. `transfers` cancel exact
+  matches first, then the biggest debtor pays the biggest creditor, which is at
+  most one payment fewer than the people with a balance — usually the fewest
+  possible, but not guaranteed (the true minimum is a hard combinatorial
+  problem). The plan is the same whatever order the input comes in.
+- *Errors* are `ExpenseError`s with a stable `code` (`invalid_amount`,
+  `invalid_currency`, `invalid_participant`, `invalid_split`,
+  `duplicate_expense`, `missing_exchange_rate`, `invalid_settlement`), for the
+  HTTP layer to map to `422`.
+
+The library is not wired to the API yet; `trip-expenses` (#30) adapts it to
+persistence and endpoints.
+
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its
 `startDate`; a destination's `departure` is not earlier than its `arrival`, and
