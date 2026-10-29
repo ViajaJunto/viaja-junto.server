@@ -14,11 +14,14 @@ import {
   DestinationCatalogRepository,
   CreateDestinationCatalogData,
 } from '../domain/destination-catalog.repository.js';
-import { TopDestinationResponseDto } from './dto/top-destination-response.dto.js';
+import { DestinationCatalogDetailsResponseDto } from './dto/destination-catalog-details-response.dto.js';
 import { ListDestinationCatalogQueryDto } from './dto/list-destination-catalog-query.dto.js';
 import { CreateDestinationCatalogDto } from './dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from './dto/update-destination-catalog.dto.js';
 import { DestinationCatalogResponseDto } from './dto/destination-catalog-response.dto.js';
+
+/** How many reviews the public destination page shows. */
+export const LATEST_REVIEWS = 10;
 
 @Injectable()
 export class DestinationCatalogService {
@@ -44,9 +47,20 @@ export class DestinationCatalogService {
   }
 
   /** The best rated destinations, for the home page (FR25). */
-  async findTop(limit: number): Promise<TopDestinationResponseDto[]> {
+  async findTop(limit: number): Promise<DestinationCatalogResponseDto[]> {
     return (await this.repository.findTopRated(limit)).map((destination) =>
-      TopDestinationResponseDto.fromRated(destination),
+      DestinationCatalogResponseDto.from(destination),
+    );
+  }
+
+  /** The public page of a destination: the entry plus its latest reviews. */
+  async findDetails(id: string): Promise<DestinationCatalogDetailsResponseDto> {
+    const destination = await this.getOrFail(id);
+    const reviews = await this.repository.findLatestReviews(id, LATEST_REVIEWS);
+
+    return DestinationCatalogDetailsResponseDto.fromDetails(
+      destination,
+      reviews,
     );
   }
 
@@ -85,6 +99,15 @@ export class DestinationCatalogService {
     return DestinationCatalogResponseDto.from(
       await this.repository.create(data),
     );
+  }
+
+  /** The catalog destination a place in this city belongs to, if there is one. */
+  findIdByCity(city?: string | null, country?: string | null) {
+    const name = city?.trim();
+
+    return name
+      ? this.repository.findIdByCity(name, country?.trim() || undefined)
+      : Promise.resolve(null);
   }
 
   /** Which of these external ids are already in the catalog. */

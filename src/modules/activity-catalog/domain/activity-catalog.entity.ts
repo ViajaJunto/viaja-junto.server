@@ -23,6 +23,8 @@ export interface ActivityCatalog {
   /** Id in the external places provider (`osm:node:123`) when imported. */
   externalId?: string | null;
   source?: string | null;
+  /** The destination (city) the activity is in, when the catalog knows it. */
+  destinationCatalogId?: string | null;
   /** Derived from the reviews; never set through the API. */
   averageRating?: number | null;
   /** How many reviews the average is based on. */

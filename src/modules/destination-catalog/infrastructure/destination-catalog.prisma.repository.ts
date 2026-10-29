@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
+import { escapeLike } from '../../../shared/database/like.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { buildDestinationWhere } from './destination-catalog.filters.js';
 import {
   DestinationCatalog,
-  RatedDestination,
+  DestinationReviewSummary,
 } from '../domain/destination-catalog.entity.js';
 import {
   CreateDestinationCatalogData,
@@ -61,45 +62,64 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
     return rows.flatMap(({ externalId }) => externalId ?? []);
   }
 
-  async findTopRated(limit: number): Promise<RatedDestination[]> {
-    // An activity belongs to a destination when it is in a city of that name
-    // (and in that country, when both sides say which). The rating is the
-    // mean of the activities' averages weighted by their review counts, i.e.
-    // the plain mean of every review given to activities there.
-    const ranked = await this.prisma.$queryRaw<
-      { id: string; rating: number; reviewCount: number }[]
-    >`
-      SELECT d.id,
-             ROUND((SUM(a.average_rating * a.review_count)
-                    / SUM(a.review_count))::numeric, 2)::float AS rating,
-             SUM(a.review_count)::int AS "reviewCount"
-      FROM destination_catalog d
-      JOIN activity_catalog a
-        ON LOWER(BTRIM(a.city)) = LOWER(BTRIM(d.name))
-       AND (d.country IS NULL OR a.country IS NULL
-            OR LOWER(BTRIM(a.country)) = LOWER(BTRIM(d.country)))
-      WHERE a.review_count > 0
-      GROUP BY d.id
-      ORDER BY rating DESC, "reviewCount" DESC, d.name ASC, d.id ASC
-      LIMIT ${limit}`;
-
-    if (ranked.length === 0) {
-      return [];
-    }
-
-    const destinations = new Map(
-      (
-        await this.prisma.destinationCatalog.findMany({
-          where: { id: { in: ranked.map(({ id }) => id) } },
-        })
-      ).map((destination) => [destination.id, destination]),
-    );
-
-    return ranked.flatMap(({ id, rating, reviewCount }) => {
-      const destination = destinations.get(id);
-
-      return destination ? [{ ...destination, rating, reviewCount }] : [];
+  findTopRated(limit: number): Promise<DestinationCatalog[]> {
+    return this.prisma.destinationCatalog.findMany({
+      where: { reviewCount: { gt: 0 } },
+      orderBy: [
+        { averageRating: 'desc' },
+        { reviewCount: 'desc' },
+        { name: 'asc' },
+        { id: 'asc' },
+      ],
+      take: limit,
     });
+  }
+
+  async findIdByCity(city: string, country?: string): Promise<string | null> {
+    const found = await this.prisma.destinationCatalog.findFirst({
+      where: {
+        name: { equals: escapeLike(city), mode: 'insensitive' },
+        // A destination without a country matches any; so does a place without one.
+        ...(country
+          ? {
+              OR: [
+                { country: null },
+                {
+                  country: { equals: escapeLike(country), mode: 'insensitive' },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+
+    return found?.id ?? null;
+  }
+
+  async findLatestReviews(
+    destinationId: string,
+    limit: number,
+  ): Promise<DestinationReviewSummary[]> {
+    const reviews = await this.prisma.destinationReview.findMany({
+      where: { destinationId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: limit,
+      // The name only: the email of a reviewer is never public.
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        user: { select: { name: true } },
+      },
+    });
+
+    return reviews.map(({ user, ...review }) => ({
+      ...review,
+      authorName: user.name,
+    }));
   }
 
   countTripUsages(id: string): Promise<number> {

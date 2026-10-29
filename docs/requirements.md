@@ -119,5 +119,5 @@ ViajaJunto is a new system without replacement of an existing product. It integr
 | BR02 | Collaborators with Editor permissions may add, edit, and remove destinations, activities, and budget information. |
 | BR03 | Collaborators with Viewer permission only have read access. |
 | BR04 | Only the trip creator may invite collaborators, change permissions, or remove them. |
-| BR05 | Only registered users may review destinations and activities. |
+| BR05 | Only registered users may review destinations and activities. A destination can only be reviewed by someone who completed a trip with it. |
 | BR06 | A user may access a trip only if they are the creator or a collaborator. |

@@ -86,14 +86,15 @@ model User {
   tokensValidAfter DateTime? @map("tokens_valid_after")
   createdAt        DateTime  @default(now()) @map("created_at")
 
-  createdTrips        Trip[]             @relation("TripCreator")
+  createdTrips        Trip[]              @relation("TripCreator")
   memberships         TripMember[]
   reviews             Review[]
-  paidExpenses        TripExpense[]      @relation("ExpensePayer")
-  recordedExpenses    TripExpense[]      @relation("ExpenseRecorder")
+  destinationReviews  DestinationReview[]
+  paidExpenses        TripExpense[]       @relation("ExpensePayer")
+  recordedExpenses    TripExpense[]       @relation("ExpenseRecorder")
   expenseShares       TripExpenseShare[]
-  notifications       Notification[]     @relation("NotificationRecipient")
-  notificationsCaused Notification[]     @relation("NotificationActor")
+  notifications       Notification[]      @relation("NotificationRecipient")
+  notificationsCaused Notification[]      @relation("NotificationActor")
 
   @@map("user")
 }
@@ -201,20 +202,25 @@ model TripExpenseShare {
 }
 
 model DestinationCatalog {
-  id          String               @id @default(uuid())
-  name        String
-  country     String?
+  id            String               @id @default(uuid())
+  name          String
+  country       String?
   // ISO 3166-1 alpha-2 ("FR"), so the frontend map can colour the country directly.
-  countryCode String?              @map("country_code") @db.VarChar(2)
-  category    DestinationCategory?
-  description String?
-  latitude    Float?
-  longitude   Float?
-  photoUrl    String?              @map("photo_url")
+  countryCode   String?              @map("country_code") @db.VarChar(2)
+  category      DestinationCategory?
+  description   String?
+  latitude      Float?
+  longitude     Float?
+  photoUrl      String?              @map("photo_url")
   // Id in the external places provider ("osm:node:123"); set when imported, unique so an import is never duplicated.
-  externalId  String?              @unique @map("external_id")
+  externalId    String?              @unique @map("external_id")
+  // Derived from the destination's own reviews, in the same transaction that changes them.
+  averageRating Float?               @map("average_rating")
+  reviewCount   Int                  @default(0) @map("review_count")
 
   tripDestinations TripDestination[]
+  activities       ActivityCatalog[]
+  reviews          DestinationReview[]
 
   @@map("destination_catalog")
 }
@@ -236,28 +242,32 @@ model TripDestination {
 }
 
 model ActivityCatalog {
-  id            String       @id @default(uuid())
-  name          String
-  description   String?
-  type          ActivityType @default(OTHER)
-  location      String?
-  city          String?
-  country       String?
-  latitude      Float?
-  longitude     Float?
-  googlePlaceId String?      @map("google_place_id")
+  id                   String       @id @default(uuid())
+  name                 String
+  description          String?
+  type                 ActivityType @default(OTHER)
+  location             String?
+  city                 String?
+  country              String?
+  latitude             Float?
+  longitude            Float?
+  googlePlaceId        String?      @map("google_place_id")
   // Id in the external places provider ("osm:node:123"); set when imported, unique so an import is never duplicated.
-  externalId    String?      @unique @map("external_id")
-  photoUrl      String?      @map("photo_url")
-  source        String?
+  externalId           String?      @unique @map("external_id")
+  photoUrl             String?      @map("photo_url")
+  source               String?
   // Derived from the reviews, in the same transaction that changes them.
-  averageRating Float?       @map("average_rating")
-  reviewCount   Int          @default(0) @map("review_count")
-  createdAt     DateTime     @default(now()) @map("created_at")
+  averageRating        Float?       @map("average_rating")
+  reviewCount          Int          @default(0) @map("review_count")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  // The destination (city) the activity is in, when the catalog knows it.
+  destinationCatalogId String?      @map("destination_catalog_id")
 
+  destination    DestinationCatalog? @relation(fields: [destinationCatalogId], references: [id], onDelete: SetNull)
   tripActivities TripActivity[]
   reviews        Review[]
 
+  @@index([destinationCatalogId])
   @@map("activity_catalog")
 }
 
@@ -285,6 +295,23 @@ model Budget {
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@map("budget")
+}
+
+// A traveller's opinion of a destination (a city), only from people who
+// completed a trip there (BR05).
+model DestinationReview {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  destinationId String   @map("destination_catalog_id")
+  rating        Int
+  comment       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination DestinationCatalog @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, destinationId])
+  @@map("destination_review")
 }
 
 model Review {

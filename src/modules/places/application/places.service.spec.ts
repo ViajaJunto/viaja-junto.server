@@ -52,7 +52,9 @@ describe('PlacesService', () => {
     findImported: ReturnType<typeof vi.fn>;
     importPlace: ReturnType<typeof vi.fn>;
   };
-  let destinations: typeof activities;
+  let destinations: typeof activities & {
+    findIdByCity: ReturnType<typeof vi.fn>;
+  };
   let service: PlacesService;
 
   beforeEach(() => {
@@ -65,6 +67,7 @@ describe('PlacesService', () => {
     destinations = {
       findImported: vi.fn().mockResolvedValue([]),
       importPlace: vi.fn().mockResolvedValue({ id: 'd1' }),
+      findIdByCity: vi.fn().mockResolvedValue(null),
     };
     service = new PlacesService(
       provider as unknown as PlacesProvider,
@@ -172,7 +175,21 @@ describe('PlacesService', () => {
           latitude: 48.86,
           longitude: 2.33,
           source: 'OSM',
+          destinationCatalogId: null,
         },
+        admin,
+      );
+    });
+
+    it('links the activity to the catalog destination of its city', async () => {
+      provider.lookup.mockResolvedValue(louvre);
+      destinations.findIdByCity.mockResolvedValue('dest-paris');
+
+      await service.importActivity(louvre.externalId, admin);
+
+      expect(destinations.findIdByCity).toHaveBeenCalledWith('Paris', 'França');
+      expect(activities.importPlace).toHaveBeenCalledWith(
+        expect.objectContaining({ destinationCatalogId: 'dest-paris' }),
         admin,
       );
     });

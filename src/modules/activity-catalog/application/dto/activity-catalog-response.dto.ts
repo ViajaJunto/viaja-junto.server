@@ -126,6 +126,15 @@ export class ActivityCatalogResponseDto {
   })
   createdAt!: Date;
 
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    description: 'Catalog destination (city) the activity is in, when known.',
+    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+    nullable: true,
+  })
+  destinationId!: string | null;
+
   static from(entity: ActivityCatalog): ActivityCatalogResponseDto {
     return {
       id: entity.id,
@@ -140,6 +149,7 @@ export class ActivityCatalogResponseDto {
       googlePlaceId: entity.googlePlaceId ?? null,
       photoUrl: entity.photoUrl ?? null,
       source: entity.source ?? null,
+      destinationId: entity.destinationCatalogId ?? null,
       averageRating: entity.averageRating ?? null,
       reviewCount: entity.reviewCount,
       createdAt: entity.createdAt,
