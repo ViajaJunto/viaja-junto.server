@@ -1,4 +1,5 @@
 // Pure budget arithmetic. No framework and no ORM dependency.
+import { convert } from '../../../shared/expenses/index.js';
 
 export const ACTIVITY_TYPES = [
   'TOUR',
@@ -17,6 +18,15 @@ export interface PlannedActivity {
   expectedCost: number | null;
 }
 
+/** An expense already paid, with the rate to the trip currency it was paid at. */
+export interface PaidExpense {
+  /** Minor units of `currency`. */
+  amount: number;
+  currency: string;
+  /** Units of the trip currency per 1 unit of `currency`; null when they are the same. */
+  exchangeRate: number | null;
+}
+
 export interface CategoryConsumption {
   type: ActivityType;
   planned: number;
@@ -31,6 +41,10 @@ export interface BudgetSummary {
   planned: number;
   /** `totalValue - planned`; negative when over budget, null without a budget. */
   remaining: number | null;
+  /** What the trip's recorded expenses add up to, in the trip currency. */
+  spent: number;
+  /** `totalValue - spent`; negative when more was spent than budgeted, null without a budget. */
+  remainingAfterSpent: number | null;
   /** `true` when what is planned exceeds the total budget. */
   overBudget: boolean;
   activityCount: number;
@@ -51,6 +65,7 @@ export function summarizeBudget(input: {
   currency: string;
   totalValue: number | null;
   activities: PlannedActivity[];
+  expenses: PaidExpense[];
 }): BudgetSummary {
   const centsByType = new Map<ActivityType, number>();
   const countByType = new Map<ActivityType, number>();
@@ -70,6 +85,18 @@ export function summarizeBudget(input: {
     centsByType.set(type, (centsByType.get(type) ?? 0) + cents);
   }
 
+  // Each expense is converted with the rate it was paid at.
+  const spentCents = input.expenses.reduce(
+    (sum, expense) =>
+      sum +
+      convert(
+        { amount: expense.amount, currency: expense.currency },
+        input.currency,
+        { rate: () => expense.exchangeRate ?? undefined },
+      ),
+    0,
+  );
+
   const totalCents =
     input.totalValue === null ? null : toCents(input.totalValue);
 
@@ -79,6 +106,9 @@ export function summarizeBudget(input: {
     planned: fromCents(plannedCents),
     remaining:
       totalCents === null ? null : fromCents(totalCents - plannedCents),
+    spent: fromCents(spentCents),
+    remainingAfterSpent:
+      totalCents === null ? null : fromCents(totalCents - spentCents),
     overBudget: totalCents !== null && plannedCents > totalCents,
     activityCount: input.activities.length,
     unpricedActivities: unpriced,

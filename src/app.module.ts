@@ -15,6 +15,7 @@ import { ActivityCatalogModule } from './modules/activity-catalog/activity-catal
 import { TripActivitiesModule } from './modules/trip-activities/trip-activities.module.js';
 import { BudgetsModule } from './modules/budgets/budgets.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
+import { TripExpensesModule } from './modules/trip-expenses/trip-expenses.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module.js';
     TripActivitiesModule,
     BudgetsModule,
     ReviewsModule,
+    TripExpensesModule,
   ],
   controllers: [AppController],
   providers: [
