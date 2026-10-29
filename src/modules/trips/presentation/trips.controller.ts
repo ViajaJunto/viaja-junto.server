@@ -30,10 +30,10 @@ import {
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { ListTripsQueryDto } from '../application/dto/list-trips-query.dto.js';
 import { CreateTripDto } from '../application/dto/create-trip.dto.js';
 import { UpdateTripDto } from '../application/dto/update-trip.dto.js';
 import { TripResponseDto } from '../application/dto/trip-response.dto.js';
@@ -48,7 +48,7 @@ export class TripsController {
   @ApiOperation({
     summary: 'List trips',
     description:
-      'Returns a paginated list of trips visible to the authenticated user — the ones they created plus the ones they were invited to.',
+      'Returns the authenticated user’s trips — the ones they created plus the ones they were invited to — newest first. Each item carries the caller’s role (`OWNER`, `EDITOR` or `VIEWER`). Filter by planning stage with `?status=`.',
   })
   @ApiPaginatedResponse(TripResponseDto, 'Page of trip records.')
   @ApiUnprocessableEntityResponse({
@@ -58,7 +58,7 @@ export class TripsController {
   @ApiAuthenticated()
   @Get()
   findAll(
-    @Query() query: PaginationQueryDto,
+    @Query() query: ListTripsQueryDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.service.findAll(query, user);

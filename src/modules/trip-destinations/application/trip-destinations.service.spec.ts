@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TripDestination } from '../domain/trip-destination.entity.js';
 import type { TripDestinationRepository } from '../domain/trip-destination.repository.js';
@@ -46,6 +50,8 @@ describe('TripDestinationsService', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      findByTrip: vi.fn(),
+      reorder: vi.fn(),
     };
     access = {
       assertCanRead: vi.fn().mockResolvedValue('CREATOR'),
@@ -69,6 +75,7 @@ describe('TripDestinationsService', () => {
       expect(repository.findAll).toHaveBeenCalledWith(
         { skip: 30, take: 15 },
         user.id,
+        { tripId: undefined },
       );
     });
 
@@ -80,7 +87,30 @@ describe('TripDestinationsService', () => {
       expect(repository.findAll).toHaveBeenCalledWith(
         { skip: 0, take: 20 },
         user.id,
+        { tripId: undefined },
       );
+    });
+
+    it('lists one trip only after checking the caller can read it', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({ tripId }, user);
+
+      expect(access.assertCanRead).toHaveBeenCalledWith(tripId, user.id);
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        user.id,
+        { tripId },
+      );
+    });
+
+    it('answers 404 for a trip the caller has no access to', async () => {
+      access.assertCanRead.mockRejectedValue(new NotFoundException());
+
+      await expect(service.findAll({ tripId }, user)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repository.findAll).not.toHaveBeenCalled();
     });
 
     it('wraps the page in the { data, meta } envelope', async () => {
@@ -215,6 +245,56 @@ describe('TripDestinationsService', () => {
         ForbiddenException,
       );
       expect(repository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reorder', () => {
+    const first = entity({ id: '11111111-1111-4111-8111-aaaaaaaaaaaa' });
+    const second = entity({ id: '22222222-2222-4222-8222-bbbbbbbbbbbb' });
+
+    beforeEach(() => {
+      repository.findByTrip.mockResolvedValue([first, second]);
+      repository.reorder.mockResolvedValue([second, first]);
+    });
+
+    it('checks the caller may edit the trip, then rewrites the order', async () => {
+      const result = await service.reorder(
+        tripId,
+        { destinationIds: [second.id, first.id] },
+        user,
+      );
+
+      expect(access.assertCanEdit).toHaveBeenCalledWith(tripId, user.id);
+      expect(repository.reorder).toHaveBeenCalledWith(tripId, [
+        second.id,
+        first.id,
+      ]);
+      expect(result.map((item) => item.id)).toEqual([second.id, first.id]);
+    });
+
+    it('does nothing for a viewer', async () => {
+      access.assertCanEdit.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        service.reorder(
+          tripId,
+          { destinationIds: [first.id, second.id] },
+          user,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repository.reorder).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a destination is missing', [first.id]],
+      ['a destination is repeated', [first.id, first.id]],
+      ['an id from another trip is mixed in', [first.id, 'not-in-this-trip']],
+      ['there are extra ids', [first.id, second.id, 'extra']],
+    ])('rejects the request when %s', async (_name, destinationIds) => {
+      await expect(
+        service.reorder(tripId, { destinationIds }, user),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(repository.reorder).not.toHaveBeenCalled();
     });
   });
 });

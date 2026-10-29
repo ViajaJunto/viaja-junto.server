@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { accessibleTrips } from '../../../shared/database/trip-scope.js';
 import { TripDestination } from '../domain/trip-destination.entity.js';
 import {
   CreateTripDestinationData,
   UpdateTripDestinationData,
+  TripDestinationFilter,
   TripDestinationRepository,
 } from '../domain/trip-destination.repository.js';
 
@@ -16,17 +18,23 @@ export class TripDestinationPrismaRepository implements TripDestinationRepositor
   async findAll(
     { skip, take }: PageRequest,
     userId: string,
+    filter: TripDestinationFilter,
   ): Promise<Page<TripDestination>> {
+    const where: Prisma.TripDestinationWhereInput = {
+      trip: accessibleTrips(userId),
+      tripId: filter.tripId,
+    };
+
     // One transaction so the page and the total come from the same snapshot.
     const [items, total] = await this.prisma.$transaction([
       this.prisma.tripDestination.findMany({
-        where: { trip: accessibleTrips(userId) },
+        where,
         skip,
         take,
         orderBy: { order: { sort: 'asc', nulls: 'last' } },
       }),
       this.prisma.tripDestination.count({
-        where: { trip: accessibleTrips(userId) },
+        where,
       }),
     ]);
 
@@ -46,6 +54,29 @@ export class TripDestinationPrismaRepository implements TripDestinationRepositor
     data: UpdateTripDestinationData,
   ): Promise<TripDestination> {
     return this.prisma.tripDestination.update({ where: { id }, data });
+  }
+
+  findByTrip(tripId: string): Promise<TripDestination[]> {
+    return this.prisma.tripDestination.findMany({
+      where: { tripId },
+      orderBy: [{ order: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
+    });
+  }
+
+  async reorder(
+    tripId: string,
+    orderedIds: string[],
+  ): Promise<TripDestination[]> {
+    await this.prisma.$transaction(
+      orderedIds.map((id, position) =>
+        this.prisma.tripDestination.update({
+          where: { id, tripId },
+          data: { order: position },
+        }),
+      ),
+    );
+
+    return this.findByTrip(tripId);
   }
 
   async remove(id: string): Promise<void> {

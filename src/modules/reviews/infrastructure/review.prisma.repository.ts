@@ -5,6 +5,7 @@ import { Review } from '../domain/review.entity.js';
 import {
   CreateReviewData,
   UpdateReviewData,
+  ReviewFilter,
   ReviewRepository,
 } from '../domain/review.repository.js';
 
@@ -12,15 +13,21 @@ import {
 export class ReviewPrismaRepository implements ReviewRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll({ skip, take }: PageRequest): Promise<Page<Review>> {
+  async findAll(
+    { skip, take }: PageRequest,
+    filter: ReviewFilter,
+  ): Promise<Page<Review>> {
+    const where = { activityId: filter.activityId };
+
     // One transaction so the page and the total come from the same snapshot.
     const [items, total] = await this.prisma.$transaction([
       this.prisma.review.findMany({
+        where,
         skip,
         take,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.review.count(),
+      this.prisma.review.count({ where }),
     ]);
 
     return { items, total };

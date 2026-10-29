@@ -1,6 +1,10 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { TripActivity } from './trip-activity.entity.js';
 
+export interface TripActivityFilter {
+  tripDestinationId?: string;
+}
+
 export type CreateTripActivityData = Omit<TripActivity, 'id'>;
 export type UpdateTripActivityData = Partial<CreateTripActivityData>;
 
@@ -17,6 +21,7 @@ export abstract class TripActivityRepository {
   abstract findAll(
     page: PageRequest,
     userId: string,
+    filter: TripActivityFilter,
   ): Promise<Page<TripActivity>>;
   abstract findById(id: string): Promise<TripActivity | null>;
   abstract create(data: CreateTripActivityData): Promise<TripActivity>;

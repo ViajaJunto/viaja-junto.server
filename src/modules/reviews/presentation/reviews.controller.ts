@@ -34,10 +34,10 @@ import {
   ErrorResponseDto,
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { ListReviewsQueryDto } from '../application/dto/list-reviews-query.dto.js';
 import { CreateReviewDto } from '../application/dto/create-review.dto.js';
 import { UpdateReviewDto } from '../application/dto/update-review.dto.js';
 import { ReviewResponseDto } from '../application/dto/review-response.dto.js';
@@ -59,7 +59,7 @@ export class ReviewsController {
     type: ValidationErrorResponseDto,
   })
   @Get()
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: ListReviewsQueryDto) {
     return this.service.findAll(query);
   }
 

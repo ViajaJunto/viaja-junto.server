@@ -49,7 +49,10 @@ describe('ReviewsService', () => {
 
       await service.findAll({ page: 3, limit: 15 });
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 30, take: 15 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 30, take: 15 },
+        { activityId: undefined },
+      );
     });
 
     it('falls back to the default window when the query is empty', async () => {
@@ -57,7 +60,21 @@ describe('ReviewsService', () => {
 
       await service.findAll({});
 
-      expect(repository.findAll).toHaveBeenCalledWith({ skip: 0, take: 20 });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        { activityId: undefined },
+      );
+    });
+
+    it('lists only the reviews of one activity', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({ activityId: base.activityId });
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        { activityId: base.activityId },
+      );
     });
 
     it('wraps the page in the { data, meta } envelope', async () => {

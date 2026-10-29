@@ -5,10 +5,10 @@ import {
 } from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
-import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { ReviewRepository } from '../domain/review.repository.js';
+import { ListReviewsQueryDto } from './dto/list-reviews-query.dto.js';
 import { CreateReviewDto } from './dto/create-review.dto.js';
 import { UpdateReviewDto } from './dto/update-review.dto.js';
 import { ReviewResponseDto } from './dto/review-response.dto.js';
@@ -18,10 +18,13 @@ export class ReviewsService {
   constructor(private readonly repository: ReviewRepository) {}
 
   async findAll(
-    query: PaginationQueryDto,
+    query: ListReviewsQueryDto,
   ): Promise<PaginatedResponseDto<ReviewResponseDto>> {
     const { page, limit, skip, take } = toPageRequest(query);
-    const { items, total } = await this.repository.findAll({ skip, take });
+    const { items, total } = await this.repository.findAll(
+      { skip, take },
+      { activityId: query.activityId },
+    );
 
     return {
       data: items.map((item) => ReviewResponseDto.from(item)),

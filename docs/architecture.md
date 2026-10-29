@@ -267,6 +267,19 @@ ordering — itinerary position for trip destinations, chronological for planned
 activities, newest first for trips and reviews — which is what makes paging
 stable across requests.
 
+**Scoped lists.** List endpoints return only what the caller can see. They
+accept the parent as a filter, which also applies the trip-access policy to it
+(`404` when the caller has no access): `GET /trip-destinations?tripId=` (itinerary
+order), `GET /trip-members?tripId=`, `GET /trip-activities?tripDestinationId=`
+(chronological) and the public `GET /reviews?activityId=` (newest first).
+`GET /trips` lists the caller's own and joined trips, newest first, each with
+the caller's `role` (`OWNER`, `EDITOR` or `VIEWER`) and an optional
+`?status=PLANNING|CONFIRMED|COMPLETED` filter.
+`PUT /trips/{tripId}/destinations/order` takes every destination id of the trip
+in the new order and rewrites `order` as 0..n-1; the ids must be exactly the
+trip's destinations (`422` otherwise), and it needs the Editor permission or the
+creator.
+
 **Authentication.** Google is the only sign-in method; there are no
 passwords. It is built on Passport.js (`passport-google-oauth20` and
 `passport-jwt`) in `src/modules/auth`:

@@ -30,10 +30,10 @@ import {
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
 import { ApiPaginatedResponse } from '../../../shared/http/decorators/api-paginated-response.decorator.js';
 import { ValidationErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { ListTripActivitiesQueryDto } from '../application/dto/list-trip-activities-query.dto.js';
 import { CreateTripActivityDto } from '../application/dto/create-trip-activity.dto.js';
 import { UpdateTripActivityDto } from '../application/dto/update-trip-activity.dto.js';
 import { TripActivityResponseDto } from '../application/dto/trip-activity-response.dto.js';
@@ -58,10 +58,13 @@ export class TripActivitiesController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
+  @ApiNotFound(
+    'The trip destination filtered by does not exist, or the caller has no access to its trip.',
+  )
   @ApiAuthenticated()
   @Get()
   findAll(
-    @Query() query: PaginationQueryDto,
+    @Query() query: ListTripActivitiesQueryDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.service.findAll(query, user);

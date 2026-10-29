@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { accessibleTrips } from '../../../shared/database/trip-scope.js';
-import { Trip } from '../domain/trip.entity.js';
+import { Trip, UserTrip } from '../domain/trip.entity.js';
 import {
   CreateTripData,
+  TripFilter,
   UpdateTripData,
   TripRepository,
 } from '../domain/trip.repository.js';
@@ -16,17 +18,30 @@ export class TripPrismaRepository implements TripRepository {
   async findAll(
     { skip, take }: PageRequest,
     userId: string,
-  ): Promise<Page<Trip>> {
+    { status }: TripFilter,
+  ): Promise<Page<UserTrip>> {
+    const where: Prisma.TripWhereInput = {
+      AND: [accessibleTrips(userId), status ? { status } : {}],
+    };
+
     // One transaction so the page and the total come from the same snapshot.
-    const [items, total] = await this.prisma.$transaction([
+    const [rows, total] = await this.prisma.$transaction([
       this.prisma.trip.findMany({
-        where: accessibleTrips(userId),
+        where,
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        include: {
+          members: { where: { userId }, select: { permission: true } },
+        },
       }),
-      this.prisma.trip.count({ where: accessibleTrips(userId) }),
+      this.prisma.trip.count({ where }),
     ]);
+
+    const items = rows.map(({ members, ...trip }): UserTrip => ({
+      ...trip,
+      role: trip.createdBy === userId ? 'OWNER' : members[0].permission,
+    }));
 
     return { items, total };
   }
