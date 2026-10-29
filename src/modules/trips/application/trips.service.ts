@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
@@ -7,6 +11,7 @@ import { TripAccessService } from '../../trip-access/application/trip-access.ser
 import { TripRepository } from '../domain/trip.repository.js';
 import type { TripRole as AccessRole } from '../../trip-access/domain/trip-access.repository.js';
 import type { TripRole } from '../domain/trip.entity.js';
+import { validateTripDates } from '../domain/trip-dates.js';
 import { ListTripsQueryDto } from './dto/list-trips-query.dto.js';
 import { CreateTripDto } from './dto/create-trip.dto.js';
 import { UpdateTripDto } from './dto/update-trip.dto.js';
@@ -50,6 +55,8 @@ export class TripsService {
     dto: CreateTripDto,
     user: AuthenticatedUser,
   ): Promise<TripResponseDto> {
+    this.assertValidDates(dto);
+
     return TripResponseDto.from(
       await this.repository.create({
         ...dto,
@@ -66,6 +73,11 @@ export class TripsService {
     user: AuthenticatedUser,
   ): Promise<TripResponseDto> {
     await this.access.assertIsCreator(id, user.id);
+    const current = await this.getOrFail(id);
+    this.assertValidDates({
+      startDate: dto.startDate ?? current.startDate,
+      endDate: dto.endDate ?? current.endDate,
+    });
 
     return TripResponseDto.from(
       await this.repository.update(id, { ...dto }),
@@ -76,6 +88,14 @@ export class TripsService {
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
     await this.access.assertIsCreator(id, user.id);
     await this.repository.remove(id);
+  }
+
+  private assertValidDates(dates: Parameters<typeof validateTripDates>[0]) {
+    const errors = validateTripDates(dates);
+
+    if (errors.length > 0) {
+      throw new UnprocessableEntityException(errors);
+    }
   }
 
   private async getOrFail(id: string) {

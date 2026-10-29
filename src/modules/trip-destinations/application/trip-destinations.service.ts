@@ -8,6 +8,7 @@ import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
+import { validateDestinationDates } from '../domain/destination-dates.js';
 import { TripDestinationRepository } from '../domain/trip-destination.repository.js';
 import { ListTripDestinationsQueryDto } from './dto/list-trip-destinations-query.dto.js';
 import { ReorderTripDestinationsDto } from './dto/reorder-trip-destinations.dto.js';
@@ -57,6 +58,7 @@ export class TripDestinationsService {
     user: AuthenticatedUser,
   ): Promise<TripDestinationResponseDto> {
     await this.access.assertCanEdit(dto.tripId, user.id);
+    await this.assertValidDates(dto.tripId, dto);
 
     return TripDestinationResponseDto.from(
       await this.repository.create({ ...dto }),
@@ -70,6 +72,10 @@ export class TripDestinationsService {
   ): Promise<TripDestinationResponseDto> {
     const destination = await this.getOrFail(id);
     await this.access.assertCanEdit(destination.tripId, user.id);
+    await this.assertValidDates(destination.tripId, {
+      arrival: dto.arrival ?? destination.arrival,
+      departure: dto.departure ?? destination.departure,
+    });
 
     return TripDestinationResponseDto.from(
       await this.repository.update(id, { ...dto }),
@@ -112,6 +118,19 @@ export class TripDestinationsService {
     const destination = await this.getOrFail(id);
     await this.access.assertCanEdit(destination.tripId, user.id);
     await this.repository.remove(id);
+  }
+
+  /** Arrival/departure must be ordered and inside the trip's own dates. */
+  private async assertValidDates(
+    tripId: string,
+    dates: Parameters<typeof validateDestinationDates>[0],
+  ): Promise<void> {
+    const trip = (await this.repository.findTripDates(tripId)) ?? {};
+    const errors = validateDestinationDates(dates, trip);
+
+    if (errors.length > 0) {
+      throw new UnprocessableEntityException(errors);
+    }
   }
 
   private async getOrFail(id: string) {

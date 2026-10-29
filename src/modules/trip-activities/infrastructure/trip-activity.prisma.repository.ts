@@ -3,6 +3,7 @@ import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { accessibleTrips } from '../../../shared/database/trip-scope.js';
+import type { DestinationStay } from '../domain/activity-schedule.js';
 import { TripActivity } from '../domain/trip-activity.entity.js';
 import {
   CreateTripActivityData,
@@ -51,6 +52,15 @@ export class TripActivityPrismaRepository implements TripActivityRepository {
 
   update(id: string, data: UpdateTripActivityData): Promise<TripActivity> {
     return this.prisma.tripActivity.update({ where: { id }, data });
+  }
+
+  findDestinationStay(
+    tripDestinationId: string,
+  ): Promise<DestinationStay | null> {
+    return this.prisma.tripDestination.findUnique({
+      where: { id: tripDestinationId },
+      select: { arrival: true, departure: true },
+    });
   }
 
   async remove(id: string): Promise<void> {

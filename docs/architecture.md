@@ -280,6 +280,15 @@ in the new order and rewrites `order` as 0..n-1; the ids must be exactly the
 trip's destinations (`422` otherwise), and it needs the Editor permission or the
 creator.
 
+**Date rules.** Dates are checked in the domain layer and answer `422` with one
+message per violated rule: a trip's `endDate` is not earlier than its
+`startDate`; a destination's `departure` is not earlier than its `arrival`, and
+both fall inside the trip's dates when the trip has them; a planned activity's
+`dateTime` falls within its destination's stay, whole days in UTC, so the
+departure day still counts. A `PATCH` is validated against the values already
+stored, not only the ones sent. Changing a trip's dates does not revalidate
+destinations that already exist.
+
 **Authentication.** Google is the only sign-in method; there are no
 passwords. It is built on Passport.js (`passport-google-oauth20` and
 `passport-jwt`) in `src/modules/auth`:

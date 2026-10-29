@@ -1,4 +1,5 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
+import type { DestinationStay } from './activity-schedule.js';
 import { TripActivity } from './trip-activity.entity.js';
 
 export interface TripActivityFilter {
@@ -29,5 +30,9 @@ export abstract class TripActivityRepository {
     id: string,
     data: UpdateTripActivityData,
   ): Promise<TripActivity>;
+  /** The stay of a trip destination, or null when it does not exist. */
+  abstract findDestinationStay(
+    tripDestinationId: string,
+  ): Promise<DestinationStay | null>;
   abstract remove(id: string): Promise<void>;
 }
