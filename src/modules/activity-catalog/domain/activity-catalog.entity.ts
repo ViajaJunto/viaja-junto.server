@@ -11,6 +11,8 @@ export interface ActivityCatalog {
   longitude?: number | null;
   googlePlaceId?: string | null;
   photoUrl?: string | null;
+  /** Id in the external places provider (`osm:node:123`) when imported. */
+  externalId?: string | null;
   source?: string | null;
   averageRating?: number | null;
   createdAt: Date;

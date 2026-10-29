@@ -44,6 +44,15 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
     return this.prisma.destinationCatalog.update({ where: { id }, data });
   }
 
+  async findExistingExternalIds(externalIds: string[]): Promise<string[]> {
+    const rows = await this.prisma.destinationCatalog.findMany({
+      where: { externalId: { in: externalIds } },
+      select: { externalId: true },
+    });
+
+    return rows.flatMap(({ externalId }) => externalId ?? []);
+  }
+
   countTripUsages(id: string): Promise<number> {
     return this.prisma.tripDestination.count({
       where: { destinationCatalogId: id },

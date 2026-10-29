@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
@@ -7,7 +11,10 @@ import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.ent
 import { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
 import { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
-import { ActivityCatalogRepository } from '../domain/activity-catalog.repository.js';
+import {
+  ActivityCatalogRepository,
+  CreateActivityCatalogData,
+} from '../domain/activity-catalog.repository.js';
 import { CreateActivityCatalogDto } from './dto/create-activity-catalog.dto.js';
 import { UpdateActivityCatalogDto } from './dto/update-activity-catalog.dto.js';
 import { ActivityCatalogResponseDto } from './dto/activity-catalog-response.dto.js';
@@ -48,6 +55,31 @@ export class ActivityCatalogService {
         type: dto.type ?? 'OTHER',
       }),
     );
+  }
+
+  /**
+   * Adds a place taken from the external provider. The external id is unique:
+   * importing the same place twice answers 409 instead of duplicating it.
+   */
+  async importPlace(
+    data: CreateActivityCatalogData & { externalId: string },
+    user: AuthenticatedUser,
+  ): Promise<ActivityCatalogResponseDto> {
+    await this.access.assertAdmin(user.id);
+
+    if (
+      (await this.repository.findExistingExternalIds([data.externalId]))
+        .length > 0
+    ) {
+      throw new ConflictException('This place is already in the catalog');
+    }
+
+    return ActivityCatalogResponseDto.from(await this.repository.create(data));
+  }
+
+  /** Which of these external ids are already in the catalog. */
+  findImported(externalIds: string[]): Promise<string[]> {
+    return this.repository.findExistingExternalIds(externalIds);
   }
 
   async update(

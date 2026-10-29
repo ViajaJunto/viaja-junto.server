@@ -23,6 +23,8 @@ export abstract class DestinationCatalogRepository {
     id: string,
     data: UpdateDestinationCatalogData,
   ): Promise<DestinationCatalog>;
+  /** Which of these external ids are already in the catalog. */
+  abstract findExistingExternalIds(externalIds: string[]): Promise<string[]>;
   /** How many trip destinations/activities still use this entry. */
   abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
@@ -7,7 +11,10 @@ import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.ent
 import { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
 import { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
 import type { UploadedPhoto } from '../../../shared/storage/domain/photo.js';
-import { DestinationCatalogRepository } from '../domain/destination-catalog.repository.js';
+import {
+  DestinationCatalogRepository,
+  CreateDestinationCatalogData,
+} from '../domain/destination-catalog.repository.js';
 import { CreateDestinationCatalogDto } from './dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from './dto/update-destination-catalog.dto.js';
 import { DestinationCatalogResponseDto } from './dto/destination-catalog-response.dto.js';
@@ -45,6 +52,33 @@ export class DestinationCatalogService {
     return DestinationCatalogResponseDto.from(
       await this.repository.create({ ...dto }),
     );
+  }
+
+  /**
+   * Adds a place taken from the external provider. The external id is unique:
+   * importing the same place twice answers 409 instead of duplicating it.
+   */
+  async importPlace(
+    data: CreateDestinationCatalogData & { externalId: string },
+    user: AuthenticatedUser,
+  ): Promise<DestinationCatalogResponseDto> {
+    await this.access.assertAdmin(user.id);
+
+    if (
+      (await this.repository.findExistingExternalIds([data.externalId]))
+        .length > 0
+    ) {
+      throw new ConflictException('This place is already in the catalog');
+    }
+
+    return DestinationCatalogResponseDto.from(
+      await this.repository.create(data),
+    );
+  }
+
+  /** Which of these external ids are already in the catalog. */
+  findImported(externalIds: string[]): Promise<string[]> {
+    return this.repository.findExistingExternalIds(externalIds);
   }
 
   async update(
