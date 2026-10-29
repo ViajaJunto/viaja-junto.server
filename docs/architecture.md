@@ -43,7 +43,7 @@ The application follows a client-server architecture with clear separation of co
 | Framework | NestJS 12 |
 | Platform | Web browser |
 | Persistence | PostgreSQL via Prisma ORM |
-| Security | Password hash; JWT authentication; trip-level authorization |
+| Security | Google sign-in (no stored passwords); JWT authentication; trip-level authorization |
 | Language of interface | Portuguese (pt-BR) |
 | Interactive map | Example: jsVectormap or Google Maps API |
 
@@ -291,8 +291,17 @@ Only Google-verified emails are accepted, since accounts are linked by email.
 
 Required configuration: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `GOOGLE_CALLBACK_URL` (registered as an authorized redirect URI in Google
-Cloud Console), `AUTH_REDIRECT_URL`, `JWT_SECRET` (32+ characters) and
-`JWT_EXPIRES_IN`. See `.env.example`.
+Cloud Console), `AUTH_REDIRECT_URL`, `JWT_SECRET` (32+ characters),
+`JWT_EXPIRES_IN` and `CORS_ORIGINS`. See `.env.example`.
+
+**CORS.** The frontend is a separate application, so the browser sends a
+preflight before every request that carries `Authorization`. `CORS_ORIGINS` is a
+comma-separated list of the allowed origins (`http://localhost:5173` by default;
+bare origins only, no path or trailing slash, and never `*`). Only the
+`Authorization` and `Content-Type` headers and the methods the API uses are
+allowed, and credentials are off because the API authenticates with a Bearer
+token rather than cookies. CloudFormation exposes it as the `CorsOrigins`
+parameter.
 
 Endpoints are documented with `@ApiBearerAuth` and expect
 `Authorization: Bearer <token>`. Public by design, matching the scope document

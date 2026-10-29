@@ -39,6 +39,12 @@ Parameters:
   AuthRedirectUrl:
     Type: String
     Default: http://localhost:5173/auth/callback
+  CorsOrigins:
+    Type: String
+    Default: http://localhost:5173
+    Description: >-
+      Browser origins allowed to call the API (CORS), comma-separated, with no
+      trailing slash.
   PublicStorageUrl:
     Type: String
     Default: http://localhost:4566
@@ -195,6 +201,8 @@ Resources:
               Value: !Sub 'http://localhost:${HostPort}/api/auth/google/callback'
             - Name: AUTH_REDIRECT_URL
               Value: !Ref AuthRedirectUrl
+            - Name: CORS_ORIGINS
+              Value: !Ref CorsOrigins
             - Name: JWT_EXPIRES_IN
               Value: '3600'
             # S3 endpoint and credentials are not set here: ECS (and

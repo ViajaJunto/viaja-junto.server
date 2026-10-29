@@ -5,6 +5,7 @@
 | Date | Version | Description | Author |
 | ---- | ------- | ----------- | ------ |
 | 25/08/2026 | 0.1 | Initial version | Gustavo de Freitas Fidélis, Bernardo Lykawka Medeiros da Silva |
+| 29/10/2026 | 0.2 | Authentication rewritten around Google sign-in: FR01–FR03 and NFR03 no longer mention passwords | Bernardo Lykawka Medeiros da Silva |
 
 ## 1. Introduction
 
@@ -44,9 +45,9 @@ ViajaJunto is a new system without replacement of an existing product. It integr
 
 | ID | Description | Priority |
 | -- | ----------- | :------: |
-| FR01 | The system must allow user registration with name, email, and password. | High |
-| FR02 | The system must allow login and logout. | High |
-| FR03 | The system must allow password recovery by email. | Medium |
+| FR01 | The system must allow users to sign in with their Google account. The account is created automatically on the first sign-in, with the name and email provided by Google. | High |
+| FR02 | The system must allow sign-in and sign-out. Signing out discards the access token on the client. | High |
+| FR03 | ~~The system must allow password recovery by email.~~ Not applicable: Google is the only sign-in method, so the system stores no passwords and account recovery is handled by Google. | — |
 
 ### Module 2 — Trip management
 
@@ -106,7 +107,7 @@ ViajaJunto is a new system without replacement of an existing product. It integr
 | -- | -------- | ----------- | :------: |
 | NFR01 | Usability | The system must be responsive and work on desktop and mobile devices. | High |
 | NFR02 | Performance | The system must load main pages in under 3 seconds under normal network conditions. | High |
-| NFR03 | Security | Passwords must be hashed. Authentication must use tokens. Access control must restrict access to user-owned or invited trips. | High |
+| NFR03 | Security | The system must not store passwords: sign-in is delegated to Google. Authentication must use tokens (JWT issued after a successful Google sign-in). Access control must restrict access to user-owned or invited trips. | High |
 | NFR04 | Availability | The system must be available through a browser without installation. | High |
 | NFR05 | Maintainability | The system must maintain a clear separation between backend and frontend. | Medium |
 
