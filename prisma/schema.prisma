@@ -78,6 +78,8 @@ model Trip {
   endDate     DateTime?  @map("end_date") @db.Date
   status      TripStatus @default(PLANNING)
   createdBy   String     @map("created_by")
+  // ISO 4217 code of the money in this trip: the budget and any expense are in it.
+  currency    String     @default("BRL") @db.VarChar(3)
   // Short code the creator shares so other users can join (FR18).
   inviteCode  String     @unique @map("invite_code")
   createdAt   DateTime   @default(now()) @map("created_at")

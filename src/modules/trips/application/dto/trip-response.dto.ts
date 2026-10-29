@@ -59,6 +59,12 @@ export class TripResponseDto {
   createdBy!: string;
 
   @ApiProperty({
+    description: 'ISO 4217 currency of the trip’s budget and expenses.',
+    example: 'BRL',
+  })
+  currency!: string;
+
+  @ApiProperty({
     description:
       'The caller’s role on this trip: OWNER (the creator), or the EDITOR/VIEWER permission they were invited with.',
     enum: ['OWNER', 'EDITOR', 'VIEWER'],
@@ -83,6 +89,7 @@ export class TripResponseDto {
       endDate: entity.endDate ?? null,
       status: entity.status,
       createdBy: entity.createdBy,
+      currency: entity.currency,
       role,
       createdAt: entity.createdAt,
     };

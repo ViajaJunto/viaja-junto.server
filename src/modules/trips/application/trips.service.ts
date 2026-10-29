@@ -14,6 +14,7 @@ import { TripAccessService } from '../../trip-access/application/trip-access.ser
 import { TripRepository } from '../domain/trip.repository.js';
 import type { TripRole as AccessRole } from '../../trip-access/domain/trip-access.repository.js';
 import type { TripRole } from '../domain/trip.entity.js';
+import { DEFAULT_CURRENCY } from '../../../shared/domain/currency.js';
 import {
   generateInviteCode,
   normalizeInviteCode,
@@ -71,6 +72,7 @@ export class TripsService {
       await this.repository.create({
         ...dto,
         createdBy: user.id,
+        currency: dto.currency ?? DEFAULT_CURRENCY,
         inviteCode: generateInviteCode(randomInt),
         status: dto.status ?? 'PLANNING',
       }),

@@ -20,6 +20,7 @@ const base: Trip = {
   endDate: null,
   status: 'PLANNING',
   createdBy: '11111111-1111-4111-8111-111111111111',
+  currency: 'BRL',
   inviteCode: 'K7M2QX9P',
   createdAt: new Date('2026-03-14T18:22:05.000Z'),
 };
@@ -205,6 +206,30 @@ describe('TripsService', () => {
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ createdBy: user.id }),
       );
+    });
+
+    it('defaults the currency to BRL', async () => {
+      repository.create.mockResolvedValue(entity());
+
+      await service.create({ name: 'Eurotrip 2026' }, user);
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'BRL' }),
+      );
+    });
+
+    it('keeps the currency the creator chose', async () => {
+      repository.create.mockResolvedValue(entity({ currency: 'EUR' }));
+
+      const result = await service.create(
+        { name: 'Eurotrip 2026', currency: 'EUR' },
+        user,
+      );
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'EUR' }),
+      );
+      expect(result.currency).toBe('EUR');
     });
 
     it('keeps an explicit status instead of the default', async () => {

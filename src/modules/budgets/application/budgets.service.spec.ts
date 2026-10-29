@@ -11,6 +11,7 @@ const base: Budget = {
   tripId: '22222222-2222-4222-8222-222222222222',
   totalValue: 8500,
   plannedActivities: 0,
+  currency: 'BRL',
   createdAt: new Date('2026-03-16T14:00:00.000Z'),
 };
 
@@ -106,6 +107,14 @@ describe('BudgetsService', () => {
 
       expect(result.id).toBe(base.id);
       expect(access.assertCanRead).toHaveBeenCalledWith(tripId, user.id);
+    });
+
+    it('reports the currency of the trip', async () => {
+      repository.findById.mockResolvedValue(entity({ currency: 'EUR' }));
+
+      const result = await service.findOne(base.id, user);
+
+      expect(result.currency).toBe('EUR');
     });
 
     it('throws NotFoundException when the record does not exist', async () => {
