@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { inviteCode } from './helpers.js';
 import { AppModule } from './../src/app.module.js';
 import { PrismaService } from './../src/shared/database/prisma.service.js';
 
@@ -148,7 +149,11 @@ describe('Catalog permissions (e2e)', () => {
     });
     createdDestinations.push(destination.id);
     const trip = await prisma.trip.create({
-      data: { name: `Trip ${run}`, createdBy: member.id },
+      data: {
+        inviteCode: inviteCode(),
+        name: `Trip ${run}`,
+        createdBy: member.id,
+      },
     });
 
     await request(app.getHttpServer())

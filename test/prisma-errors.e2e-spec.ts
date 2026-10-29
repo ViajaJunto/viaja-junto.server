@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
+import { inviteCode } from './helpers.js';
 import { AppModule } from './../src/app.module.js';
 import { PrismaService } from './../src/shared/database/prisma.service.js';
 
@@ -38,7 +39,11 @@ describe('Prisma error mapping (e2e)', () => {
       data: { name: 'Other', email: `other-${run}@example.com` },
     });
     const trip = await prisma.trip.create({
-      data: { name: `Trip ${run}`, createdBy: owner.id },
+      data: {
+        inviteCode: inviteCode(),
+        name: `Trip ${run}`,
+        createdBy: owner.id,
+      },
     });
     tripId = trip.id;
   });

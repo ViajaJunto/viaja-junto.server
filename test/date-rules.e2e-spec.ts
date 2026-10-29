@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
+import { inviteCode } from './helpers.js';
 import { AppModule } from './../src/app.module.js';
 import { PrismaService } from './../src/shared/database/prisma.service.js';
 import { buildValidationPipe } from './../src/shared/http/validation.js';
@@ -57,6 +58,7 @@ describe('Date rules (e2e)', () => {
     tripId = (
       await prisma.trip.create({
         data: {
+          inviteCode: inviteCode(),
           name: `Trip ${run}`,
           createdBy: user.id,
           startDate: new Date('2026-07-01'),
