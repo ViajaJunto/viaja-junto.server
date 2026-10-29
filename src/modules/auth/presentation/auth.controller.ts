@@ -9,6 +9,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { StrictRateLimit } from '../../../shared/http/throttling.js';
 import { env } from '../../../shared/config/env.js';
 import { ErrorResponseDto } from '../../../shared/http/dto/error-response.dto.js';
 import { UserResponseDto } from '../../users/application/dto/user-response.dto.js';
@@ -36,6 +37,7 @@ export class AuthController {
   })
   @ApiFoundResponse({ description: 'Redirect to the Google consent screen.' })
   @Get('google')
+  @StrictRateLimit()
   @UseGuards(GoogleAuthGuard)
   googleSignIn(): void {
     // GoogleAuthGuard answers with the redirect; this body never runs.
@@ -53,6 +55,7 @@ export class AuthController {
     description: 'Redirect to the frontend with the token or an error.',
   })
   @Get('google/callback')
+  @StrictRateLimit()
   @UseGuards(GoogleAuthGuard)
   async googleCallback(
     @Req() request: Request,

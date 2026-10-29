@@ -19,6 +19,7 @@ import {
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import { StrictRateLimit } from '../../../shared/http/throttling.js';
 import { ApiNotFound } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import {
   ErrorResponseDto,
@@ -53,6 +54,7 @@ const providerErrors = () => [
 /** Discovering real-world places (OpenStreetMap) to add to the shared catalogs. */
 @ApiTags('Places')
 @AdminOnly()
+@StrictRateLimit()
 @Controller('places')
 export class PlacesController {
   constructor(private readonly service: PlacesService) {}

@@ -315,6 +315,29 @@ from the itinerary. Activities without a cost count as 0 and are reported in
 `totalValue` and `remaining` null. Amounts are summed in integer cents and are
 in the trip's currency. Any member of the trip can read it.
 
+**Hardening (NFR03).**
+- *Security headers.* `helmet` sets the standard protective headers on every
+  response, including a strict `Content-Security-Policy` (the API only answers
+  JSON, so it may load nothing). The API reference page under `SWAGGER_PATH`
+  is the one exception: Scalar renders from a script on jsDelivr and styles
+  itself inline, so only that path allows `cdn.jsdelivr.net` and inline
+  scripts/styles; plugins and framing by other sites stay forbidden.
+- *Rate limiting.* `@nestjs/throttler` runs as a global guard, **before** the
+  JWT guard, so a flood of anonymous requests is stopped before any token is
+  parsed. Each client IP gets, per window (`THROTTLE_TTL_SECONDS`, 60 s):
+  `THROTTLE_LIMIT` reads (300), `THROTTLE_WRITE_LIMIT` writes (60) and, on the
+  routes worth abusing — Google sign-in and its callback, `POST /trips/join`
+  (guessing invite codes), photo uploads and `POST /reviews` — only
+  `THROTTLE_STRICT_LIMIT` (10). A client over its budget receives `429` with
+  `Retry-After`. Counters live in memory, per process. Behind a load balancer,
+  set `TRUST_PROXY_HOPS` so the client IP is read from `X-Forwarded-For`;
+  otherwise every client shares the balancer's address and is throttled together.
+- *Health check.* `GET /api/health` (public, never throttled) answers `200`
+  only when the process is up **and** the database answers a query, and `503`
+  otherwise, without saying why. It replaces the starter `GET /` ("Hello
+  World!") and is what the Docker `HEALTHCHECK`, the compose service and the ECS
+  task definition probe, so an unhealthy container is replaced.
+
 **Review ratings (FR23).** `activity_catalog.average_rating` (two decimals,
 null without reviews) and `review_count` are derived, never typed in. Creating,
 editing or deleting a review — and deleting a user, which cascades to their

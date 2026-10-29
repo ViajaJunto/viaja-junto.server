@@ -193,6 +193,18 @@ Resources:
         - Name: api
           Image: !Ref Image
           Essential: true
+          # /health also checks the database, so ECS replaces a task that
+          # cannot reach it. Node has fetch built in; the image has no curl.
+          HealthCheck:
+            Command:
+              - CMD
+              - node
+              - -e
+              - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            Interval: 10
+            Timeout: 5
+            Retries: 5
+            StartPeriod: 20
           PortMappings:
             - ContainerPort: 3000
               HostPort: !Ref HostPort

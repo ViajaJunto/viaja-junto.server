@@ -42,7 +42,7 @@ export function buildOpenApiConfig() {
       'https://github.com/BernardoLykawka/viaja-junto.server',
     )
     .addServer('http://localhost:3000', 'Local development')
-    .addTag('Health', 'Liveness probe.')
+    .addTag('Health', 'Health check for containers and load balancers.')
     .addTag('Auth', 'Sign-in with Google and the current session.')
     .addTag('Users', 'Accounts and profile management.')
     .addTag('Trips', 'Trips and their planning stage.')
