@@ -62,6 +62,10 @@ export function buildOpenApiConfig() {
     .addTag('Trip Activities', 'Activities scheduled inside a trip stop.')
     .addTag('Budgets', 'Budget tracking per trip.')
     .addTag('Reviews', 'Community ratings of catalogue activities.')
+    .addTag(
+      'Places',
+      'Finding real-world places in OpenStreetMap to import into the catalogues (administrators).',
+    )
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'bearer',

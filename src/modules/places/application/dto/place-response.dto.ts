@@ -53,7 +53,7 @@ export class PlaceResponseDto {
     enum: ['CITY', 'BEACH', 'NATURE', 'CULTURAL'],
     nullable: true,
     type: String,
-    example: null,
+    example: 'CITY',
   })
   suggestedDestinationCategory!: DestinationCategory | null;
 

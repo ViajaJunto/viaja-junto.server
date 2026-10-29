@@ -21,6 +21,8 @@ describe('ActivityCatalogController', () => {
     service = {
       findAll: vi.fn(),
       findOne: vi.fn(),
+      importPlace: vi.fn(),
+      findImported: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
