@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsUUID, Min } from 'class-validator';
 
 /** Request body for creating a budget. */
 export class CreateBudgetDto {
@@ -20,16 +20,4 @@ export class CreateBudgetDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   totalValue!: number;
-
-  @ApiPropertyOptional({
-    description:
-      'Amount already committed to planned activities. Defaults to 0.',
-    minimum: 0,
-    default: 0,
-    example: 1240.75,
-  })
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  plannedActivities?: number;
 }

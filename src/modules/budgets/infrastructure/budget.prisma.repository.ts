@@ -8,6 +8,7 @@ import {
   CreateBudgetData,
   UpdateBudgetData,
   BudgetRepository,
+  BudgetSummarySource,
 } from '../domain/budget.repository.js';
 
 const withCurrency = {
@@ -66,6 +67,41 @@ export class BudgetPrismaRepository implements BudgetRepository {
         ...withCurrency,
       }),
     );
+  }
+
+  async findSummarySource(tripId: string): Promise<BudgetSummarySource | null> {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: {
+        currency: true,
+        budget: { select: { totalValue: true } },
+        destinations: {
+          select: {
+            activities: {
+              select: {
+                expectedCost: true,
+                activityCatalog: { select: { type: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!trip) {
+      return null;
+    }
+
+    return {
+      currency: trip.currency,
+      totalValue: trip.budget?.totalValue ?? null,
+      activities: trip.destinations.flatMap(({ activities }) =>
+        activities.map(({ expectedCost, activityCatalog }) => ({
+          type: activityCatalog.type,
+          expectedCost,
+        })),
+      ),
+    };
   }
 
   async remove(id: string): Promise<void> {
