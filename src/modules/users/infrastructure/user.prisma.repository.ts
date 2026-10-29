@@ -25,7 +25,7 @@ export class UserPrismaRepository implements UserRepository {
       this.prisma.user.findMany({
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       }),
       this.prisma.user.count(),
     ]);

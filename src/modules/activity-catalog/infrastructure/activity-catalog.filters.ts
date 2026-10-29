@@ -41,11 +41,15 @@ export function buildActivityWhere({
   return conditions.length > 0 ? { AND: conditions } : {};
 }
 
-/** Best rated first (unrated last), or A to Z; ties always fall back to the name. */
+/** Best rated first (unrated last), or A to Z; ties fall back to the name and then to the id, so pages never overlap. */
 export function buildActivityOrderBy(
   sort: ActivityCatalogFilter['sort'],
 ): Prisma.ActivityCatalogOrderByWithRelationInput[] {
   return sort === 'rating'
-    ? [{ averageRating: { sort: 'desc', nulls: 'last' } }, { name: 'asc' }]
-    : [{ name: 'asc' }];
+    ? [
+        { averageRating: { sort: 'desc', nulls: 'last' } },
+        { name: 'asc' },
+        { id: 'asc' },
+      ]
+    : [{ name: 'asc' }, { id: 'asc' }];
 }

@@ -69,14 +69,21 @@ describe('buildActivityWhere', () => {
 
 describe('buildActivityOrderBy', () => {
   it('orders A to Z by default', () => {
-    expect(buildActivityOrderBy(undefined)).toEqual([{ name: 'asc' }]);
-    expect(buildActivityOrderBy('name')).toEqual([{ name: 'asc' }]);
+    expect(buildActivityOrderBy(undefined)).toEqual([
+      { name: 'asc' },
+      { id: 'asc' },
+    ]);
+    expect(buildActivityOrderBy('name')).toEqual([
+      { name: 'asc' },
+      { id: 'asc' },
+    ]);
   });
 
   it('puts the best rated first, unrated last, and breaks ties by name', () => {
     expect(buildActivityOrderBy('rating')).toEqual([
       { averageRating: { sort: 'desc', nulls: 'last' } },
       { name: 'asc' },
+      { id: 'asc' },
     ]);
   });
 });

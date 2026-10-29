@@ -31,7 +31,7 @@ export class TripMemberPrismaRepository implements TripMemberRepository {
         where,
         skip,
         take,
-        orderBy: { joinedAt: 'desc' },
+        orderBy: [{ joinedAt: 'desc' }, { id: 'asc' }],
       }),
       this.prisma.tripMember.count({
         where,

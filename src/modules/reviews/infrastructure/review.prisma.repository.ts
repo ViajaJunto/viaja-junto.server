@@ -29,7 +29,7 @@ export class ReviewPrismaRepository implements ReviewRepository {
         where,
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       }),
       this.prisma.review.count({ where }),
     ]);

@@ -29,7 +29,7 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
         where,
         skip,
         take,
-        orderBy: { name: 'asc' },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
       }),
       this.prisma.destinationCatalog.count({ where }),
     ]);

@@ -37,7 +37,7 @@ export class BudgetPrismaRepository implements BudgetRepository {
         where: { trip: accessibleTrips(userId) },
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
         ...withCurrency,
       }),
       this.prisma.budget.count({ where: { trip: accessibleTrips(userId) } }),

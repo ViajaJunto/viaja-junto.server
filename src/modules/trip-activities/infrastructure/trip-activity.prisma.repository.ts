@@ -32,7 +32,7 @@ export class TripActivityPrismaRepository implements TripActivityRepository {
         where,
         skip,
         take,
-        orderBy: { dateTime: { sort: 'asc', nulls: 'last' } },
+        orderBy: [{ dateTime: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
       }),
       this.prisma.tripActivity.count({
         where,
