@@ -69,6 +69,7 @@ describe('TripsService', () => {
       expect(repository.findAll).toHaveBeenCalledWith(
         { skip: 30, take: 15 },
         user.id,
+        { status: undefined },
       );
     });
 
@@ -80,11 +81,41 @@ describe('TripsService', () => {
       expect(repository.findAll).toHaveBeenCalledWith(
         { skip: 0, take: 20 },
         user.id,
+        { status: undefined },
       );
     });
 
+    it('filters by planning stage', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({ status: 'CONFIRMED' }, user);
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        user.id,
+        { status: 'CONFIRMED' },
+      );
+    });
+
+    it('returns the role the caller holds on each trip', async () => {
+      repository.findAll.mockResolvedValue({
+        items: [
+          { ...entity(), role: 'OWNER' },
+          { ...entity({ id: 'other' }), role: 'VIEWER' },
+        ],
+        total: 2,
+      });
+
+      const result = await service.findAll({}, user);
+
+      expect(result.data.map((trip) => trip.role)).toEqual(['OWNER', 'VIEWER']);
+    });
+
     it('wraps the page in the { data, meta } envelope', async () => {
-      repository.findAll.mockResolvedValue({ items: [entity()], total: 41 });
+      repository.findAll.mockResolvedValue({
+        items: [{ ...entity(), role: 'OWNER' }],
+        total: 41,
+      });
 
       const result = await service.findAll({ page: 2, limit: 20 }, user);
 
@@ -108,6 +139,19 @@ describe('TripsService', () => {
 
       expect(result.id).toBe(base.id);
       expect(access.assertCanRead).toHaveBeenCalledWith(base.id, user.id);
+    });
+
+    it.each([
+      ['CREATOR', 'OWNER'],
+      ['EDITOR', 'EDITOR'],
+      ['VIEWER', 'VIEWER'],
+    ])('reports the %s access as the %s role', async (granted, role) => {
+      repository.findById.mockResolvedValue(entity());
+      access.assertCanRead.mockResolvedValue(granted);
+
+      const result = await service.findOne(base.id, user);
+
+      expect(result.role).toBe(role);
     });
 
     it('does not load the trip for someone with no access', async () => {

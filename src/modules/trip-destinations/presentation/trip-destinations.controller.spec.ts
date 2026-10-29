@@ -24,6 +24,7 @@ describe('TripDestinationsController', () => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      reorder: vi.fn(),
     };
     controller = new TripDestinationsController(
       service as unknown as TripDestinationsService,

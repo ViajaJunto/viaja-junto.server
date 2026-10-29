@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { Trip } from '../../domain/trip.entity.js';
+import type { Trip, TripRole } from '../../domain/trip.entity.js';
 
 /**
  * Response body for a trip.
@@ -59,6 +59,14 @@ export class TripResponseDto {
   createdBy!: string;
 
   @ApiProperty({
+    description:
+      'The caller’s role on this trip: OWNER (the creator), or the EDITOR/VIEWER permission they were invited with.',
+    enum: ['OWNER', 'EDITOR', 'VIEWER'],
+    example: 'OWNER',
+  })
+  role!: TripRole;
+
+  @ApiProperty({
     description: 'When the trip was created.',
     type: String,
     format: 'date-time',
@@ -66,7 +74,7 @@ export class TripResponseDto {
   })
   createdAt!: Date;
 
-  static from(entity: Trip): TripResponseDto {
+  static from(entity: Trip, role: TripRole): TripResponseDto {
     return {
       id: entity.id,
       name: entity.name,
@@ -75,6 +83,7 @@ export class TripResponseDto {
       endDate: entity.endDate ?? null,
       status: entity.status,
       createdBy: entity.createdBy,
+      role,
       createdAt: entity.createdAt,
     };
   }

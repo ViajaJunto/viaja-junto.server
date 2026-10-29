@@ -5,10 +5,11 @@ import { TripDestinationsService } from './application/trip-destinations.service
 import { TripDestinationRepository } from './domain/trip-destination.repository.js';
 import { TripDestinationPrismaRepository } from './infrastructure/trip-destination.prisma.repository.js';
 import { TripDestinationsController } from './presentation/trip-destinations.controller.js';
+import { TripItineraryController } from './presentation/trip-itinerary.controller.js';
 
 @Module({
   imports: [AuthModule, TripAccessModule],
-  controllers: [TripDestinationsController],
+  controllers: [TripDestinationsController, TripItineraryController],
   providers: [
     TripDestinationsService,
     // Dependency inversion: the application depends on the domain contract,

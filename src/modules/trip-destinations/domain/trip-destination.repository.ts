@@ -1,6 +1,10 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { TripDestination } from './trip-destination.entity.js';
 
+export interface TripDestinationFilter {
+  tripId?: string;
+}
+
 export type CreateTripDestinationData = Omit<TripDestination, 'id'>;
 export type UpdateTripDestinationData = Partial<CreateTripDestinationData>;
 
@@ -17,6 +21,7 @@ export abstract class TripDestinationRepository {
   abstract findAll(
     page: PageRequest,
     userId: string,
+    filter: TripDestinationFilter,
   ): Promise<Page<TripDestination>>;
   abstract findById(id: string): Promise<TripDestination | null>;
   abstract create(data: CreateTripDestinationData): Promise<TripDestination>;
@@ -24,5 +29,15 @@ export abstract class TripDestinationRepository {
     id: string,
     data: UpdateTripDestinationData,
   ): Promise<TripDestination>;
+  /** Every destination of a trip, in itinerary order. */
+  abstract findByTrip(tripId: string): Promise<TripDestination[]>;
+  /**
+   * Gives the trip's destinations the positions 0..n-1 in the order of
+   * `orderedIds`, atomically, and returns them in that order.
+   */
+  abstract reorder(
+    tripId: string,
+    orderedIds: string[],
+  ): Promise<TripDestination[]>;
   abstract remove(id: string): Promise<void>;
 }

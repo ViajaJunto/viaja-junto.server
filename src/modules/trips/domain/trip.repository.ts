@@ -1,5 +1,9 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
-import { Trip } from './trip.entity.js';
+import { Trip, UserTrip } from './trip.entity.js';
+
+export interface TripFilter {
+  status?: Trip['status'];
+}
 
 export type CreateTripData = Omit<Trip, 'id' | 'createdAt'>;
 export type UpdateTripData = Partial<CreateTripData>;
@@ -13,8 +17,12 @@ export type UpdateTripData = Partial<CreateTripData>;
  * are erased at compile time.
  */
 export abstract class TripRepository {
-  /** Trips the user created or was invited to. */
-  abstract findAll(page: PageRequest, userId: string): Promise<Page<Trip>>;
+  /** Trips the user created or was invited to, newest first. */
+  abstract findAll(
+    page: PageRequest,
+    userId: string,
+    filter: TripFilter,
+  ): Promise<Page<UserTrip>>;
   abstract findById(id: string): Promise<Trip | null>;
   abstract create(data: CreateTripData): Promise<Trip>;
   abstract update(id: string, data: UpdateTripData): Promise<Trip>;

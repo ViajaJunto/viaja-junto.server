@@ -5,11 +5,11 @@ import {
 } from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
-import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { TripMemberRepository } from '../domain/trip-member.repository.js';
+import { ListTripMembersQueryDto } from './dto/list-trip-members-query.dto.js';
 import { CreateTripMemberDto } from './dto/create-trip-member.dto.js';
 import { UpdateTripMemberDto } from './dto/update-trip-member.dto.js';
 import { TripMemberResponseDto } from './dto/trip-member-response.dto.js';
@@ -22,13 +22,17 @@ export class TripMembersService {
   ) {}
 
   async findAll(
-    query: PaginationQueryDto,
+    query: ListTripMembersQueryDto,
     user: AuthenticatedUser,
   ): Promise<PaginatedResponseDto<TripMemberResponseDto>> {
+    if (query.tripId) {
+      await this.access.assertCanRead(query.tripId, user.id);
+    }
     const { page, limit, skip, take } = toPageRequest(query);
     const { items, total } = await this.repository.findAll(
       { skip, take },
       user.id,
+      { tripId: query.tripId },
     );
 
     return {

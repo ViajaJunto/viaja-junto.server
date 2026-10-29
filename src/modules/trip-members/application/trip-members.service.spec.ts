@@ -71,6 +71,7 @@ describe('TripMembersService', () => {
       expect(repository.findAll).toHaveBeenCalledWith(
         { skip: 30, take: 15 },
         user.id,
+        { tripId: undefined },
       );
     });
 
@@ -82,7 +83,30 @@ describe('TripMembersService', () => {
       expect(repository.findAll).toHaveBeenCalledWith(
         { skip: 0, take: 20 },
         user.id,
+        { tripId: undefined },
       );
+    });
+
+    it('lists one trip only after checking the caller can read it', async () => {
+      repository.findAll.mockResolvedValue({ items: [], total: 0 });
+
+      await service.findAll({ tripId }, user);
+
+      expect(access.assertCanRead).toHaveBeenCalledWith(tripId, user.id);
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { skip: 0, take: 20 },
+        user.id,
+        { tripId },
+      );
+    });
+
+    it('answers 404 for a trip the caller has no access to', async () => {
+      access.assertCanRead.mockRejectedValue(new NotFoundException());
+
+      await expect(service.findAll({ tripId }, user)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repository.findAll).not.toHaveBeenCalled();
     });
 
     it('wraps the page in the { data, meta } envelope', async () => {

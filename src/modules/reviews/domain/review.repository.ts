@@ -1,6 +1,10 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { Review } from './review.entity.js';
 
+export interface ReviewFilter {
+  activityId?: string;
+}
+
 export type CreateReviewData = Omit<Review, 'id' | 'createdAt'>;
 export type UpdateReviewData = Partial<CreateReviewData>;
 
@@ -13,7 +17,11 @@ export type UpdateReviewData = Partial<CreateReviewData>;
  * are erased at compile time.
  */
 export abstract class ReviewRepository {
-  abstract findAll(page: PageRequest): Promise<Page<Review>>;
+  /** Newest first. */
+  abstract findAll(
+    page: PageRequest,
+    filter: ReviewFilter,
+  ): Promise<Page<Review>>;
   abstract findById(id: string): Promise<Review | null>;
   abstract create(data: CreateReviewData): Promise<Review>;
   abstract update(id: string, data: UpdateReviewData): Promise<Review>;

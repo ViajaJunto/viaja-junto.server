@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { accessibleTrips } from '../../../shared/database/trip-scope.js';
 import { TripMember } from '../domain/trip-member.entity.js';
 import {
   CreateTripMemberData,
   UpdateTripMemberData,
+  TripMemberFilter,
   TripMemberRepository,
 } from '../domain/trip-member.repository.js';
 
@@ -16,17 +18,23 @@ export class TripMemberPrismaRepository implements TripMemberRepository {
   async findAll(
     { skip, take }: PageRequest,
     userId: string,
+    filter: TripMemberFilter,
   ): Promise<Page<TripMember>> {
+    const where: Prisma.TripMemberWhereInput = {
+      trip: accessibleTrips(userId),
+      tripId: filter.tripId,
+    };
+
     // One transaction so the page and the total come from the same snapshot.
     const [items, total] = await this.prisma.$transaction([
       this.prisma.tripMember.findMany({
-        where: { trip: accessibleTrips(userId) },
+        where,
         skip,
         take,
         orderBy: { joinedAt: 'desc' },
       }),
       this.prisma.tripMember.count({
-        where: { trip: accessibleTrips(userId) },
+        where,
       }),
     ]);
 

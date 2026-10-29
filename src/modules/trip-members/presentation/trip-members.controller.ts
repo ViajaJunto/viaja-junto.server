@@ -34,10 +34,10 @@ import {
   ErrorResponseDto,
   ValidationErrorResponseDto,
 } from '../../../shared/http/dto/error-response.dto.js';
-import { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard.js';
+import { ListTripMembersQueryDto } from '../application/dto/list-trip-members-query.dto.js';
 import { CreateTripMemberDto } from '../application/dto/create-trip-member.dto.js';
 import { UpdateTripMemberDto } from '../application/dto/update-trip-member.dto.js';
 import { TripMemberResponseDto } from '../application/dto/trip-member-response.dto.js';
@@ -59,10 +59,13 @@ export class TripMembersController {
     description: 'Invalid pagination parameters.',
     type: ValidationErrorResponseDto,
   })
+  @ApiNotFound(
+    'The trip filtered by does not exist, or the caller has no access to it.',
+  )
   @ApiAuthenticated()
   @Get()
   findAll(
-    @Query() query: PaginationQueryDto,
+    @Query() query: ListTripMembersQueryDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.service.findAll(query, user);
