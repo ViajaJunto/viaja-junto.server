@@ -28,11 +28,22 @@ export function securityHeaders(docsPath: string) {
       },
     },
   });
-  const prefix = `/${docsPath.replace(/^\/+|\/+$/g, '')}`;
+  const prefix = `/${trimSlashes(docsPath)}`;
 
   return (req: Request, res: Response, next: NextFunction) => {
     const isDocs = req.path === prefix || req.path.startsWith(`${prefix}/`);
 
     (isDocs ? docs : api)(req, res, next);
   };
+}
+
+/** Removes the slashes at both ends, without a regular expression that backtracks. */
+function trimSlashes(path: string): string {
+  let start = 0;
+  let end = path.length;
+
+  while (start < end && path[start] === '/') start += 1;
+  while (end > start && path[end - 1] === '/') end -= 1;
+
+  return path.slice(start, end);
 }

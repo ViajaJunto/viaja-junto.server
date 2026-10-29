@@ -80,4 +80,15 @@ describe('securityHeaders', () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("frame-ancestors 'self'");
   });
+
+  it.each(['reference', '/reference', 'reference/', '///reference///'])(
+    'finds the docs path whatever slashes surround it: %j',
+    (docsPath) => {
+      const csp = headersFor('/reference', docsPath).headers.get(
+        'content-security-policy',
+      );
+
+      expect(csp).toContain('cdn.jsdelivr.net');
+    },
+  );
 });
