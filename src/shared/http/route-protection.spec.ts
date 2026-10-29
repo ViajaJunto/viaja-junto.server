@@ -17,6 +17,10 @@ import { ReviewsController } from '../../modules/reviews/presentation/reviews.co
 import { TripActivitiesController } from '../../modules/trip-activities/presentation/trip-activities.controller.js';
 import { TripDestinationsController } from '../../modules/trip-destinations/presentation/trip-destinations.controller.js';
 import { TripItineraryController } from '../../modules/trip-destinations/presentation/trip-itinerary.controller.js';
+import {
+  TripExpenseSummaryController,
+  TripExpensesController,
+} from '../../modules/trip-expenses/presentation/trip-expenses.controller.js';
 import { TripMembersController } from '../../modules/trip-members/presentation/trip-members.controller.js';
 import { TripInviteController } from '../../modules/trips/presentation/trip-invite.controller.js';
 import { TripsController } from '../../modules/trips/presentation/trips.controller.js';
@@ -35,6 +39,8 @@ const controllers: Controller[] = [
   TripActivitiesController,
   TripDestinationsController,
   TripItineraryController,
+  TripExpenseSummaryController,
+  TripExpensesController,
   TripMembersController,
   TripInviteController,
   TripsController,

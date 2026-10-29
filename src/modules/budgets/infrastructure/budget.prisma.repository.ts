@@ -75,6 +75,9 @@ export class BudgetPrismaRepository implements BudgetRepository {
       select: {
         currency: true,
         budget: { select: { totalValue: true } },
+        expenses: {
+          select: { amount: true, currency: true, exchangeRate: true },
+        },
         destinations: {
           select: {
             activities: {
@@ -95,6 +98,11 @@ export class BudgetPrismaRepository implements BudgetRepository {
     return {
       currency: trip.currency,
       totalValue: trip.budget?.totalValue ?? null,
+      expenses: trip.expenses.map(({ amount, currency, exchangeRate }) => ({
+        amount,
+        currency,
+        exchangeRate: exchangeRate === null ? null : Number(exchangeRate),
+      })),
       activities: trip.destinations.flatMap(({ activities }) =>
         activities.map(({ expectedCost, activityCatalog }) => ({
           type: activityCatalog.type,

@@ -94,6 +94,10 @@ trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id-
 
 budget(#id, *trip_id->trip, total_value, created_at)
 
+trip_expense(#id, *trip_id->trip, *payer_id->user, amount, currency, exchange_rate, description, spent_on, split_type, *created_by->user, created_at)
+
+trip_expense_share(#id, *expense_id->trip_expense, *user_id->user, position, weight, amount)
+
 review(#id, *user_id->user, *activity_catalog_id->activity_catalog, rating, comment, created_at)
 ```
 
@@ -348,6 +352,33 @@ through `index.ts`, so it can be lifted into its own package. Its API:
   `invalid_currency`, `invalid_participant`, `invalid_split`,
   `duplicate_expense`, `missing_exchange_rate`, `invalid_settlement`), for the
   HTTP layer to map to `422`.
+
+**Trip expenses (#30).** The `trip-expenses` module adapts the library to the
+API. `POST /trip-expenses` records an expense: who paid (`payerId`), the `amount`
+in minor units, an optional `description` and `spentOn`, and the `split`
+(`equal` with `participants`, `exact` with `shares`, or `proportional` with
+`weights`). The payer and everyone in the split must be the trip's creator or a
+member (`422` otherwise); creators and Editors write, any member reads
+(`GET /trip-expenses?tripId=`, `GET /trip-expenses/{id}`, `PATCH`, `DELETE`). A
+`PATCH` is checked again as a whole, against the values already stored.
+`GET /trips/{id}/expenses/summary` returns the balances and the payments that
+settle them, in the trip currency.
+
+Currencies follow the decision of #31: an expense is in the trip currency by
+default; in another one it **must** carry the `exchangeRate` the user paid
+(units of the trip currency per unit of the expense's), and an expense already
+in the trip currency must not carry one. Each expense is converted with its own
+rate before the library splits it, since two euro expenses may have been paid at
+different rates; an `exact` split of a foreign expense becomes a proportional
+one with the shares as weights, which still adds up to the converted amount.
+Because the amounts only make sense in that currency, **a trip's currency can no
+longer be changed once it has expenses** (`409`). The budget summary now also
+reports `spent` (every expense converted at its own rate) and
+`remainingAfterSpent` next to the planned amount.
+
+An expense keeps its people referenced, so a user who paid or took part in one
+cannot be deleted (`409`). Marking debts as paid (`settleBalance`) is supported
+by the library but has no endpoint yet.
 
 The library is not wired to the API yet; `trip-expenses` (#30) adapts it to
 persistence and endpoints.

@@ -61,6 +61,10 @@ export function buildOpenApiConfig() {
     )
     .addTag('Trip Activities', 'Activities scheduled inside a trip stop.')
     .addTag('Budgets', 'Budget tracking per trip.')
+    .addTag(
+      'Trip Expenses',
+      'Shared expenses of a trip: who paid, how it is split and who owes whom.',
+    )
     .addTag('Reviews', 'Community ratings of catalogue activities.')
     .addTag(
       'Places',
