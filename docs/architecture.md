@@ -86,7 +86,7 @@ destination_catalog(#id, name, country, country_code, category, description, lat
 
 trip_destination(#id, *trip_id->trip, *destination_catalog_id->destination_catalog, arrival, departure, description, order)
 
-activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, created_at)
+activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, review_count, created_at)
 
 trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id->activity_catalog, date_time, duration_minutes, expected_cost, status)
 
@@ -312,6 +312,17 @@ from the itinerary. Activities without a cost count as 0 and are reported in
 `unpricedActivities`; a trip without a budget still returns `planned`, with
 `totalValue` and `remaining` null. Amounts are summed in integer cents and are
 in the trip's currency. Any member of the trip can read it.
+
+**Review ratings (FR23).** `activity_catalog.average_rating` (two decimals,
+null without reviews) and `review_count` are derived, never typed in. Creating,
+editing or deleting a review — and deleting a user, which cascades to their
+reviews — refreshes both **in the same transaction**, holding a row lock on the
+activity so concurrent reviews of one activity cannot leave a stale average.
+`GET /activity-catalog/{id}/details` is the public page of an activity: the
+entry with its average and count plus the 10 most recent reviews, newest first,
+each with the reviewer's name only (never their email or id). The
+`activity_review_count` migration backfills existing rows from their reviews and
+clears any rating that was typed in by hand before.
 
 **Catalog search (FR10, FR24).** Both catalogs are searchable by anyone, with
 filters that combine with AND and are ignored when blank:

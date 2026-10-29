@@ -5,7 +5,10 @@ import {
   buildActivityOrderBy,
   buildActivityWhere,
 } from './activity-catalog.filters.js';
-import { ActivityCatalog } from '../domain/activity-catalog.entity.js';
+import {
+  ActivityCatalog,
+  ActivityReview,
+} from '../domain/activity-catalog.entity.js';
 import {
   CreateActivityCatalogData,
   UpdateActivityCatalogData,
@@ -50,6 +53,30 @@ export class ActivityCatalogPrismaRepository implements ActivityCatalogRepositor
     data: UpdateActivityCatalogData,
   ): Promise<ActivityCatalog> {
     return this.prisma.activityCatalog.update({ where: { id }, data });
+  }
+
+  async findLatestReviews(
+    activityId: string,
+    limit: number,
+  ): Promise<ActivityReview[]> {
+    const reviews = await this.prisma.review.findMany({
+      where: { activityId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: limit,
+      // The name only: the email of a reviewer is never public.
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        user: { select: { name: true } },
+      },
+    });
+
+    return reviews.map(({ user, ...review }) => ({
+      ...review,
+      authorName: user.name,
+    }));
   }
 
   countTripUsages(id: string): Promise<number> {
