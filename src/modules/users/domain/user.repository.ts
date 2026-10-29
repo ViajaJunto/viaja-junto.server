@@ -1,5 +1,6 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { User } from './user.entity.js';
+import type { VisitedPlace } from './visited-countries.js';
 
 /** The role is never set through the API: new accounts start as USER. */
 export type CreateUserData = Omit<User, 'id' | 'createdAt' | 'role'>;
@@ -22,6 +23,8 @@ export abstract class UserRepository {
   abstract findById(id: string): Promise<User | null>;
   abstract findByEmail(email: string): Promise<User | null>;
   abstract findByGoogleId(googleId: string): Promise<User | null>;
+  /** Destinations of the user's completed trips (as creator or member). */
+  abstract findVisitedPlaces(userId: string): Promise<VisitedPlace[]>;
   abstract create(data: CreateUserData): Promise<User>;
   abstract update(id: string, data: UpdateUserData): Promise<User>;
   abstract remove(id: string): Promise<void>;
