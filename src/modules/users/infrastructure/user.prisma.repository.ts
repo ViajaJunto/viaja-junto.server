@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
+import {
+  lockActivities,
+  syncActivityRatings,
+} from '../../../shared/database/activity-rating.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { accessibleTrips } from '../../../shared/database/trip-scope.js';
 import { User } from '../domain/user.entity.js';
@@ -66,7 +70,22 @@ export class UserPrismaRepository implements UserRepository {
     return this.prisma.user.update({ where: { id }, data });
   }
 
+  /**
+   * Deleting a user cascades to their reviews, so the ratings of the
+   * activities they reviewed are refreshed in the same transaction.
+   */
   async remove(id: string): Promise<void> {
-    await this.prisma.user.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      const reviewed = (
+        await tx.review.findMany({
+          where: { userId: id },
+          select: { activityId: true },
+        })
+      ).map(({ activityId }) => activityId);
+
+      await lockActivities(tx, reviewed);
+      await tx.user.delete({ where: { id } });
+      await syncActivityRatings(tx, reviewed);
+    });
   }
 }

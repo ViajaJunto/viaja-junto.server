@@ -1,5 +1,8 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
-import { DestinationCatalog } from './destination-catalog.entity.js';
+import {
+  DestinationCatalog,
+  RatedDestination,
+} from './destination-catalog.entity.js';
 
 /** Discovery filters; every field that is set narrows the result. */
 export interface DestinationCatalogFilter {
@@ -37,6 +40,12 @@ export abstract class DestinationCatalogRepository {
   ): Promise<DestinationCatalog>;
   /** Which of these external ids are already in the catalog. */
   abstract findExistingExternalIds(externalIds: string[]): Promise<string[]>;
+  /**
+   * The best rated destinations, best first. A destination is rated by the
+   * reviews of the catalog activities located in it; destinations without
+   * reviews are not listed.
+   */
+  abstract findTopRated(limit: number): Promise<RatedDestination[]>;
   /** How many trip destinations/activities still use this entry. */
   abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;

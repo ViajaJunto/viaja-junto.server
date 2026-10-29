@@ -88,6 +88,8 @@ trip_destination(#id, *trip_id->trip, *destination_catalog_id->destination_catal
 
 activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, external_id, source, average_rating, created_at)
 
+activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, review_count, created_at)
+
 trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id->activity_catalog, date_time, duration_minutes, expected_cost, status)
 
 budget(#id, *trip_id->trip, total_value, created_at)
@@ -312,6 +314,31 @@ from the itinerary. Activities without a cost count as 0 and are reported in
 `unpricedActivities`; a trip without a budget still returns `planned`, with
 `totalValue` and `remaining` null. Amounts are summed in integer cents and are
 in the trip's currency. Any member of the trip can read it.
+
+**Review ratings (FR23).** `activity_catalog.average_rating` (two decimals,
+null without reviews) and `review_count` are derived, never typed in. Creating,
+editing or deleting a review — and deleting a user, which cascades to their
+reviews — refreshes both **in the same transaction**, holding a row lock on the
+activity so concurrent reviews of one activity cannot leave a stale average.
+`GET /activity-catalog/{id}/details` is the public page of an activity: the
+entry with its average and count plus the 10 most recent reviews, newest first,
+each with the reviewer's name only (never their email or id). The
+`activity_review_count` migration backfills existing rows from their reviews and
+clears any rating that was typed in by hand before.
+
+**Top destinations (FR25).** Decision: a destination's rating is **derived**
+from the reviews of its activities rather than from separate destination
+reviews, so people review one thing (the activity) and the schema keeps a
+single review table. `GET /destination-catalog/top?limit=` (public, default 10,
+maximum 50) lists the best rated destinations, best first. An activity belongs
+to a destination when it is in a city with the destination's name and, if both
+sides state a country, in the same country (case-insensitive, trimmed). The
+rating is the mean of every review given to those activities — the activities'
+averages weighted by their review counts, to two decimals — and ties go to the
+destination with more reviews, then by name. Destinations without reviews are
+not listed. Because the match is by name, a destination's activities need a
+consistent `city`; destination reviews (BR05) can be added later without
+changing this endpoint's contract.
 
 **Catalog search (FR10, FR24).** Both catalogs are searchable by anyone, with
 filters that combine with AND and are ignored when blank:

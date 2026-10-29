@@ -1,5 +1,5 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
-import { ActivityCatalog } from './activity-catalog.entity.js';
+import { ActivityCatalog, ActivityReview } from './activity-catalog.entity.js';
 
 /** Discovery filters; every field that is set narrows the result. */
 export interface ActivityCatalogFilter {
@@ -16,7 +16,7 @@ export interface ActivityCatalogFilter {
 
 export type CreateActivityCatalogData = Omit<
   ActivityCatalog,
-  'id' | 'createdAt'
+  'id' | 'createdAt' | 'reviewCount'
 >;
 export type UpdateActivityCatalogData = Partial<CreateActivityCatalogData>;
 
@@ -41,6 +41,11 @@ export abstract class ActivityCatalogRepository {
   ): Promise<ActivityCatalog>;
   /** Which of these external ids are already in the catalog. */
   abstract findExistingExternalIds(externalIds: string[]): Promise<string[]>;
+  /** The most recent reviews of an activity, newest first. */
+  abstract findLatestReviews(
+    activityId: string,
+    limit: number,
+  ): Promise<ActivityReview[]>;
   /** How many trip destinations/activities still use this entry. */
   abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;

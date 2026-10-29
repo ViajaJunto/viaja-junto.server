@@ -47,8 +47,10 @@ const PUBLIC = new Set([
   'AuthController.googleCallback',
   'DestinationCatalogController.findAll',
   'DestinationCatalogController.findOne',
+  'DestinationCatalogController.findTop',
   'ActivityCatalogController.findAll',
   'ActivityCatalogController.findOne',
+  'ActivityCatalogController.findDetails',
   'ReviewsController.findAll',
   'ReviewsController.findOne',
 ]);

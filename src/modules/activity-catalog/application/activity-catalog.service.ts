@@ -17,7 +17,11 @@ import {
 import { ListActivityCatalogQueryDto } from './dto/list-activity-catalog-query.dto.js';
 import { CreateActivityCatalogDto } from './dto/create-activity-catalog.dto.js';
 import { UpdateActivityCatalogDto } from './dto/update-activity-catalog.dto.js';
+import { ActivityCatalogDetailsResponseDto } from './dto/activity-catalog-details-response.dto.js';
 import { ActivityCatalogResponseDto } from './dto/activity-catalog-response.dto.js';
+
+/** How many reviews the public activity page shows. */
+export const LATEST_REVIEWS = 10;
 
 @Injectable()
 export class ActivityCatalogService {
@@ -51,6 +55,14 @@ export class ActivityCatalogService {
 
   async findOne(id: string): Promise<ActivityCatalogResponseDto> {
     return ActivityCatalogResponseDto.from(await this.getOrFail(id));
+  }
+
+  /** The public page of an activity: the entry plus its latest reviews. */
+  async findDetails(id: string): Promise<ActivityCatalogDetailsResponseDto> {
+    const activity = await this.getOrFail(id);
+    const reviews = await this.repository.findLatestReviews(id, LATEST_REVIEWS);
+
+    return ActivityCatalogDetailsResponseDto.fromDetails(activity, reviews);
   }
 
   async create(

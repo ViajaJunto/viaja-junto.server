@@ -14,6 +14,7 @@ import {
   DestinationCatalogRepository,
   CreateDestinationCatalogData,
 } from '../domain/destination-catalog.repository.js';
+import { TopDestinationResponseDto } from './dto/top-destination-response.dto.js';
 import { ListDestinationCatalogQueryDto } from './dto/list-destination-catalog-query.dto.js';
 import { CreateDestinationCatalogDto } from './dto/create-destination-catalog.dto.js';
 import { UpdateDestinationCatalogDto } from './dto/update-destination-catalog.dto.js';
@@ -40,6 +41,13 @@ export class DestinationCatalogService {
       data: items.map((item) => DestinationCatalogResponseDto.from(item)),
       meta: buildPaginationMeta(page, limit, total),
     };
+  }
+
+  /** The best rated destinations, for the home page (FR25). */
+  async findTop(limit: number): Promise<TopDestinationResponseDto[]> {
+    return (await this.repository.findTopRated(limit)).map((destination) =>
+      TopDestinationResponseDto.fromRated(destination),
+    );
   }
 
   async findOne(id: string): Promise<DestinationCatalogResponseDto> {

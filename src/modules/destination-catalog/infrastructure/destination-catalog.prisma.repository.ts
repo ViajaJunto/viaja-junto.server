@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { buildDestinationWhere } from './destination-catalog.filters.js';
-import { DestinationCatalog } from '../domain/destination-catalog.entity.js';
+import {
+  DestinationCatalog,
+  RatedDestination,
+} from '../domain/destination-catalog.entity.js';
 import {
   CreateDestinationCatalogData,
   UpdateDestinationCatalogData,
@@ -56,6 +59,47 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
     });
 
     return rows.flatMap(({ externalId }) => externalId ?? []);
+  }
+
+  async findTopRated(limit: number): Promise<RatedDestination[]> {
+    // An activity belongs to a destination when it is in a city of that name
+    // (and in that country, when both sides say which). The rating is the
+    // mean of the activities' averages weighted by their review counts, i.e.
+    // the plain mean of every review given to activities there.
+    const ranked = await this.prisma.$queryRaw<
+      { id: string; rating: number; reviewCount: number }[]
+    >`
+      SELECT d.id,
+             ROUND((SUM(a.average_rating * a.review_count)
+                    / SUM(a.review_count))::numeric, 2)::float AS rating,
+             SUM(a.review_count)::int AS "reviewCount"
+      FROM destination_catalog d
+      JOIN activity_catalog a
+        ON LOWER(BTRIM(a.city)) = LOWER(BTRIM(d.name))
+       AND (d.country IS NULL OR a.country IS NULL
+            OR LOWER(BTRIM(a.country)) = LOWER(BTRIM(d.country)))
+      WHERE a.review_count > 0
+      GROUP BY d.id
+      ORDER BY rating DESC, "reviewCount" DESC, d.name ASC, d.id ASC
+      LIMIT ${limit}`;
+
+    if (ranked.length === 0) {
+      return [];
+    }
+
+    const destinations = new Map(
+      (
+        await this.prisma.destinationCatalog.findMany({
+          where: { id: { in: ranked.map(({ id }) => id) } },
+        })
+      ).map((destination) => [destination.id, destination]),
+    );
+
+    return ranked.flatMap(({ id, rating, reviewCount }) => {
+      const destination = destinations.get(id);
+
+      return destination ? [{ ...destination, rating, reviewCount }] : [];
+    });
   }
 
   countTripUsages(id: string): Promise<number> {
