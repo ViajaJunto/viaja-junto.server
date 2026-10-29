@@ -43,6 +43,7 @@ describe('UsersService', () => {
       remove: vi.fn(),
       findSession: vi.fn(),
       revokeTokens: vi.fn(),
+      findVisitedPlaces: vi.fn(),
     };
     service = new UsersService(repository as unknown as UserRepository);
   });
@@ -145,6 +146,22 @@ describe('UsersService', () => {
         new Date('2026-07-01T10:00:00.000Z'),
       );
       vi.useRealTimers();
+    });
+  });
+
+  describe('findVisitedCountries', () => {
+    it('groups the places of the caller’s completed trips', async () => {
+      repository.findVisitedPlaces.mockResolvedValue([
+        { tripId: 't1', country: 'França', countryCode: 'FR' },
+        { tripId: 't2', country: 'França', countryCode: 'FR' },
+      ]);
+
+      const result = await service.findVisitedCountries(base.id);
+
+      expect(repository.findVisitedPlaces).toHaveBeenCalledWith(base.id);
+      expect(result).toEqual([
+        { country: 'França', countryCode: 'FR', tripCount: 2 },
+      ]);
     });
   });
 

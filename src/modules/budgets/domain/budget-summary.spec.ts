@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIVITY_TYPES,
   summarizeBudget,
+  type PaidExpense,
   type PlannedActivity,
 } from './budget-summary.js';
 
@@ -14,7 +15,8 @@ const summarize = (
   totalValue: number | null,
   activities: PlannedActivity[],
   currency = 'BRL',
-) => summarizeBudget({ currency, totalValue, activities });
+  expenses: PaidExpense[] = [],
+) => summarizeBudget({ currency, totalValue, activities, expenses });
 
 describe('summarizeBudget', () => {
   it('sums the expected cost and subtracts it from the budget', () => {
@@ -132,5 +134,63 @@ describe('summarizeBudget', () => {
 
     expect(summary.planned).toBe(0.3);
     expect(summary.remaining).toBe(0.7);
+  });
+
+  describe('what was actually spent', () => {
+    const paid = (
+      amount: number,
+      currency = 'BRL',
+      exchangeRate: number | null = null,
+    ): PaidExpense => ({ amount, currency, exchangeRate });
+
+    it('is zero when nothing was spent', () => {
+      expect(summarize(100, [])).toMatchObject({
+        spent: 0,
+        remainingAfterSpent: 100,
+      });
+    });
+
+    it('adds up the expenses and subtracts them from the budget', () => {
+      const summary = summarize(1000, [], 'BRL', [paid(12050), paid(3000)]);
+
+      expect(summary.spent).toBe(150.5);
+      expect(summary.remainingAfterSpent).toBe(849.5);
+    });
+
+    it('converts each expense with the rate it was paid at', () => {
+      // 10.00 EUR at 5.5 = 55.00 BRL and 10.00 EUR at 6 = 60.00 BRL.
+      const summary = summarize(1000, [], 'BRL', [
+        paid(1000, 'EUR', 5.5),
+        paid(1000, 'EUR', 6),
+      ]);
+
+      expect(summary.spent).toBe(115);
+    });
+
+    it('goes negative when more was spent than budgeted', () => {
+      const summary = summarize(100, [], 'BRL', [paid(15000)]);
+
+      expect(summary.remainingAfterSpent).toBe(-50);
+    });
+
+    it('is independent of what was planned', () => {
+      const summary = summarize(1000, [activity('TOUR', 400)], 'BRL', [
+        paid(10000),
+      ]);
+
+      expect(summary).toMatchObject({ planned: 400, spent: 100 });
+    });
+
+    it('has no remaining balance without a budget', () => {
+      const summary = summarize(null, [], 'BRL', [paid(5000)]);
+
+      expect(summary).toMatchObject({ spent: 50, remainingAfterSpent: null });
+    });
+
+    it('fails loudly if a foreign expense has no rate', () => {
+      expect(() =>
+        summarize(100, [], 'BRL', [paid(1000, 'EUR', null)]),
+      ).toThrow(/exchange rate/i);
+    });
   });
 });

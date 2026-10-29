@@ -10,6 +10,8 @@ import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js'
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import type { GoogleUserData, UserSession } from '../domain/user.repository.js';
 import { UserRepository } from '../domain/user.repository.js';
+import { groupVisitedCountries } from '../domain/visited-countries.js';
+import { VisitedCountryResponseDto } from './dto/visited-country-response.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserResponseDto } from './dto/user-response.dto.js';
 
@@ -48,6 +50,18 @@ export class UsersService {
     await this.repository.revokeTokens(
       id,
       new Date(Math.ceil(Date.now() / 1000) * 1000),
+    );
+  }
+
+  /**
+   * The countries of the destinations in the user's completed trips, as
+   * creator or member, for the map (FR11).
+   */
+  async findVisitedCountries(
+    userId: string,
+  ): Promise<VisitedCountryResponseDto[]> {
+    return groupVisitedCountries(
+      await this.repository.findVisitedPlaces(userId),
     );
   }
 

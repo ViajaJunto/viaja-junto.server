@@ -82,15 +82,23 @@ trip(#id, name, description, start_date, end_date, status, *created_by->user, cu
 
 trip_member(#id, *trip_id->trip, *user_id->user, permission, joined_at)
 
-destination_catalog(#id, name, country, category, description, latitude, longitude, photo_url)
+destination_catalog(#id, name, country, country_code, category, description, latitude, longitude, photo_url, external_id)
 
 trip_destination(#id, *trip_id->trip, *destination_catalog_id->destination_catalog, arrival, departure, description, order)
 
-activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, created_at)
+activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, external_id, source, average_rating, created_at)
+
+activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, review_count, created_at)
 
 trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id->activity_catalog, date_time, duration_minutes, expected_cost, status)
 
 budget(#id, *trip_id->trip, total_value, created_at)
+
+notification(#id, *user_id->user, *trip_id->trip, *actor_id->user, type, payload, read_at, created_at)
+
+trip_expense(#id, *trip_id->trip, *payer_id->user, amount, currency, exchange_rate, description, spent_on, split_type, *created_by->user, created_at)
+
+trip_expense_share(#id, *expense_id->trip_expense, *user_id->user, position, weight, amount)
 
 review(#id, *user_id->user, *activity_catalog_id->activity_catalog, rating, comment, created_at)
 ```
@@ -339,6 +347,183 @@ signed with the old one are still accepted until they expire, so nobody is
 signed out by the rotation. Remove `JWT_SECRET_PREVIOUS` after `JWT_EXPIRES_IN`
 seconds. Only HS256 is accepted, and a token matching neither secret fails as
 before. (The CloudFormation template does not wire `JWT_SECRET_PREVIOUS` yet.)
+
+**Notifications (FR21).** When something relevant happens on a trip, everyone
+on it is told in-app, **except who did it**. The services announce changes
+through a `TripEventPublisher` port (`src/shared/events`), implemented with
+`@nestjs/event-emitter`; they know nothing about who listens. The `notifications`
+module listens and writes one `notification` per recipient, with a small flat
+`payload` (`tripName`, `actorName`, the `subjectId` that changed and a few
+details). Events: a member joins (by invitation or with a code), is removed (the
+removed member is told too, although no longer on the trip) or has the
+permission changed (`from`/`to`); a destination or an activity is added, edited
+(a reorder counts) or removed; the budget is created, updated or removed
+(`action`); the trip status changes (`from`/`to`).
+
+`GET /notifications` lists the caller's own, **unread first**, newest first
+within each group; `GET /notifications/unread-count` feeds the bell;
+`PATCH /notifications/{id}/read` is idempotent and answers `404` for a
+notification that is not the caller's, and `PATCH /notifications/read-all`
+returns how many were unread. Delivery is best effort: the listener runs
+asynchronously and a failure to notify is logged, never turned into an error on
+the change that caused it. Notifications are deleted with the trip, and keep
+working if the person who caused one deletes their account (`actor_id` becomes
+null). Notifications about expenses (`trip-expenses`) can be added the same way.
+
+**Shared expenses library.** `src/shared/expenses` (reuse plan: a generic,
+reusable component) splits costs, keeps balances and works out who owes whom.
+It is framework-free — no Nest, no Prisma, no network — and is imported only
+through `index.ts`, so it can be lifted into its own package. Its API:
+
+| Function | What it does |
+| -------- | ------------ |
+| `createLedger(currency)` | An empty ledger whose balances are kept in `currency`. |
+| `addExpense(ledger, expense, rates?)` | Records an expense (validated up front) and returns a **new** ledger. |
+| `settleBalance(ledger, { from, to, amount }, rates?)` | Records that `from` paid `to`; returns a new ledger. |
+| `calculateSummary(ledger, rates?)` | `total`, a `Balance` per person (`paid`, `owed`, `settled`, `net`) and the `transfers` that settle everyone. |
+
+- *Money* is an integer in minor units (cents; whole yen) plus an ISO 4217 code,
+  so no floating point touches a balance. Digits per currency come from ICU.
+- *Splits* are `equal`, `exact` (stated amounts that must add up) or
+  `proportional` (weights: percentages, nights, head-count). Rounding uses the
+  **largest remainder method**: everyone gets the whole part of their exact
+  share and the leftover cents go, one each, to the biggest fractional
+  remainders, ties to whoever is listed first. Shares always add up to the
+  expense and the result is deterministic.
+- *Currencies*: an expense in another currency is converted to the ledger
+  currency through the caller's `ExchangeRates` (units of `to` per unit of
+  `from`), rounded half up to the minor unit. A missing rate is an error, never
+  a guess; the library never fetches rates.
+- *Settling up*: balances always add up to zero. `transfers` cancel exact
+  matches first, then the biggest debtor pays the biggest creditor, which is at
+  most one payment fewer than the people with a balance — usually the fewest
+  possible, but not guaranteed (the true minimum is a hard combinatorial
+  problem). The plan is the same whatever order the input comes in.
+- *Errors* are `ExpenseError`s with a stable `code` (`invalid_amount`,
+  `invalid_currency`, `invalid_participant`, `invalid_split`,
+  `duplicate_expense`, `missing_exchange_rate`, `invalid_settlement`), for the
+  HTTP layer to map to `422`.
+
+**Trip expenses (#30).** The `trip-expenses` module adapts the library to the
+API. `POST /trip-expenses` records an expense: who paid (`payerId`), the `amount`
+in minor units, an optional `description` and `spentOn`, and the `split`
+(`equal` with `participants`, `exact` with `shares`, or `proportional` with
+`weights`). The payer and everyone in the split must be the trip's creator or a
+member (`422` otherwise); creators and Editors write, any member reads
+(`GET /trip-expenses?tripId=`, `GET /trip-expenses/{id}`, `PATCH`, `DELETE`). A
+`PATCH` is checked again as a whole, against the values already stored.
+`GET /trips/{id}/expenses/summary` returns the balances and the payments that
+settle them, in the trip currency.
+
+Currencies follow the decision of #31: an expense is in the trip currency by
+default; in another one it **must** carry the `exchangeRate` the user paid
+(units of the trip currency per unit of the expense's), and an expense already
+in the trip currency must not carry one. Each expense is converted with its own
+rate before the library splits it, since two euro expenses may have been paid at
+different rates; an `exact` split of a foreign expense becomes a proportional
+one with the shares as weights, which still adds up to the converted amount.
+Because the amounts only make sense in that currency, **a trip's currency can no
+longer be changed once it has expenses** (`409`). The budget summary now also
+reports `spent` (every expense converted at its own rate) and
+`remainingAfterSpent` next to the planned amount.
+
+An expense keeps its people referenced, so a user who paid or took part in one
+cannot be deleted (`409`). Marking debts as paid (`settleBalance`) is supported
+by the library but has no endpoint yet.
+
+The library is not wired to the API yet; `trip-expenses` (#30) adapts it to
+persistence and endpoints.
+**Hardening (NFR03).**
+- *Security headers.* `helmet` sets the standard protective headers on every
+  response, including a strict `Content-Security-Policy` (the API only answers
+  JSON, so it may load nothing). The API reference page under `SWAGGER_PATH`
+  is the one exception: Scalar renders from a script on jsDelivr and styles
+  itself inline, so only that path allows `cdn.jsdelivr.net` and inline
+  scripts/styles; plugins and framing by other sites stay forbidden.
+- *Rate limiting.* `@nestjs/throttler` runs as a global guard, **before** the
+  JWT guard, so a flood of anonymous requests is stopped before any token is
+  parsed. Each client IP gets, per window (`THROTTLE_TTL_SECONDS`, 60 s):
+  `THROTTLE_LIMIT` reads (300), `THROTTLE_WRITE_LIMIT` writes (60) and, on the
+  routes worth abusing — Google sign-in and its callback, `POST /trips/join`
+  (guessing invite codes), photo uploads and `POST /reviews` — only
+  `THROTTLE_STRICT_LIMIT` (10). A client over its budget receives `429` with
+  `Retry-After`. Counters live in memory, per process. Behind a load balancer,
+  set `TRUST_PROXY_HOPS` so the client IP is read from `X-Forwarded-For`;
+  otherwise every client shares the balancer's address and is throttled together.
+- *Health check.* `GET /api/health` (public, never throttled) answers `200`
+  only when the process is up **and** the database answers a query, and `503`
+  otherwise, without saying why. It replaces the starter `GET /` ("Hello
+  World!") and is what the Docker `HEALTHCHECK`, the compose service and the ECS
+  task definition probe, so an unhealthy container is replaced.
+
+**Review ratings (FR23).** `activity_catalog.average_rating` (two decimals,
+null without reviews) and `review_count` are derived, never typed in. Creating,
+editing or deleting a review — and deleting a user, which cascades to their
+reviews — refreshes both **in the same transaction**, holding a row lock on the
+activity so concurrent reviews of one activity cannot leave a stale average.
+`GET /activity-catalog/{id}/details` is the public page of an activity: the
+entry with its average and count plus the 10 most recent reviews, newest first,
+each with the reviewer's name only (never their email or id). The
+`activity_review_count` migration backfills existing rows from their reviews and
+clears any rating that was typed in by hand before.
+
+**Top destinations (FR25).** Decision: a destination's rating is **derived**
+from the reviews of its activities rather than from separate destination
+reviews, so people review one thing (the activity) and the schema keeps a
+single review table. `GET /destination-catalog/top?limit=` (public, default 10,
+maximum 50) lists the best rated destinations, best first. An activity belongs
+to a destination when it is in a city with the destination's name and, if both
+sides state a country, in the same country (case-insensitive, trimmed). The
+rating is the mean of every review given to those activities — the activities'
+averages weighted by their review counts, to two decimals — and ties go to the
+destination with more reviews, then by name. Destinations without reviews are
+not listed. Because the match is by name, a destination's activities need a
+consistent `city`; destination reviews (BR05) can be added later without
+changing this endpoint's contract.
+
+**Catalog search (FR10, FR24).** Both catalogs are searchable by anyone, with
+filters that combine with AND and are ignored when blank:
+`GET /destination-catalog?q=&country=&category=` (`q` is a case-insensitive
+substring of the name; `country` is the country name or its ISO code) and
+`GET /activity-catalog?q=&type=&minRating=&city=&country=&sort=` (`minRating`
+leaves unrated activities out; `sort=rating` puts the best rated first and the
+unrated last, `name` is the default). User text is escaped before it reaches
+`ILIKE`, because Prisma does not do it for `contains`/`equals` with
+`mode: 'insensitive'`: without that, `q=%` would match every row. The catalogs
+are small, so no extra indexes were added; revisit with `pg_trgm` if they grow.
+
+**Visited countries (FR11).** `GET /users/me/visited-countries` lists the
+distinct countries of the destinations in the caller's `COMPLETED` trips, as
+creator or member, sorted by name, each with `countryCode` (ISO 3166-1 alpha-2,
+ready for the frontend map) and `tripCount`. Destinations are grouped by code,
+or by name when the catalog has no code, and destinations with neither are
+skipped. `destination_catalog.country_code` is optional, validated against the
+ISO list and stored upper-case; only an admin writes it, with the rest of the
+catalog.
+
+**External places (OpenStreetMap).** Administrators can find real-world places
+and import them into the catalogs, which cuts the effort of collecting data
+(reuse plan). The provider sits behind a `PlacesProvider` port in
+`src/modules/places`; the adapter is **OpenStreetMap via Nominatim**, chosen
+because it needs no API key or billing — it removes the price-change risk of
+the reuse plan — and a Google Places adapter could be added without touching
+the rest. Endpoints, all admin-only: `GET /places/search?q=&limit=` (each result
+says what an import would create and whether it is already in a catalog),
+`POST /places/import/activities` and `POST /places/import/destinations` with
+`{ "externalId": "osm:node:123" }`. The import fetches the place again from the
+provider, so only the id is trusted from the client; the activity type and the
+destination category are guessed from the OSM tags and can be corrected later.
+`external_id` is unique in each catalog, so importing the same place twice
+answers `409`.
+
+Nominatim's usage policy is followed in the adapter: an identifying
+`User-Agent` (`PLACES_USER_AGENT`, required to enable the feature — without it
+the endpoints answer `503`), at most one request per second, a timeout
+(`PLACES_TIMEOUT_MS`, default 5 s) and an in-memory cache of one hour, so
+repeating a search costs nothing. Provider failures become `504` (timeout),
+`503` (rate limited) or `502` (unreachable or unusable answer). Results carry the
+attribution "© OpenStreetMap contributors", which must be shown wherever they
+are displayed. The rate limit and the cache are per process.
 
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its

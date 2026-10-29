@@ -1,5 +1,5 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
-import type { PlannedActivity } from './budget-summary.js';
+import type { PaidExpense, PlannedActivity } from './budget-summary.js';
 import { Budget } from './budget.entity.js';
 
 /** The raw facts a budget summary is computed from. */
@@ -7,6 +7,7 @@ export interface BudgetSummarySource {
   currency: string;
   totalValue: number | null;
   activities: PlannedActivity[];
+  expenses: PaidExpense[];
 }
 
 export type CreateBudgetData = Omit<Budget, 'id' | 'createdAt' | 'currency'>;

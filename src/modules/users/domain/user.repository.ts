@@ -1,5 +1,6 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { User } from './user.entity.js';
+import type { VisitedPlace } from './visited-countries.js';
 
 /** The role is never set through the API: new accounts start as USER. */
 /** The part of an account that decides whether its tokens are still valid. */
@@ -31,6 +32,8 @@ export abstract class UserRepository {
   abstract findSession(id: string): Promise<UserSession | null>;
   /** Refuses every access token issued before `validAfter`. */
   abstract revokeTokens(id: string, validAfter: Date): Promise<void>;
+  /** Destinations of the user's completed trips (as creator or member). */
+  abstract findVisitedPlaces(userId: string): Promise<VisitedPlace[]>;
   abstract create(data: CreateUserData): Promise<User>;
   abstract update(id: string, data: UpdateUserData): Promise<User>;
   abstract remove(id: string): Promise<void>;
