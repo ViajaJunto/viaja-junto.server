@@ -12,6 +12,7 @@ export function buildActivityWhere({
   minRating,
   city,
   country,
+  destinationId,
 }: ActivityCatalogFilter): Prisma.ActivityCatalogWhereInput {
   const conditions: Prisma.ActivityCatalogWhereInput[] = [];
 
@@ -36,6 +37,10 @@ export function buildActivityWhere({
     conditions.push({
       country: { equals: escapeLike(country), mode: 'insensitive' },
     });
+  }
+
+  if (destinationId) {
+    conditions.push({ destinationCatalogId: destinationId });
   }
 
   return conditions.length > 0 ? { AND: conditions } : {};

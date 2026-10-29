@@ -14,6 +14,7 @@ import { BudgetsController } from '../../modules/budgets/presentation/budgets.co
 import { DestinationCatalogController } from '../../modules/destination-catalog/presentation/destination-catalog.controller.js';
 import { NotificationsController } from '../../modules/notifications/presentation/notifications.controller.js';
 import { PlacesController } from '../../modules/places/presentation/places.controller.js';
+import { DestinationReviewsController } from '../../modules/destination-reviews/presentation/destination-reviews.controller.js';
 import { ReviewsController } from '../../modules/reviews/presentation/reviews.controller.js';
 import { TripActivitiesController } from '../../modules/trip-activities/presentation/trip-activities.controller.js';
 import { TripDestinationsController } from '../../modules/trip-destinations/presentation/trip-destinations.controller.js';
@@ -38,6 +39,7 @@ const controllers: Controller[] = [
   NotificationsController,
   PlacesController,
   ReviewsController,
+  DestinationReviewsController,
   TripActivitiesController,
   TripDestinationsController,
   TripItineraryController,
@@ -56,11 +58,14 @@ const PUBLIC = new Set([
   'DestinationCatalogController.findAll',
   'DestinationCatalogController.findOne',
   'DestinationCatalogController.findTop',
+  'DestinationCatalogController.findDetails',
   'ActivityCatalogController.findAll',
   'ActivityCatalogController.findOne',
   'ActivityCatalogController.findDetails',
   'ReviewsController.findAll',
   'ReviewsController.findOne',
+  'DestinationReviewsController.findAll',
+  'DestinationReviewsController.findOne',
 ]);
 
 function routes(controller: Controller) {

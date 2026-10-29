@@ -1,7 +1,7 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import {
   DestinationCatalog,
-  RatedDestination,
+  DestinationReviewSummary,
 } from './destination-catalog.entity.js';
 
 /** Discovery filters; every field that is set narrows the result. */
@@ -13,7 +13,10 @@ export interface DestinationCatalogFilter {
   category?: NonNullable<DestinationCatalog['category']>;
 }
 
-export type CreateDestinationCatalogData = Omit<DestinationCatalog, 'id'>;
+export type CreateDestinationCatalogData = Omit<
+  DestinationCatalog,
+  'id' | 'averageRating' | 'reviewCount'
+>;
 export type UpdateDestinationCatalogData =
   Partial<CreateDestinationCatalogData>;
 
@@ -41,11 +44,20 @@ export abstract class DestinationCatalogRepository {
   /** Which of these external ids are already in the catalog. */
   abstract findExistingExternalIds(externalIds: string[]): Promise<string[]>;
   /**
-   * The best rated destinations, best first. A destination is rated by the
-   * reviews of the catalog activities located in it; destinations without
-   * reviews are not listed.
+   * The best rated destinations, best first, by their own reviews;
+   * destinations without reviews are not listed.
    */
-  abstract findTopRated(limit: number): Promise<RatedDestination[]>;
+  abstract findTopRated(limit: number): Promise<DestinationCatalog[]>;
+  /**
+   * The catalog destination a place in this city belongs to: same name
+   * (case-insensitive) and, when both sides say it, the same country.
+   */
+  abstract findIdByCity(city: string, country?: string): Promise<string | null>;
+  /** The most recent reviews of a destination, newest first. */
+  abstract findLatestReviews(
+    destinationId: string,
+    limit: number,
+  ): Promise<DestinationReviewSummary[]>;
   /** How many trip destinations/activities still use this entry. */
   abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;

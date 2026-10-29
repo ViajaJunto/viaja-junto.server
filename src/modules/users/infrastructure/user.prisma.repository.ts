@@ -4,6 +4,10 @@ import {
   lockActivities,
   syncActivityRatings,
 } from '../../../shared/database/activity-rating.js';
+import {
+  lockDestinations,
+  syncDestinationRatings,
+} from '../../../shared/database/destination-rating.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { accessibleTrips } from '../../../shared/database/trip-scope.js';
 import { User } from '../domain/user.entity.js';
@@ -87,7 +91,7 @@ export class UserPrismaRepository implements UserRepository {
 
   /**
    * Deleting a user cascades to their reviews, so the ratings of the
-   * activities they reviewed are refreshed in the same transaction.
+   * activities and destinations they reviewed are refreshed in the same transaction.
    */
   async remove(id: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
@@ -98,9 +102,18 @@ export class UserPrismaRepository implements UserRepository {
         })
       ).map(({ activityId }) => activityId);
 
+      const reviewedDestinations = (
+        await tx.destinationReview.findMany({
+          where: { userId: id },
+          select: { destinationId: true },
+        })
+      ).map(({ destinationId }) => destinationId);
+
       await lockActivities(tx, reviewed);
+      await lockDestinations(tx, reviewedDestinations);
       await tx.user.delete({ where: { id } });
       await syncActivityRatings(tx, reviewed);
+      await syncDestinationRatings(tx, reviewedDestinations);
     });
   }
 }

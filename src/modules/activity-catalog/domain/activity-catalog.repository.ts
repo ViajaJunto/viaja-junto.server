@@ -10,6 +10,8 @@ export interface ActivityCatalogFilter {
   minRating?: number;
   city?: string;
   country?: string;
+  /** Only the activities linked to this catalog destination. */
+  destinationId?: string;
   /** `name` (default) or best rated first. */
   sort?: 'name' | 'rating';
 }
