@@ -76,7 +76,7 @@ The relational model is composed of the following entities:
 ### 5.2 Data model summary
 
 ```
-user(#id, name, email, google_id, role, created_at)
+user(#id, name, email, google_id, role, tokens_valid_after, created_at)
 
 trip(#id, name, description, start_date, end_date, status, *created_by->user, currency, invite_code, created_at)
 
@@ -313,6 +313,33 @@ from the itinerary. Activities without a cost count as 0 and are reported in
 `totalValue` and `remaining` null. Amounts are summed in integer cents and are
 in the trip's currency. Any member of the trip can read it.
 
+**Session model and token lifecycle.** The decision, from the reuse plan's
+warning about "the token lifecycle": the API keeps **a single short-lived access
+token** (HS256, `JWT_EXPIRES_IN`, one hour by default) and has **no refresh
+token**. When it expires the client sends the user through Google again, which
+is a redirect and no typing when they are still signed in there. A refresh token
+would mean a second credential to store safely (an httpOnly cookie, with the
+CSRF and cross-site cookie concerns that come with a separate frontend), rotate
+and revoke, for a small gain here. Revisit it if sessions must outlive an hour
+without re-authenticating.
+
+What makes the single token safe enough is a server-side kill switch:
+- `POST /auth/logout` sets `user.tokens_valid_after` to the next whole second,
+  and every authenticated request refuses a token whose `iat` is older. Signing
+  out therefore ends **every** session of the account at once, on every device,
+  not only the one that asked, and a stolen token stops working immediately.
+  Signing in again issues a token that is newer than the sign-out and works.
+- The same lookup refuses the token of an account that **no longer exists**, so
+  deleting an account is effective before its tokens expire. It costs one
+  primary-key read per authenticated request.
+
+*Rotating the signing secret.* Put the new secret in `JWT_SECRET` and the old one
+in `JWT_SECRET_PREVIOUS`: new tokens are signed with the new secret, tokens
+signed with the old one are still accepted until they expire, so nobody is
+signed out by the rotation. Remove `JWT_SECRET_PREVIOUS` after `JWT_EXPIRES_IN`
+seconds. Only HS256 is accepted, and a token matching neither secret fails as
+before. (The CloudFormation template does not wire `JWT_SECRET_PREVIOUS` yet.)
+
 **Date rules.** Dates are checked in the domain layer and answer `422` with one
 message per violated rule: a trip's `endDate` is not earlier than its
 `startDate`; a destination's `departure` is not earlier than its `arrival`, and
@@ -337,8 +364,8 @@ passwords. It is built on Passport.js (`passport-google-oauth20` and
    The token sits in the fragment so it never reaches server logs or the
    Referer header.
 4. The client sends `Authorization: Bearer <token>` on later requests.
-   `GET /api/auth/me` returns the current user. Signing out means the client
-   discards the token.
+   `GET /api/auth/me` returns the current user. `POST /api/auth/logout` signs
+   out (see *Session model* below); the client should also discard its token.
 
 Login CSRF is prevented by the OAuth `state` parameter, kept in a short-lived
 httpOnly cookie (`CookieStateStore`) because the API holds no session.

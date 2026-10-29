@@ -28,6 +28,7 @@ describe('AuthController', () => {
     service = {
       signInWithGoogle: vi.fn(),
       getProfile: vi.fn(),
+      signOut: vi.fn(),
     };
     controller = new AuthController(service as unknown as AuthService);
     response = { redirect: vi.fn() };
@@ -101,5 +102,11 @@ describe('AuthController', () => {
     service.getProfile.mockReturnValue(profile);
 
     expect(controller.me({ id: 'user-id', email: 'a@b.com' })).toBe(profile);
+  });
+
+  it('signs out the owner of the token on logout', () => {
+    controller.logout({ id: 'user-id', email: 'a@b.com' });
+
+    expect(service.signOut).toHaveBeenCalledWith('user-id');
   });
 });

@@ -8,7 +8,7 @@ import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
-import type { GoogleUserData } from '../domain/user.repository.js';
+import type { GoogleUserData, UserSession } from '../domain/user.repository.js';
 import { UserRepository } from '../domain/user.repository.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserResponseDto } from './dto/user-response.dto.js';
@@ -31,6 +31,24 @@ export class UsersService {
 
   async findOne(id: string): Promise<UserResponseDto> {
     return UserResponseDto.from(await this.getOrFail(id));
+  }
+
+  /** Whether the account still exists and since when its tokens count; null if it is gone. */
+  getSession(id: string): Promise<UserSession | null> {
+    return this.repository.findSession(id);
+  }
+
+  /**
+   * Signs the account out everywhere: every access token issued so far stops
+   * working. Rounded **up** to the next whole second, because a token's `iat`
+   * has no fraction: a token issued in the same second as the sign-out could
+   * otherwise survive it.
+   */
+  async revokeTokens(id: string): Promise<void> {
+    await this.repository.revokeTokens(
+      id,
+      new Date(Math.ceil(Date.now() / 1000) * 1000),
+    );
   }
 
   /** The role of an account; a deleted account counts as a plain USER. */

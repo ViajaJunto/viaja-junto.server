@@ -75,6 +75,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3600}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:

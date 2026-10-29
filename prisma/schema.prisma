@@ -53,15 +53,18 @@ enum TripActivityStatus {
 // ─── Models ─────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
+  id               String    @id @default(uuid())
+  name             String
+  email            String    @unique
   // Stable Google account id ("sub"). Null only for accounts created before
   // Google sign-in existed; they are linked by verified email on first login.
-  googleId  String?  @unique @map("google_id")
+  googleId         String?   @unique @map("google_id")
   // Only an ADMIN may write to the shared catalogs; promote an account with SQL.
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now()) @map("created_at")
+  role             UserRole  @default(USER)
+  // Access tokens issued before this instant are refused: signing out, or a
+  // stolen token, ends every session at once. Null = never revoked.
+  tokensValidAfter DateTime? @map("tokens_valid_after")
+  createdAt        DateTime  @default(now()) @map("created_at")
 
   createdTrips Trip[]       @relation("TripCreator")
   memberships  TripMember[]

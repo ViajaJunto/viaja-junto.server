@@ -26,6 +26,11 @@ export class AuthService {
     );
   }
 
+  /** Ends every session of the account: all its access tokens stop working. */
+  async signOut(userId: string): Promise<void> {
+    await this.users.revokeTokens(userId);
+  }
+
   async getProfile(userId: string): Promise<UserResponseDto> {
     return this.users.findOne(userId);
   }
