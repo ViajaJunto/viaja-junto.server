@@ -62,6 +62,10 @@ export function buildOpenApiConfig() {
     .addTag('Trip Activities', 'Activities scheduled inside a trip stop.')
     .addTag('Budgets', 'Budget tracking per trip.')
     .addTag('Reviews', 'Community ratings of catalogue activities.')
+    .addTag(
+      'Notifications',
+      'In-app notifications about changes on a user’s trips.',
+    )
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'bearer',

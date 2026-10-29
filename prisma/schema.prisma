@@ -29,6 +29,20 @@ enum UserRole {
   ADMIN
 }
 
+enum NotificationType {
+  MEMBER_JOINED
+  MEMBER_REMOVED
+  MEMBER_PERMISSION_CHANGED
+  DESTINATION_ADDED
+  DESTINATION_UPDATED
+  DESTINATION_REMOVED
+  ACTIVITY_ADDED
+  ACTIVITY_UPDATED
+  ACTIVITY_REMOVED
+  BUDGET_CHANGED
+  TRIP_STATUS_CHANGED
+}
+
 enum DestinationCategory {
   CITY
   BEACH
@@ -63,9 +77,11 @@ model User {
   role      UserRole @default(USER)
   createdAt DateTime @default(now()) @map("created_at")
 
-  createdTrips Trip[]       @relation("TripCreator")
-  memberships  TripMember[]
-  reviews      Review[]
+  createdTrips        Trip[]         @relation("TripCreator")
+  memberships         TripMember[]
+  reviews             Review[]
+  notifications       Notification[] @relation("NotificationRecipient")
+  notificationsCaused Notification[] @relation("NotificationActor")
 
   @@map("user")
 }
@@ -84,10 +100,11 @@ model Trip {
   inviteCode  String     @unique @map("invite_code")
   createdAt   DateTime   @default(now()) @map("created_at")
 
-  creator      User              @relation("TripCreator", fields: [createdBy], references: [id])
-  members      TripMember[]
-  destinations TripDestination[]
-  budget       Budget?
+  creator       User              @relation("TripCreator", fields: [createdBy], references: [id])
+  members       TripMember[]
+  destinations  TripDestination[]
+  budget        Budget?
+  notifications Notification[]
 
   @@map("trip")
 }
@@ -104,6 +121,27 @@ model TripMember {
 
   @@unique([tripId, userId])
   @@map("trip_member")
+}
+
+// Something that happened on a trip, told to one of its people (FR21).
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  tripId    String           @map("trip_id")
+  // Who did it; kept as null if they delete their account.
+  actorId   String?          @map("actor_id")
+  type      NotificationType
+  // Small and flat: names and ids the client needs to say what happened.
+  payload   Json             @default("{}")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  trip  Trip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notification")
 }
 
 model DestinationCatalog {

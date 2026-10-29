@@ -3,6 +3,7 @@ import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-re
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import type { PaginationQueryDto } from '../../../shared/http/dto/pagination-query.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { summarizeBudget } from '../domain/budget-summary.js';
@@ -17,6 +18,7 @@ export class BudgetsService {
   constructor(
     private readonly repository: BudgetRepository,
     private readonly access: TripAccessService,
+    private readonly events: TripEventPublisher,
   ) {}
 
   async findAll(
@@ -51,7 +53,16 @@ export class BudgetsService {
   ): Promise<BudgetResponseDto> {
     await this.access.assertCanEdit(dto.tripId, user.id);
 
-    return BudgetResponseDto.from(await this.repository.create({ ...dto }));
+    const created = await this.repository.create({ ...dto });
+    this.events.publish({
+      type: 'BUDGET_CHANGED',
+      tripId: dto.tripId,
+      actorId: user.id,
+      subjectId: created.id,
+      details: { action: 'created' },
+    });
+
+    return BudgetResponseDto.from(created);
   }
 
   async update(
@@ -62,13 +73,29 @@ export class BudgetsService {
     const budget = await this.getOrFail(id);
     await this.access.assertCanEdit(budget.tripId, user.id);
 
-    return BudgetResponseDto.from(await this.repository.update(id, { ...dto }));
+    const updated = await this.repository.update(id, { ...dto });
+    this.events.publish({
+      type: 'BUDGET_CHANGED',
+      tripId: budget.tripId,
+      actorId: user.id,
+      subjectId: id,
+      details: { action: 'updated' },
+    });
+
+    return BudgetResponseDto.from(updated);
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
     const budget = await this.getOrFail(id);
     await this.access.assertCanEdit(budget.tripId, user.id);
     await this.repository.remove(id);
+    this.events.publish({
+      type: 'BUDGET_CHANGED',
+      tripId: budget.tripId,
+      actorId: user.id,
+      subjectId: id,
+      details: { action: 'removed' },
+    });
   }
 
   /**

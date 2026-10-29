@@ -6,6 +6,7 @@ import {
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { TripEventPublisher } from '../../../shared/events/trip-events.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { TripAccessService } from '../../trip-access/application/trip-access.service.js';
 import { TripMemberRepository } from '../domain/trip-member.repository.js';
@@ -19,6 +20,7 @@ export class TripMembersService {
   constructor(
     private readonly repository: TripMemberRepository,
     private readonly access: TripAccessService,
+    private readonly events: TripEventPublisher,
   ) {}
 
   async findAll(
@@ -65,25 +67,39 @@ export class TripMembersService {
       );
     }
 
-    return this.addMember(dto.tripId, dto.userId, dto.permission);
+    return this.addMember(dto.tripId, dto.userId, dto.permission, user.id);
   }
 
   /**
    * Adds a user to a trip, once. Shared by the creator's invitation and by
    * joining with an invite code; callers are responsible for authorization.
+   * `actorId` is who made it happen: the creator inviting, or the person
+   * joining with a code.
    */
   async addMember(
     tripId: string,
     userId: string,
     permission: CreateTripMemberDto['permission'],
+    actorId: string = userId,
   ): Promise<TripMemberResponseDto> {
     if (await this.repository.findByTripAndUser(tripId, userId)) {
       throw new ConflictException('This user is already a member of the trip');
     }
 
-    return TripMemberResponseDto.from(
-      await this.repository.create({ tripId, userId, permission }),
-    );
+    const created = await this.repository.create({
+      tripId,
+      userId,
+      permission,
+    });
+    this.events.publish({
+      type: 'MEMBER_JOINED',
+      tripId,
+      actorId,
+      subjectId: userId,
+      details: { permission },
+    });
+
+    return TripMemberResponseDto.from(created);
   }
 
   async update(
@@ -94,15 +110,32 @@ export class TripMembersService {
     const member = await this.getOrFail(id);
     await this.access.assertIsCreator(member.tripId, user.id);
 
-    return TripMemberResponseDto.from(
-      await this.repository.update(id, { ...dto }),
-    );
+    const updated = await this.repository.update(id, { ...dto });
+    if (updated.permission !== member.permission) {
+      this.events.publish({
+        type: 'MEMBER_PERMISSION_CHANGED',
+        tripId: member.tripId,
+        actorId: user.id,
+        subjectId: member.userId,
+        details: { from: member.permission, to: updated.permission },
+      });
+    }
+
+    return TripMemberResponseDto.from(updated);
   }
 
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
     const member = await this.getOrFail(id);
     await this.access.assertIsCreator(member.tripId, user.id);
     await this.repository.remove(id);
+    this.events.publish({
+      type: 'MEMBER_REMOVED',
+      tripId: member.tripId,
+      actorId: user.id,
+      subjectId: member.userId,
+      // No longer on the trip, but they should hear it.
+      alsoNotify: [member.userId],
+    });
   }
 
   private async getOrFail(id: string) {
