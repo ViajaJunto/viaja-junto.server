@@ -20,12 +20,11 @@ export async function lockActivities(
 ): Promise<void> {
   if (activityIds.length === 0) return;
 
-  // Ordered, so transactions locking several activities cannot deadlock.
-  const ordered = [...new Set(activityIds)].sort();
-
+  // Rows are locked in `ORDER BY id`, so transactions locking several
+  // activities take the locks in the same order and cannot deadlock.
   await tx.$queryRaw`
     SELECT id FROM activity_catalog
-    WHERE id IN (${Prisma.join(ordered)})
+    WHERE id IN (${Prisma.join([...new Set(activityIds)])})
     ORDER BY id
     FOR UPDATE`;
 }
