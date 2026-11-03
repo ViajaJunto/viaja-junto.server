@@ -43,6 +43,7 @@ export class ActivityCatalogService {
         minRating: query.minRating,
         city: query.city,
         country: query.country,
+        destinationId: query.destinationId,
         sort: query.sort,
       },
     );

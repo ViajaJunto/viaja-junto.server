@@ -30,7 +30,7 @@ import {
   ApiNotFound,
 } from '../../../shared/http/decorators/api-resource-responses.decorator.js';
 import { IdParam } from '../../../shared/http/decorators/id-param.decorator.js';
-import { TopDestinationResponseDto } from '../application/dto/top-destination-response.dto.js';
+import { DestinationCatalogDetailsResponseDto } from '../application/dto/destination-catalog-details-response.dto.js';
 import { TopDestinationsQueryDto } from '../application/dto/top-destinations-query.dto.js';
 import { ListDestinationCatalogQueryDto } from '../application/dto/list-destination-catalog-query.dto.js';
 import { CreateDestinationCatalogDto } from '../application/dto/create-destination-catalog.dto.js';
@@ -71,9 +71,9 @@ export class DestinationCatalogController {
   @ApiOperation({
     summary: 'Top rated destinations',
     description:
-      'The best rated destinations, best first, for the home page. A destination is rated by the reviews of the catalog activities located in it (same city, and same country when both are known); destinations without reviews are not listed. Public.',
+      'The best rated destinations, best first, for the home page. A destination is rated by its own reviews, written by travellers who completed a trip there; destinations without reviews are not listed. Public.',
   })
-  @ApiOkResponse({ type: [TopDestinationResponseDto] })
+  @ApiOkResponse({ type: [DestinationCatalogResponseDto] })
   @ApiUnprocessableEntityResponse({
     description: 'Invalid limit.',
     type: ValidationErrorResponseDto,
@@ -81,6 +81,19 @@ export class DestinationCatalogController {
   @Get('top')
   findTop(@Query() query: TopDestinationsQueryDto) {
     return this.service.findTop(query.limit);
+  }
+
+  @ApiOperation({
+    summary: 'Public page of a destination',
+    description:
+      'The destination with its rating, review count and latest reviews (newest first, author name only). Public.',
+  })
+  @ApiIdParam('DestinationCatalog identifier.')
+  @ApiOkResponse({ type: DestinationCatalogDetailsResponseDto })
+  @ApiNotFound('No destination exists with this id.')
+  @Get(':id/details')
+  findDetails(@IdParam() id: string) {
+    return this.service.findDetails(id);
   }
 
   @ApiOperation({

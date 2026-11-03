@@ -83,6 +83,10 @@ export class PlacesService {
   ): Promise<ActivityCatalogResponseDto> {
     await this.access.assertAdmin(user.id);
     const place = await this.findPlace(externalId);
+    const destinationCatalogId = await this.destinations.findIdByCity(
+      place.city,
+      place.country,
+    );
 
     return this.activities.importPlace(
       {
@@ -95,6 +99,7 @@ export class PlacesService {
         latitude: place.latitude,
         longitude: place.longitude,
         source: 'OSM',
+        destinationCatalogId,
       },
       user,
     );

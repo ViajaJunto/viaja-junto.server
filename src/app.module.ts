@@ -20,6 +20,7 @@ import { TripActivitiesModule } from './modules/trip-activities/trip-activities.
 import { BudgetsModule } from './modules/budgets/budgets.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { PlacesModule } from './modules/places/places.module.js';
+import { DestinationReviewsModule } from './modules/destination-reviews/destination-reviews.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { TripExpensesModule } from './modules/trip-expenses/trip-expenses.module.js';
 import { TripEventsModule } from './shared/events/trip-events.module.js';
@@ -41,6 +42,7 @@ import { TripEventsModule } from './shared/events/trip-events.module.js';
     TripActivitiesModule,
     BudgetsModule,
     ReviewsModule,
+    DestinationReviewsModule,
     TripExpensesModule,
     PlacesModule,
     NotificationsModule,

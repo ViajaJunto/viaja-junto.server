@@ -72,6 +72,7 @@ The relational model is composed of the following entities:
 - `trip_activity`
 - `budget`
 - `review`
+- `destination_review`
 
 ### 5.2 Data model summary
 
@@ -82,13 +83,15 @@ trip(#id, name, description, start_date, end_date, status, *created_by->user, cu
 
 trip_member(#id, *trip_id->trip, *user_id->user, permission, joined_at)
 
-destination_catalog(#id, name, country, country_code, category, description, latitude, longitude, photo_url, external_id)
+destination_catalog(#id, name, country, country_code, category, description, latitude, longitude, photo_url, external_id, average_rating, review_count)
 
 trip_destination(#id, *trip_id->trip, *destination_catalog_id->destination_catalog, arrival, departure, description, order)
 
 activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, external_id, source, average_rating, created_at)
 
-activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, review_count, created_at)
+activity_catalog(#id, name, description, activity_type, location, city, country, latitude, longitude, google_place_id, photo_url, source, average_rating, review_count, *destination_catalog_id->destination_catalog?, created_at)
+
+destination_review(#id, *user_id->user, *destination_catalog_id->destination_catalog, rating, comment, created_at; unique user + destination)
 
 trip_activity(#id, *trip_destination_id->trip_destination, *activity_catalog_id->activity_catalog, date_time, duration_minutes, expected_cost, status)
 
@@ -176,6 +179,7 @@ No service or controller is touched.
 | `trip-activities` | `/trip-activities` | `trip_activity` |
 | `budgets` | `/budgets` | `budget` |
 | `reviews` | `/reviews` | `review` |
+| `destination-reviews` | `/destination-reviews` | `destination_review` |
 | `trip-access` | — (no routes) | Trip-level authorization policy shared by the trip modules |
 | `catalog-access` | — (no routes) | Who may change the shared catalogs |
 
@@ -467,19 +471,32 @@ each with the reviewer's name only (never their email or id). The
 `activity_review_count` migration backfills existing rows from their reviews and
 clears any rating that was typed in by hand before.
 
-**Top destinations (FR25).** Decision: a destination's rating is **derived**
-from the reviews of its activities rather than from separate destination
-reviews, so people review one thing (the activity) and the schema keeps a
-single review table. `GET /destination-catalog/top?limit=` (public, default 10,
-maximum 50) lists the best rated destinations, best first. An activity belongs
-to a destination when it is in a city with the destination's name and, if both
-sides state a country, in the same country (case-insensitive, trimmed). The
-rating is the mean of every review given to those activities — the activities'
-averages weighted by their review counts, to two decimals — and ties go to the
-destination with more reviews, then by name. Destinations without reviews are
-not listed. Because the match is by name, a destination's activities need a
-consistent `city`; destination reviews (BR05) can be added later without
-changing this endpoint's contract.
+**Destination reviews and top destinations (FR25, BR05).** A destination (a
+city) and the activities inside it are rated separately. Destinations have
+their own `destination_review` table (rating 1 to 5, optional comment, one per
+user and destination) and their own `destination_catalog.average_rating` /
+`review_count`, derived in the same transaction and under the same kind of row
+lock as the activity ratings (also when a user deletes their account). Only
+someone who **completed a trip with that destination** may review it: the
+caller must have created or joined a trip with status `COMPLETED` whose
+itinerary contains the destination, otherwise `POST /destination-reviews`
+answers 403 (404 for an unknown destination, 409 for a second review). Reading
+reviews is public; only the author may edit or delete. `GET
+/destination-catalog/{id}/details` is the public page: the destination with its
+rating, review count and the 10 latest reviews, author name only.
+`GET /destination-catalog/top?limit=` (public, default 10, maximum 50) lists
+the destinations by their own rating, then by number of reviews, then by name;
+destinations without reviews are not listed. The earlier rating derived from
+the activities' reviews was removed, so a destination has a single rating.
+
+Activities are linked to their destination explicitly through
+`activity_catalog.destination_catalog_id` (nullable, `ON DELETE SET NULL`)
+instead of matching city names. The OSM import fills it when the place's city
+(and country, when both sides state one) matches a catalog destination, and
+`GET /activity-catalog?destinationId=` filters by it. The
+`destination_reviews` migration backfills the link for existing activities with
+the old city/country rule. Activities imported before their destination exists
+stay unlinked until the link is set.
 
 **Catalog search (FR10, FR24).** Both catalogs are searchable by anyone, with
 filters that combine with AND and are ignored when blank:

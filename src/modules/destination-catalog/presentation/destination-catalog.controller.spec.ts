@@ -27,6 +27,8 @@ describe('DestinationCatalogController', () => {
       importPlace: vi.fn(),
       findImported: vi.fn(),
       findTop: vi.fn(),
+      findDetails: vi.fn(),
+      findIdByCity: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
@@ -53,6 +55,12 @@ describe('DestinationCatalogController', () => {
     controller.findOne(id);
 
     expect(service.findOne).toHaveBeenCalledWith(id);
+  });
+
+  it('forwards the id on findDetails', () => {
+    controller.findDetails(id);
+
+    expect(service.findDetails).toHaveBeenCalledWith(id);
   });
 
   it('forwards the body on create', () => {

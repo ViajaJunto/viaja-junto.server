@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsIn,
+  IsUUID,
   IsNumber,
   IsOptional,
   IsString,
@@ -79,6 +80,15 @@ export class ListActivityCatalogQueryDto extends PaginationQueryDto {
   @IsString()
   @MaxLength(100)
   country?: string;
+
+  @ApiPropertyOptional({
+    description: 'Only activities located in this catalog destination.',
+    format: 'uuid',
+    example: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  destinationId?: string;
 
   @ApiPropertyOptional({
     description:

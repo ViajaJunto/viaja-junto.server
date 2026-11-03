@@ -75,6 +75,22 @@ export class DestinationCatalogResponseDto {
   })
   photoUrl!: string | null;
 
+  @ApiProperty({
+    type: Number,
+    description:
+      'Average rating, 1 to 5, from the reviews of travellers who completed a trip here. Null until the first review.',
+    example: 4.7,
+    nullable: true,
+  })
+  averageRating!: number | null;
+
+  @ApiProperty({
+    description: 'How many reviews the average rating is based on.',
+    minimum: 0,
+    example: 38,
+  })
+  reviewCount!: number;
+
   static from(entity: DestinationCatalog): DestinationCatalogResponseDto {
     return {
       id: entity.id,
@@ -86,6 +102,8 @@ export class DestinationCatalogResponseDto {
       latitude: entity.latitude ?? null,
       longitude: entity.longitude ?? null,
       photoUrl: entity.photoUrl ?? null,
+      averageRating: entity.averageRating ?? null,
+      reviewCount: entity.reviewCount,
     };
   }
 }

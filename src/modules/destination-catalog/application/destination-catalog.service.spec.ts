@@ -8,7 +8,10 @@ import type { DestinationCatalog } from '../domain/destination-catalog.entity.js
 import type { DestinationCatalogRepository } from '../domain/destination-catalog.repository.js';
 import type { PhotoStorageService } from '../../../shared/storage/application/photo-storage.service.js';
 import type { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
-import { DestinationCatalogService } from './destination-catalog.service.js';
+import {
+  DestinationCatalogService,
+  LATEST_REVIEWS,
+} from './destination-catalog.service.js';
 
 const base: DestinationCatalog = {
   id: '44444444-4444-4444-8444-444444444444',
@@ -19,6 +22,8 @@ const base: DestinationCatalog = {
   latitude: 48.856614,
   longitude: 2.3522219,
   photoUrl: null,
+  averageRating: null,
+  reviewCount: 0,
 };
 
 const entity = (
@@ -55,6 +60,8 @@ describe('DestinationCatalogService', () => {
       countTripUsages: vi.fn().mockResolvedValue(0),
       findExistingExternalIds: vi.fn().mockResolvedValue([]),
       findTopRated: vi.fn().mockResolvedValue([]),
+      findLatestReviews: vi.fn().mockResolvedValue([]),
+      findIdByCity: vi.fn().mockResolvedValue(null),
       remove: vi.fn(),
     };
     access = {
@@ -150,16 +157,16 @@ describe('DestinationCatalogService', () => {
   });
 
   describe('findTop', () => {
-    it('maps the best rated destinations with their rating', async () => {
+    it('maps the best rated destinations with their own rating', async () => {
       repository.findTopRated.mockResolvedValue([
-        { ...entity(), rating: 4.7, reviewCount: 38 },
-        { ...entity({ id: 'second' }), rating: 4.1, reviewCount: 3 },
+        entity({ averageRating: 4.7, reviewCount: 38 }),
+        entity({ id: 'second', averageRating: 4.1, reviewCount: 3 }),
       ]);
 
       const result = await service.findTop(5);
 
       expect(repository.findTopRated).toHaveBeenCalledWith(5);
-      expect(result.map((d) => [d.rating, d.reviewCount])).toEqual([
+      expect(result.map((d) => [d.averageRating, d.reviewCount])).toEqual([
         [4.7, 38],
         [4.1, 3],
       ]);
@@ -168,6 +175,68 @@ describe('DestinationCatalogService', () => {
 
     it('returns an empty list when nothing is rated yet', async () => {
       await expect(service.findTop(10)).resolves.toEqual([]);
+    });
+  });
+
+  describe('findDetails', () => {
+    it('returns the destination with its latest reviews', async () => {
+      repository.findById.mockResolvedValue(
+        entity({ averageRating: 4.5, reviewCount: 2 }),
+      );
+      repository.findLatestReviews.mockResolvedValue([
+        {
+          id: 'r1',
+          rating: 5,
+          comment: 'Lovely',
+          createdAt: new Date('2026-08-02T00:00:00Z'),
+          authorName: 'Ana',
+        },
+      ]);
+
+      const result = await service.findDetails(base.id);
+
+      expect(repository.findLatestReviews).toHaveBeenCalledWith(
+        base.id,
+        LATEST_REVIEWS,
+      );
+      expect(result).toMatchObject({ averageRating: 4.5, reviewCount: 2 });
+      expect(result.latestReviews).toEqual([
+        expect.objectContaining({ authorName: 'Ana', rating: 5 }),
+      ]);
+      expect(result.latestReviews[0]).not.toHaveProperty('email');
+    });
+
+    it('throws NotFoundException for an unknown destination', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(service.findDetails(base.id)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('findIdByCity', () => {
+    it('looks the destination up by the trimmed city and country', async () => {
+      repository.findIdByCity.mockResolvedValue(base.id);
+
+      await expect(service.findIdByCity(' Paris ', ' Franca ')).resolves.toBe(
+        base.id,
+      );
+      expect(repository.findIdByCity).toHaveBeenCalledWith('Paris', 'Franca');
+    });
+
+    it('does not look anything up for a place without a city', async () => {
+      await expect(
+        service.findIdByCity(undefined, 'Franca'),
+      ).resolves.toBeNull();
+      await expect(service.findIdByCity('  ', null)).resolves.toBeNull();
+      expect(repository.findIdByCity).not.toHaveBeenCalled();
+    });
+
+    it('matches on the city alone when the country is unknown', async () => {
+      await service.findIdByCity('Paris', null);
+
+      expect(repository.findIdByCity).toHaveBeenCalledWith('Paris', undefined);
     });
   });
 

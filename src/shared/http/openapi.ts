@@ -67,6 +67,10 @@ export function buildOpenApiConfig() {
     )
     .addTag('Reviews', 'Community ratings of catalogue activities.')
     .addTag(
+      'Destination Reviews',
+      'Ratings of destinations, written by travellers who completed a trip there.',
+    )
+    .addTag(
       'Notifications',
       'In-app notifications about changes on a user’s trips.',
     )

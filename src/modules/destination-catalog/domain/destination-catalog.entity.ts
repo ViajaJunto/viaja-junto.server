@@ -1,12 +1,4 @@
 // Domain entity — no framework and no ORM dependency.
-/** A destination with the rating derived from the reviews of its activities. */
-export interface RatedDestination extends DestinationCatalog {
-  /** Average rating, 1 to 5, weighted by how many reviews each activity has. */
-  rating: number;
-  /** Reviews the rating is based on. */
-  reviewCount: number;
-}
-
 export interface DestinationCatalog {
   id: string;
   name: string;
@@ -20,4 +12,8 @@ export interface DestinationCatalog {
   photoUrl?: string | null;
   /** Id in the external places provider (`osm:node:123`) when imported. */
   externalId?: string | null;
+  /** Derived from the destination's own reviews; never set through the API. */
+  averageRating?: number | null;
+  /** How many reviews the average is based on. */
+  reviewCount: number;
 }

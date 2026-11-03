@@ -32,7 +32,12 @@ const DESTINATIONS = [
   },
 ];
 
-const CONTENT_TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const CONTENT_TYPES = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+};
 
 function storageFromEnv() {
   const bucket = process.env.S3_BUCKET;
