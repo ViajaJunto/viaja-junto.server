@@ -7,7 +7,8 @@ import {
 } from '../../domain/points-of-interest.provider.js';
 
 export const DEFAULT_ACTIVITIES_LIMIT = 10;
-export const MAX_ACTIVITIES_LIMIT = 30;
+/** Google Places returns at most 20 places per search. */
+export const MAX_ACTIVITIES_LIMIT = 20;
 
 /** Query string of `GET /destination-catalog/:id/activities`. */
 export class DestinationActivitiesQueryDto {

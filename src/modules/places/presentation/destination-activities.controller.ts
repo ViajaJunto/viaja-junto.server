@@ -34,7 +34,7 @@ export class DestinationActivitiesController {
   @ApiOperation({
     summary: 'Activities of a destination',
     description:
-      'Answers from the catalog. When it has fewer than `limit` activities of that type around the destination, looks for more in OpenStreetMap (Overpass), within 10 km of the destination’s coordinates, adds them to the catalog and answers with them. If OpenStreetMap is unavailable, answers with what the catalog has. Data © OpenStreetMap contributors.',
+      'Answers from the catalog. When it has fewer than `limit` activities of that type around the destination, asks Google Places for the most popular ones within a radius of the destination’s coordinates (10 km for tours, 5 km for lodging, 3 km for food), copies their name, position and first photo into the catalog, linked to the destination, and answers with them. If Google Places is unavailable, answers with what the catalog has. Show the `attribution` with the data.',
   })
   @ApiIdParam('DestinationCatalog identifier.')
   @ApiOkResponse({ type: DestinationActivitiesResponseDto })
@@ -45,17 +45,17 @@ export class DestinationActivitiesController {
   })
   @ApiServiceUnavailableResponse({
     description:
-      'The places service is not configured, or OpenStreetMap is limiting our requests, and the catalog had nothing to show.',
+      'The places service is not configured, or Google Places is limiting our requests, and the catalog had nothing to show.',
     type: ErrorResponseDto,
   })
   @ApiBadGatewayResponse({
     description:
-      'OpenStreetMap is unreachable and the catalog had nothing to show.',
+      'Google Places is unreachable and the catalog had nothing to show.',
     type: ErrorResponseDto,
   })
   @ApiGatewayTimeoutResponse({
     description:
-      'OpenStreetMap did not answer in time and the catalog had nothing to show.',
+      'Google Places did not answer in time and the catalog had nothing to show.',
     type: ErrorResponseDto,
   })
   @ApiAuthenticated()

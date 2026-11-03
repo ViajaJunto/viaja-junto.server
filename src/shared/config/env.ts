@@ -124,26 +124,14 @@ const envSchema = z.object({
   // Give up on the provider after this long, in milliseconds.
   PLACES_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
 
-  // Overpass API (OpenStreetMap points of interest), used to find the
-  // activities around a destination. Needs PLACES_USER_AGENT too.
-  // Comma-separated list, tried in order: when a public server is at capacity
-  // the next one answers.
-  OVERPASS_URL: z
-    .string()
-    .default(
-      'https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter',
-    )
-    .transform((value) =>
-      value
-        .split(',')
-        .map((url) => url.trim())
-        .filter(Boolean),
-    )
-    .pipe(z.array(z.url()).min(1)),
+  // ── Google Places (activities around a destination) ──────────────────
+  // Optional: without a key the API still boots and finding the activities of
+  // a destination answers 503 when the catalog has too few. Needs the Places
+  // API (New) enabled and billing on in the Google Cloud project.
+  GOOGLE_PLACES_API_KEY: optionalString,
 
-  // Give up on Overpass after this long, in milliseconds (queries are slower
-  // than geocoding).
-  OVERPASS_TIMEOUT_MS: z.coerce.number().int().positive().default(90000),
+  // Give up on Google Places after this long, in milliseconds.
+  GOOGLE_PLACES_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
 
   // ── Object storage (S3) ──────────────────────────────────────────────── ────────────────────────────────────────────────
   // Optional: without S3_BUCKET the API still boots and photo uploads answer

@@ -23,14 +23,30 @@ export const SEARCH_RADIUS_METERS: Record<PoiCategory, number> = {
 };
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+/** What must be shown with places from each source. */
+const GOOGLE_ATTRIBUTION = 'Powered by Google';
+
+/** The credits the answer needs: Google for its places, OpenStreetMap for the ones imported from there. */
+export function attributionFor(
+  activities: { source: string | null }[],
+): string {
+  const sources = new Set(activities.map(({ source }) => source));
+  const credits = [
+    sources.has('GOOGLE') ? GOOGLE_ATTRIBUTION : null,
+    sources.has('OSM') ? OSM_ATTRIBUTION : null,
+  ].filter(Boolean);
+
+  return credits.length > 0 ? credits.join(' · ') : GOOGLE_ATTRIBUTION;
+}
+
 /**
  * The activities of a destination: the catalog first and, only when it does
- * not have enough, OpenStreetMap (Overpass). What is fetched is added to the
+ * not have enough, Google Places. What is fetched is added to the
  * catalog, so the next request is answered from the database.
  */
 @Injectable()
 export class ActivityDiscoveryService {
-  /** The limit already searched for a destination + type, so a small city does not hit Overpass on every request. */
+  /** The limit already searched for a destination + type, so a small city does not hit Google Places on every request. */
   private readonly searched = new TtlCache<number>(ONE_DAY_MS, 1000);
 
   constructor(
@@ -55,7 +71,11 @@ export class ActivityDiscoveryService {
     const answer = (
       page: Awaited<ReturnType<typeof fromCatalog>>,
       imported: number,
-    ) => ({ data: page.data, imported, attribution: OSM_ATTRIBUTION });
+    ) => ({
+      data: page.data,
+      imported,
+      attribution: attributionFor(page.data),
+    });
 
     const known = await fromCatalog();
     const searchKey = `${destinationId}:${type}`;
@@ -78,7 +98,7 @@ export class ActivityDiscoveryService {
           longitude: destination.longitude as number,
           radiusMeters: SEARCH_RADIUS_METERS[type],
           category: type,
-          limit: limit * 3,
+          limit,
         }),
       );
     } catch (error) {
@@ -98,7 +118,9 @@ export class ActivityDiscoveryService {
         country: destination.country,
         latitude: place.latitude,
         longitude: place.longitude,
-        source: 'OSM',
+        source: place.source ?? 'OSM',
+        googlePlaceId: place.googlePlaceId ?? null,
+        photoUrl: place.photoUrl ?? null,
         destinationCatalogId: destinationId,
       })),
       destinationId,

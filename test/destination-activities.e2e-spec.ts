@@ -27,11 +27,14 @@ describe('Activities of a destination (e2e)', () => {
   // Each test gets its own places: the external id is unique across the catalog.
   let batch = 0;
   const place = (n: number) => ({
-    externalId: `osm:node:8${run}${batch}${n}`,
+    externalId: `google:8${run}${batch}${n}`,
     name: `Attraction ${run} ${n}`,
     displayName: `Attraction ${n}`,
-    kind: 'tourism',
+    kind: 'google',
     subtype: 'museum',
+    source: 'GOOGLE' as const,
+    googlePlaceId: `g${run}${batch}${n}`,
+    photoUrl: `https://lh3.example/${n}.jpg`,
     city: null,
     country: null,
     countryCode: null,
@@ -73,7 +76,7 @@ describe('Activities of a destination (e2e)', () => {
 
   afterAll(async () => {
     await prisma.activityCatalog.deleteMany({
-      where: { externalId: { startsWith: `osm:node:8${run}` } },
+      where: { externalId: { startsWith: `google:8${run}` } },
     });
     await data.dispose();
     await nest.close();
@@ -103,14 +106,16 @@ describe('Activities of a destination (e2e)', () => {
     });
     expect(first.body).toMatchObject({
       imported: 3,
-      attribution: '© OpenStreetMap contributors',
+      attribution: 'Powered by Google',
     });
     expect(first.body.data).toHaveLength(3);
     expect(first.body.data[0]).toMatchObject({
       destinationId: destination.id,
       type: 'TOUR',
       country: 'França',
-      source: 'OSM',
+      source: 'GOOGLE',
+      googlePlaceId: expect.any(String),
+      photoUrl: expect.stringContaining('https://lh3.example/'),
     });
 
     const second = await get(
@@ -183,7 +188,7 @@ describe('Activities of a destination (e2e)', () => {
       `/destination-catalog/${destination.id}/activities?type=OTHER`,
     ).expect(422);
     await get(
-      `/destination-catalog/${destination.id}/activities?limit=31`,
+      `/destination-catalog/${destination.id}/activities?limit=21`,
     ).expect(422);
     await get(`/destination-catalog/${randomUUID()}/activities`).expect(404);
   });

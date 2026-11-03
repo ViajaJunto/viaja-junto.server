@@ -6,6 +6,7 @@ import { PlacesProviderError } from '../domain/places.provider.js';
 import type { PointsOfInterestProvider } from '../domain/points-of-interest.provider.js';
 import {
   ActivityDiscoveryService,
+  attributionFor,
   SEARCH_RADIUS_METERS,
 } from './activity-discovery.service.js';
 
@@ -92,7 +93,7 @@ describe('ActivityDiscoveryService', () => {
       longitude: 2.35,
       radiusMeters: SEARCH_RADIUS_METERS.TOUR,
       category: 'TOUR',
-      limit: 15,
+      limit: 5,
     });
     expect(activities.importDiscovered).toHaveBeenCalledWith(
       [
@@ -102,15 +103,14 @@ describe('ActivityDiscoveryService', () => {
           city: 'Paris',
           country: 'França',
           source: 'OSM',
+          googlePlaceId: null,
+          photoUrl: null,
           destinationCatalogId: 'dest-paris',
         }),
       ],
       'dest-paris',
     );
-    expect(result).toMatchObject({
-      imported: 1,
-      attribution: '© OpenStreetMap contributors',
-    });
+    expect(result).toMatchObject({ imported: 1 });
     expect(result.data).toHaveLength(1);
   });
 
@@ -120,6 +120,30 @@ describe('ActivityDiscoveryService', () => {
     await service.findForDestination('dest-paris', { type: 'FOOD', limit: 5 });
 
     expect(provider.findNear).toHaveBeenCalledTimes(2);
+  });
+
+  it('stores the Google id, the photo and the source of a Google place', async () => {
+    provider.findNear.mockResolvedValue([
+      {
+        ...louvre,
+        source: 'GOOGLE',
+        googlePlaceId: 'g1',
+        photoUrl: 'https://lh3.example/p.jpg',
+      },
+    ]);
+
+    await service.findForDestination('dest-paris', { type: 'TOUR', limit: 5 });
+
+    expect(activities.importDiscovered).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          source: 'GOOGLE',
+          googlePlaceId: 'g1',
+          photoUrl: 'https://lh3.example/p.jpg',
+        }),
+      ],
+      'dest-paris',
+    );
   });
 
   it('searches a smaller area for restaurants and hotels', async () => {
@@ -213,5 +237,22 @@ describe('ActivityDiscoveryService', () => {
       service.findForDestination('nope', { type: 'TOUR', limit: 5 }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(activities.findAll).not.toHaveBeenCalled();
+  });
+});
+
+describe('attributionFor', () => {
+  it('credits Google for its places and OpenStreetMap for the ones imported from there', () => {
+    expect(attributionFor([{ source: 'GOOGLE' }])).toBe('Powered by Google');
+    expect(attributionFor([{ source: 'OSM' }])).toBe(
+      '© OpenStreetMap contributors',
+    );
+    expect(attributionFor([{ source: 'OSM' }, { source: 'GOOGLE' }])).toBe(
+      'Powered by Google · © OpenStreetMap contributors',
+    );
+  });
+
+  it('credits Google when there is nothing to show yet', () => {
+    expect(attributionFor([])).toBe('Powered by Google');
+    expect(attributionFor([{ source: null }])).toBe('Powered by Google');
   });
 });

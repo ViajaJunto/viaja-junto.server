@@ -10,7 +10,7 @@ import { NominatimProvider } from './infrastructure/nominatim.provider.js';
 import { UnconfiguredPlacesProvider } from './infrastructure/unconfigured-places.provider.js';
 import { ActivityDiscoveryService } from './application/activity-discovery.service.js';
 import { PointsOfInterestProvider } from './domain/points-of-interest.provider.js';
-import { OverpassProvider } from './infrastructure/overpass.provider.js';
+import { GooglePlacesProvider } from './infrastructure/google-places.provider.js';
 import { UnconfiguredPointsOfInterestProvider } from './infrastructure/unconfigured-points-of-interest.provider.js';
 import { DestinationActivitiesController } from './presentation/destination-activities.controller.js';
 import { PlacesController } from './presentation/places.controller.js';
@@ -29,11 +29,10 @@ import { PlacesController } from './presentation/places.controller.js';
     {
       provide: PointsOfInterestProvider,
       useFactory: (): PointsOfInterestProvider =>
-        env.PLACES_USER_AGENT
-          ? new OverpassProvider({
-              urls: env.OVERPASS_URL,
-              userAgent: env.PLACES_USER_AGENT,
-              timeoutMs: env.OVERPASS_TIMEOUT_MS,
+        env.GOOGLE_PLACES_API_KEY
+          ? new GooglePlacesProvider({
+              apiKey: env.GOOGLE_PLACES_API_KEY,
+              timeoutMs: env.GOOGLE_PLACES_TIMEOUT_MS,
             })
           : new UnconfiguredPointsOfInterestProvider(),
     },

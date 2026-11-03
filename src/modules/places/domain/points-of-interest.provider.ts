@@ -21,7 +21,7 @@ export interface NearbySearch {
 
 /**
  * Port to a service that lists points of interest around a coordinate
- * (OpenStreetMap through Overpass today). Unlike `PlacesProvider`, which
+ * (Google Places today). Unlike `PlacesProvider`, which
  * looks a named place up, this one answers "what is there to do around here".
  */
 export abstract class PointsOfInterestProvider {
