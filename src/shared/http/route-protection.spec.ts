@@ -13,6 +13,7 @@ import { BudgetSummaryController } from '../../modules/budgets/presentation/budg
 import { BudgetsController } from '../../modules/budgets/presentation/budgets.controller.js';
 import { DestinationCatalogController } from '../../modules/destination-catalog/presentation/destination-catalog.controller.js';
 import { NotificationsController } from '../../modules/notifications/presentation/notifications.controller.js';
+import { DestinationActivitiesController } from '../../modules/places/presentation/destination-activities.controller.js';
 import { PlacesController } from '../../modules/places/presentation/places.controller.js';
 import { DestinationReviewsController } from '../../modules/destination-reviews/presentation/destination-reviews.controller.js';
 import { ReviewsController } from '../../modules/reviews/presentation/reviews.controller.js';
@@ -38,6 +39,7 @@ const controllers: Controller[] = [
   DestinationCatalogController,
   NotificationsController,
   PlacesController,
+  DestinationActivitiesController,
   ReviewsController,
   DestinationReviewsController,
   TripActivitiesController,

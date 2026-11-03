@@ -498,6 +498,41 @@ instead of matching city names. The OSM import fills it when the place's city
 the old city/country rule. Activities imported before their destination exists
 stay unlinked until the link is set.
 
+**Activities of a destination (catalog first, then Google Places).**
+Nominatim finds named places but is poor at "what is there to do here", so the
+activities around a destination come from Google Places API (New).
+`GET /destination-catalog/{id}/activities?type=&limit=` (any signed-in user,
+strict rate limit; `type` is `TOUR` by default, or `FOOD`/`LODGING`; `limit`
+10 by default, 20 at most, which is what one Google search returns) answers
+from `activity_catalog` when the destination already has `limit` activities of
+that type. Otherwise it asks Google for the most popular places of that kind
+around the destination's coordinates (10 km for tours, 5 km for lodging, 3 km
+for food), copies their name, address, position, Google place id and first
+photo into the catalog linked to the destination (`source` `GOOGLE`,
+`google:<placeId>` as external id, so a place is never stored twice) and
+answers with the catalog's best rated ones. The next request is then served
+from the database. A destination + type that was searched is not searched again
+for 24 hours (in memory) unless a larger `limit` is asked for, a destination
+without coordinates is answered from the catalog only, and if Google fails the
+catalog's answer is returned when it has anything (502/503/504 otherwise).
+This is the one place where a non-admin request adds rows to the shared
+catalog, which is why it is limited to results for a known destination.
+
+The port is `PointsOfInterestProvider`; `GooglePlacesProvider` sends the API
+key in the `X-Goog-Api-Key` header, never in a URL, so it cannot end up in a
+stored photo link, and fetches the photo URL with `skipHttpRedirect` (one
+extra call per place, a failed photo only leaves the place without one).
+`GOOGLE_PLACES_API_KEY` enables it (without it the endpoint answers 503 when
+the catalog has too few) and `GOOGLE_PLACES_TIMEOUT_MS` sets the timeout. The
+Places API (New) must be enabled and billing turned on in the Google Cloud
+project; every search and every photo is a billed request, which is why the
+catalog is read first. Google's terms restrict storing its content beyond the
+place id, and the catalog does keep copies of name, position and photo URL; this
+was a conscious choice for a course project, and the answer carries
+`attribution` ("Powered by Google", plus the OpenStreetMap credit for places
+imported from there) to be shown with the data. Rating fields are not copied:
+the catalog's own `average_rating` comes only from our users' reviews.
+
 **Catalog search (FR10, FR24).** Both catalogs are searchable by anyone, with
 filters that combine with AND and are ignored when blank:
 `GET /destination-catalog?q=&country=&category=` (`q` is a case-insensitive

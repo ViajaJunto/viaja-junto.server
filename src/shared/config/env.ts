@@ -124,6 +124,15 @@ const envSchema = z.object({
   // Give up on the provider after this long, in milliseconds.
   PLACES_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
 
+  // ── Google Places (activities around a destination) ──────────────────
+  // Optional: without a key the API still boots and finding the activities of
+  // a destination answers 503 when the catalog has too few. Needs the Places
+  // API (New) enabled and billing on in the Google Cloud project.
+  GOOGLE_PLACES_API_KEY: optionalString,
+
+  // Give up on Google Places after this long, in milliseconds.
+  GOOGLE_PLACES_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+
   // ── Object storage (S3) ──────────────────────────────────────────────── ────────────────────────────────────────────────
   // Optional: without S3_BUCKET the API still boots and photo uploads answer
   // 503. Credentials are never read from here — the AWS SDK resolves them

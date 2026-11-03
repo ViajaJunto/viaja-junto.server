@@ -6,9 +6,11 @@ import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module.js';
 import { env } from './shared/config/env.js';
 import { configureHttp } from './shared/http/configure-http.js';
+import { allowSlowConnectAttempts } from './shared/http/network.js';
 import { buildOpenApiConfig } from './shared/http/openapi.js';
 
 async function bootstrap() {
+  allowSlowConnectAttempts();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   configureHttp(app);
