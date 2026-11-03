@@ -153,7 +153,7 @@ deploy_app() {
 # API without DATABASE_URL. Registering the same task definition again through
 # the ECS API, with the secret's ARN, restores what the template declares.
 fix_task_secrets() {
-  log "ECS: registering the task definition with its secret (MiniStack workaround)"
+  log "ECS: registering the task definition with its secrets and S3 credentials (MiniStack workaround)"
   local db_arn app_arn td_file="$OUT/taskdef.json"
   db_arn=$(awsl secretsmanager describe-secret --secret-id viajajunto/database-url \
     --query ARN --output text)
@@ -174,6 +174,17 @@ fix_task_secrets() {
       c.secrets = [
         { name: "DATABASE_URL", valueFrom: process.env.DB_ARN },
         app("GOOGLE_CLIENT_ID"), app("GOOGLE_CLIENT_SECRET"), app("JWT_SECRET"),
+      ];
+      // MiniStack serves the task-role credentials on a plain-http, non-loopback
+      // URL (http://<ministack-ip>:4566/v2/credentials/...), which the AWS SDK v3
+      // refuses ("URL not accepted"), so every S3 call from the API failed with
+      // 500. Static dummy keys take precedence in the SDK credential chain. On
+      // AWS the task role is served from 169.254.170.2 and this is not needed.
+      c.environment = [
+        ...(c.environment ?? []).filter(
+          (e) => e.name !== "AWS_ACCESS_KEY_ID" && e.name !== "AWS_SECRET_ACCESS_KEY"),
+        { name: "AWS_ACCESS_KEY_ID", value: "test" },
+        { name: "AWS_SECRET_ACCESS_KEY", value: "test" },
       ];
       // CloudFormation parameters arrive as strings; the ECS API wants numbers.
       for (const p of c.portMappings ?? [])

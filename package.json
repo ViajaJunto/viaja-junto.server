@@ -41,6 +41,7 @@
     "aws:deploy": "bash infra/deploy.sh",
     "aws:status": "bash infra/status.sh",
     "aws:destroy": "bash infra/destroy.sh",
+    "aws:demo": "bash infra/demo.sh",
     "aws:down": "docker compose --profile aws rm --stop --force ministack"
   },
   "dependencies": {

@@ -530,6 +530,7 @@ for real AWS; `deploy.sh` compensates where MiniStack diverges:
 | `AWS::RDS::DBInstance` in a template is metadata only — no database starts | The instance is created through the RDS API, and its endpoint is passed to `app.yaml` as a parameter |
 | The CloudFormation provisioner drops `Secrets` from `AWS::ECS::TaskDefinition`, and `Ref` on a secret returns its name instead of its ARN | After the stack is created, the same task definition is registered again through the ECS API with the secret ARN, and the service is redeployed |
 | MiniStack is reached by IP from task containers, where bucket subdomains cannot resolve | The task sets `S3_FORCE_PATH_STYLE=true` (harmless on AWS) |
+| Task-role credentials are served on a plain-http, non-loopback URL, which the AWS SDK v3 rejects, so S3 calls from the API fail | The re-registered task definition also gets dummy `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, which take precedence in the SDK chain |
 
 Neither workaround is needed on AWS; both are isolated in `deploy.sh` and
 marked as such.
