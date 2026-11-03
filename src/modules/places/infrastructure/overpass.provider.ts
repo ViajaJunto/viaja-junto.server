@@ -4,6 +4,7 @@ import {
   PointsOfInterestProvider,
   type NearbySearch,
 } from '../domain/points-of-interest.provider.js';
+import { causeOf } from './network-error.js';
 import { MinIntervalLimiter } from './min-interval-limiter.js';
 import { buildOverpassQuery } from './overpass-query.js';
 import { TtlCache } from './ttl-cache.js';
@@ -105,7 +106,7 @@ export class OverpassProvider implements PointsOfInterestProvider {
       }
       throw new PlacesProviderError(
         'unavailable',
-        'Overpass could not be reached',
+        `Overpass could not be reached${causeOf(error)}`,
       );
     }
 

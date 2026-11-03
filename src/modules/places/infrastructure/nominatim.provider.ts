@@ -3,6 +3,7 @@ import {
   PlacesProviderError,
   type ExternalPlace,
 } from '../domain/places.provider.js';
+import { causeOf } from './network-error.js';
 import { MinIntervalLimiter } from './min-interval-limiter.js';
 import { TtlCache } from './ttl-cache.js';
 
@@ -124,7 +125,7 @@ export class NominatimProvider implements PlacesProvider {
       }
       throw new PlacesProviderError(
         'unavailable',
-        'The places provider could not be reached',
+        `The places provider could not be reached${causeOf(error)}`,
       );
     }
 
