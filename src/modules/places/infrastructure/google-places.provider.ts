@@ -15,7 +15,12 @@ export interface GooglePlacesOptions {
   fetch?: typeof fetch;
 }
 
-/** Table A place types of Places API (New) for each kind of activity. */
+/**
+ * Table A place types of Places API (New) for each kind of activity. Tours
+ * match any of a place's types (a landmark is also a "tourist_attraction");
+ * food and lodging match the main type only, or every department store with a
+ * café and every hotel with a restaurant would be listed as a restaurant.
+ */
 const TYPES: Record<PoiCategory, string[]> = {
   TOUR: [
     'tourist_attraction',
@@ -82,7 +87,8 @@ export class GooglePlacesProvider implements PointsOfInterestProvider {
         'Content-Type': 'application/json',
       },
       JSON.stringify({
-        includedTypes: TYPES[search.category],
+        [search.category === 'TOUR' ? 'includedTypes' : 'includedPrimaryTypes']:
+          TYPES[search.category],
         maxResultCount: Math.min(search.limit, GOOGLE_MAX_RESULTS),
         rankPreference: 'POPULARITY',
         languageCode: 'pt-BR',

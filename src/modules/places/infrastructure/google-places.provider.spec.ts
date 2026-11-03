@@ -67,6 +67,7 @@ describe('GooglePlacesProvider', () => {
     expect(headers['X-Goog-Api-Key']).toBe('secret-key');
     expect(headers['X-Goog-FieldMask']).toContain('places.displayName');
     expect(JSON.parse(init.body as string)).toEqual({
+      // Tours match any type of the place; food and lodging only its main type.
       includedTypes: expect.arrayContaining(['museum', 'tourist_attraction']),
       maxResultCount: 5,
       rankPreference: 'POPULARITY',
@@ -170,7 +171,8 @@ describe('GooglePlacesProvider', () => {
       (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
         .body as string,
     );
-    expect(sent.includedTypes).toContain(type);
+    expect(sent.includedPrimaryTypes).toContain(type);
+    expect(sent.includedTypes).toBeUndefined();
   });
 
   it('answers an empty list when Google finds nothing (the body has no places)', async () => {
