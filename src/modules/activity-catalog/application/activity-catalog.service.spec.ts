@@ -63,6 +63,8 @@ describe('ActivityCatalogService', () => {
       countTripUsages: vi.fn().mockResolvedValue(0),
       findExistingExternalIds: vi.fn().mockResolvedValue([]),
       findLatestReviews: vi.fn().mockResolvedValue([]),
+      createManyIfAbsent: vi.fn().mockResolvedValue(0),
+      linkToDestination: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn(),
     };
     access = {
@@ -410,6 +412,33 @@ describe('ActivityCatalogService', () => {
       await service.remove(base.id, user);
 
       expect(repository.countTripUsages).toHaveBeenCalledWith(base.id);
+    });
+  });
+
+  describe('importDiscovered', () => {
+    const place = {
+      externalId: 'osm:node:1',
+      name: 'Louvre',
+      type: 'TOUR' as const,
+    };
+
+    it('adds the new places and links them all to the destination, without being admin', async () => {
+      repository.createManyIfAbsent.mockResolvedValue(1);
+
+      const count = await service.importDiscovered([place], 'dest-1');
+
+      expect(count).toBe(1);
+      expect(repository.createManyIfAbsent).toHaveBeenCalledWith([place]);
+      expect(repository.linkToDestination).toHaveBeenCalledWith(
+        ['osm:node:1'],
+        'dest-1',
+      );
+      expect(access.assertAdmin).not.toHaveBeenCalled();
+    });
+
+    it('does nothing for an empty list', async () => {
+      await expect(service.importDiscovered([], 'dest-1')).resolves.toBe(0);
+      expect(repository.createManyIfAbsent).not.toHaveBeenCalled();
     });
   });
 

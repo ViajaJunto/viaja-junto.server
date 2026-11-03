@@ -66,6 +66,27 @@ export class ActivityCatalogPrismaRepository implements ActivityCatalogRepositor
     return rows.flatMap(({ externalId }) => externalId ?? []);
   }
 
+  async createManyIfAbsent(
+    data: (CreateActivityCatalogData & { externalId: string })[],
+  ): Promise<number> {
+    const { count } = await this.prisma.activityCatalog.createMany({
+      data,
+      skipDuplicates: true,
+    });
+
+    return count;
+  }
+
+  async linkToDestination(
+    externalIds: string[],
+    destinationId: string,
+  ): Promise<void> {
+    await this.prisma.activityCatalog.updateMany({
+      where: { externalId: { in: externalIds }, destinationCatalogId: null },
+      data: { destinationCatalogId: destinationId },
+    });
+  }
+
   async findLatestReviews(
     activityId: string,
     limit: number,

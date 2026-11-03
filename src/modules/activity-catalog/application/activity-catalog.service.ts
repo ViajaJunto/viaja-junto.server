@@ -100,6 +100,27 @@ export class ActivityCatalogService {
     return ActivityCatalogResponseDto.from(await this.repository.create(data));
   }
 
+  /**
+   * Adds places found around a destination, linked to it. It is not an admin
+   * action: the caller already decided to fetch them, and places that are
+   * already in the catalog are left as they are (only their link is filled in).
+   * Returns how many were new.
+   */
+  async importDiscovered(
+    places: (CreateActivityCatalogData & { externalId: string })[],
+    destinationId: string,
+  ): Promise<number> {
+    if (places.length === 0) return 0;
+
+    const created = await this.repository.createManyIfAbsent(places);
+    await this.repository.linkToDestination(
+      places.map((place) => place.externalId),
+      destinationId,
+    );
+
+    return created;
+  }
+
   /** Which of these external ids are already in the catalog. */
   findImported(externalIds: string[]): Promise<string[]> {
     return this.repository.findExistingExternalIds(externalIds);

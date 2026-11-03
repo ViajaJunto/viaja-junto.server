@@ -8,6 +8,11 @@ import { PlacesService } from './application/places.service.js';
 import { PlacesProvider } from './domain/places.provider.js';
 import { NominatimProvider } from './infrastructure/nominatim.provider.js';
 import { UnconfiguredPlacesProvider } from './infrastructure/unconfigured-places.provider.js';
+import { ActivityDiscoveryService } from './application/activity-discovery.service.js';
+import { PointsOfInterestProvider } from './domain/points-of-interest.provider.js';
+import { OverpassProvider } from './infrastructure/overpass.provider.js';
+import { UnconfiguredPointsOfInterestProvider } from './infrastructure/unconfigured-points-of-interest.provider.js';
+import { DestinationActivitiesController } from './presentation/destination-activities.controller.js';
 import { PlacesController } from './presentation/places.controller.js';
 
 @Module({
@@ -17,9 +22,21 @@ import { PlacesController } from './presentation/places.controller.js';
     ActivityCatalogModule,
     DestinationCatalogModule,
   ],
-  controllers: [PlacesController],
+  controllers: [PlacesController, DestinationActivitiesController],
   providers: [
     PlacesService,
+    ActivityDiscoveryService,
+    {
+      provide: PointsOfInterestProvider,
+      useFactory: (): PointsOfInterestProvider =>
+        env.PLACES_USER_AGENT
+          ? new OverpassProvider({
+              url: env.OVERPASS_URL,
+              userAgent: env.PLACES_USER_AGENT,
+              timeoutMs: env.OVERPASS_TIMEOUT_MS,
+            })
+          : new UnconfiguredPointsOfInterestProvider(),
+    },
     {
       provide: PlacesProvider,
       useFactory: (): PlacesProvider => {

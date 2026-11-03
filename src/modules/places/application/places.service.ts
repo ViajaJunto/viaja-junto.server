@@ -1,23 +1,17 @@
-import {
-  BadGatewayException,
-  GatewayTimeoutException,
-  Injectable,
-  NotFoundException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { ActivityCatalogService } from '../../activity-catalog/application/activity-catalog.service.js';
 import { ActivityCatalogResponseDto } from '../../activity-catalog/application/dto/activity-catalog-response.dto.js';
 import { CatalogAccessService } from '../../catalog-access/application/catalog-access.service.js';
 import { DestinationCatalogService } from '../../destination-catalog/application/destination-catalog.service.js';
 import { DestinationCatalogResponseDto } from '../../destination-catalog/application/dto/destination-catalog-response.dto.js';
+import { callProvider } from './provider-errors.js';
 import {
   inferActivityType,
   inferDestinationCategory,
 } from '../domain/place-mapping.js';
 import {
   PlacesProvider,
-  PlacesProviderError,
   type ExternalPlace,
 } from '../domain/places.provider.js';
 import {
@@ -47,7 +41,7 @@ export class PlacesService {
     user: AuthenticatedUser,
   ): Promise<PlaceSearchResponseDto> {
     await this.access.assertAdmin(user.id);
-    const places = await this.callProvider(() =>
+    const places = await callProvider(() =>
       this.provider.search(query.q, query.limit),
     );
 
@@ -128,32 +122,12 @@ export class PlacesService {
 
   /** The place, fetched again from the provider: only the id comes from the client. */
   private async findPlace(externalId: string): Promise<ExternalPlace> {
-    const place = await this.callProvider(() =>
-      this.provider.lookup(externalId),
-    );
+    const place = await callProvider(() => this.provider.lookup(externalId));
 
     if (!place) {
       throw new NotFoundException(`Place "${externalId}" was not found`);
     }
 
     return place;
-  }
-
-  /** Turns what can go wrong with the provider into the HTTP answer it deserves. */
-  private async callProvider<T>(call: () => Promise<T>): Promise<T> {
-    try {
-      return await call();
-    } catch (error) {
-      if (!(error instanceof PlacesProviderError)) throw error;
-
-      switch (error.failure) {
-        case 'timeout':
-          throw new GatewayTimeoutException(error.message);
-        case 'rate_limited':
-          throw new ServiceUnavailableException(error.message);
-        default:
-          throw new BadGatewayException(error.message);
-      }
-    }
   }
 }

@@ -124,6 +124,14 @@ const envSchema = z.object({
   // Give up on the provider after this long, in milliseconds.
   PLACES_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
 
+  // Overpass API (OpenStreetMap points of interest), used to find the
+  // activities around a destination. Needs PLACES_USER_AGENT too.
+  OVERPASS_URL: z.url().default('https://overpass-api.de/api/interpreter'),
+
+  // Give up on Overpass after this long, in milliseconds (queries are slower
+  // than geocoding).
+  OVERPASS_TIMEOUT_MS: z.coerce.number().int().positive().default(25000),
+
   // ── Object storage (S3) ──────────────────────────────────────────────── ────────────────────────────────────────────────
   // Optional: without S3_BUCKET the API still boots and photo uploads answer
   // 503. Credentials are never read from here — the AWS SDK resolves them

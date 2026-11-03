@@ -23,6 +23,7 @@ describe('ActivityCatalogController', () => {
       findOne: vi.fn(),
       importPlace: vi.fn(),
       findImported: vi.fn(),
+      importDiscovered: vi.fn(),
       findDetails: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),

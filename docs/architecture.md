@@ -498,6 +498,30 @@ instead of matching city names. The OSM import fills it when the place's city
 the old city/country rule. Activities imported before their destination exists
 stay unlinked until the link is set.
 
+**Activities of a destination (catalog first, then OpenStreetMap).**
+Nominatim finds named places but is poor at "what is there to do here", so the
+activities around a destination come from the Overpass API instead.
+`GET /destination-catalog/{id}/activities?type=&limit=` (any signed-in user,
+strict rate limit; `type` is `TOUR` by default, or `FOOD`/`LODGING`; `limit`
+10 by default, 30 at most) answers from `activity_catalog` when the destination
+already has `limit` activities of that type. Otherwise it asks Overpass for the
+named places of that category within 10 km of the destination's coordinates,
+ranks them (a Wikipedia/Wikidata entry first, then a website, then by name),
+adds the new ones to the catalog linked to the destination (`source` `OSM`,
+type taken from the request, `osm:node|way|relation:<id>` as external id, so a
+place is never stored twice) and answers with the catalog's best rated ones.
+The next request is then served from the database. A destination + type that
+was searched is not searched again for 24 hours (in memory), a destination
+without coordinates is answered from the catalog only, and if Overpass fails
+the catalog's answer is returned when it has anything (502/503/504 otherwise).
+This is the one place where a non-admin request adds rows to the shared
+catalog, which is why it is limited to Overpass results for a known
+destination. The port is `PointsOfInterestProvider`; `OverpassProvider` sends
+an identifying User-Agent (`PLACES_USER_AGENT`), spaces calls one second apart
+and caches answers for six hours. `OVERPASS_URL` and `OVERPASS_TIMEOUT_MS`
+configure it; use your own Overpass instance for heavy traffic. Data ©
+OpenStreetMap contributors, returned as `attribution`.
+
 **Catalog search (FR10, FR24).** Both catalogs are searchable by anyone, with
 filters that combine with AND and are ignored when blank:
 `GET /destination-catalog?q=&country=&category=` (`q` is a case-insensitive

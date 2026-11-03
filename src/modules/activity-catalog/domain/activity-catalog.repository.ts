@@ -44,6 +44,18 @@ export abstract class ActivityCatalogRepository {
   ): Promise<ActivityCatalog>;
   /** Which of these external ids are already in the catalog. */
   abstract findExistingExternalIds(externalIds: string[]): Promise<string[]>;
+  /**
+   * Adds the places that are not in the catalog yet (matched by external id)
+   * and returns how many were added.
+   */
+  abstract createManyIfAbsent(
+    data: (CreateActivityCatalogData & { externalId: string })[],
+  ): Promise<number>;
+  /** Links the activities with these external ids that have no destination yet. */
+  abstract linkToDestination(
+    externalIds: string[],
+    destinationId: string,
+  ): Promise<void>;
   /** The most recent reviews of an activity, newest first. */
   abstract findLatestReviews(
     activityId: string,
