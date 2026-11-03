@@ -10,8 +10,11 @@ import { buildOverpassQuery } from './overpass-query.js';
 import { TtlCache } from './ttl-cache.js';
 
 export interface OverpassOptions {
-  /** Interpreter endpoint, e.g. `https://overpass-api.de/api/interpreter`. */
-  url: string;
+  /**
+   * Interpreter endpoints, tried in order: the next one is used when a server
+   * is at capacity, rate limiting or unreachable.
+   */
+  urls: string[];
   /** Identifies the application to the public servers. */
   userAgent: string;
   /** Give up on the HTTP call after this long. */
@@ -83,11 +86,35 @@ export class OverpassProvider implements PointsOfInterestProvider {
   }
 
   private async request(query: string): Promise<OverpassElement[]> {
+    let last: unknown;
+
+    for (const url of this.options.urls) {
+      try {
+        return await this.requestTo(url, query);
+      } catch (error) {
+        // A timeout means the query itself is heavy, so another server would be as slow.
+        if (
+          !(error instanceof PlacesProviderError) ||
+          error.failure === 'timeout'
+        ) {
+          throw error;
+        }
+        last = error;
+      }
+    }
+
+    throw last;
+  }
+
+  private async requestTo(
+    url: string,
+    query: string,
+  ): Promise<OverpassElement[]> {
     await this.limiter.wait();
 
     let response: Response;
     try {
-      response = await this.http(this.options.url, {
+      response = await this.http(url, {
         method: 'POST',
         headers: {
           'User-Agent': this.options.userAgent,

@@ -126,11 +126,24 @@ const envSchema = z.object({
 
   // Overpass API (OpenStreetMap points of interest), used to find the
   // activities around a destination. Needs PLACES_USER_AGENT too.
-  OVERPASS_URL: z.url().default('https://overpass-api.de/api/interpreter'),
+  // Comma-separated list, tried in order: when a public server is at capacity
+  // the next one answers.
+  OVERPASS_URL: z
+    .string()
+    .default(
+      'https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter',
+    )
+    .transform((value) =>
+      value
+        .split(',')
+        .map((url) => url.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.url()).min(1)),
 
   // Give up on Overpass after this long, in milliseconds (queries are slower
   // than geocoding).
-  OVERPASS_TIMEOUT_MS: z.coerce.number().int().positive().default(25000),
+  OVERPASS_TIMEOUT_MS: z.coerce.number().int().positive().default(40000),
 
   // ── Object storage (S3) ──────────────────────────────────────────────── ────────────────────────────────────────────────
   // Optional: without S3_BUCKET the API still boots and photo uploads answer

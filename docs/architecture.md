@@ -518,7 +518,7 @@ This is the one place where a non-admin request adds rows to the shared
 catalog, which is why it is limited to Overpass results for a known
 destination. The port is `PointsOfInterestProvider`; `OverpassProvider` sends
 an identifying User-Agent (`PLACES_USER_AGENT`), spaces calls one second apart
-and caches answers for six hours. `OVERPASS_URL` and `OVERPASS_TIMEOUT_MS`
+and caches answers for six hours. `OVERPASS_URL` (a comma-separated list: the next server is tried when one is at capacity, rate limiting or unreachable, but not after a timeout) and `OVERPASS_TIMEOUT_MS` (40 s)
 configure it; use your own Overpass instance for heavy traffic. Data ©
 OpenStreetMap contributors, returned as `attribution`.
 

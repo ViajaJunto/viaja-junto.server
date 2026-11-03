@@ -28,9 +28,15 @@ const search = {
   limit: 2,
 };
 
-const build = (fetchImpl: ReturnType<typeof vi.fn>) =>
+const PRIMARY = 'https://overpass.example.org/api/interpreter';
+const MIRROR = 'https://mirror.example.org/api/interpreter';
+
+const build = (
+  fetchImpl: ReturnType<typeof vi.fn>,
+  urls: string[] = [PRIMARY],
+) =>
   new OverpassProvider({
-    url: 'https://overpass.example.org/api/interpreter',
+    urls: urls,
     userAgent: 'ViajaJunto/1.0 (test@example.com)',
     timeoutMs: 10000,
     fetch: fetchImpl as unknown as typeof fetch,
@@ -52,7 +58,7 @@ describe('OverpassProvider', () => {
     const places = await build(fetchMock).findNear(search);
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://overpass.example.org/api/interpreter');
+    expect(url).toBe(PRIMARY);
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>)['User-Agent']).toBe(
       'ViajaJunto/1.0 (test@example.com)',
@@ -111,6 +117,57 @@ describe('OverpassProvider', () => {
         search,
       ),
     ).rejects.toMatchObject({ failure: 'unavailable' });
+  });
+});
+
+describe('OverpassProvider with several servers', () => {
+  const ok = () => json({ elements: [element(1, 'Louvre')] });
+
+  it.each([
+    ['at capacity (502)', new Response('', { status: 502 })],
+    ['rate limiting (429)', new Response('', { status: 429 })],
+  ])('asks the next server when the first is %s', async (_label, refusal) => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(refusal)
+      .mockResolvedValueOnce(ok());
+
+    const places = await build(fetchMock, [PRIMARY, MIRROR]).findNear(search);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([PRIMARY, MIRROR]);
+    expect(places.map((p) => p.name)).toEqual(['Louvre']);
+  });
+
+  it('asks the next server when the first cannot be reached', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('down'))
+      .mockResolvedValueOnce(ok());
+
+    await build(fetchMock, [PRIMARY, MIRROR]).findNear(search);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not ask another server after a timeout: the query itself is heavy', async () => {
+    const timeout = Object.assign(new Error('t'), { name: 'TimeoutError' });
+    const fetchMock = vi.fn().mockRejectedValue(timeout);
+
+    await expect(
+      build(fetchMock, [PRIMARY, MIRROR]).findNear(search),
+    ).rejects.toMatchObject({ failure: 'timeout' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails with the last error when every server refuses', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('', { status: 502 }))
+      .mockResolvedValueOnce(new Response('', { status: 429 }));
+
+    await expect(
+      build(fetchMock, [PRIMARY, MIRROR]).findNear(search),
+    ).rejects.toMatchObject({ failure: 'rate_limited' });
   });
 });
 

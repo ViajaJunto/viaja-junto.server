@@ -31,7 +31,7 @@ import { PlacesController } from './presentation/places.controller.js';
       useFactory: (): PointsOfInterestProvider =>
         env.PLACES_USER_AGENT
           ? new OverpassProvider({
-              url: env.OVERPASS_URL,
+              urls: env.OVERPASS_URL,
               userAgent: env.PLACES_USER_AGENT,
               timeoutMs: env.OVERPASS_TIMEOUT_MS,
             })
