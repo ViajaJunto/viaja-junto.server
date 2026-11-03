@@ -11,8 +11,16 @@ import { callProvider } from './provider-errors.js';
 import type { DestinationActivitiesQueryDto } from './dto/destination-activities-query.dto.js';
 import type { DestinationActivitiesResponseDto } from './dto/destination-activities-response.dto.js';
 
-/** How far from the destination's coordinates activities are looked for. */
-export const SEARCH_RADIUS_METERS = 10_000;
+/**
+ * How far from the destination's coordinates each kind of place is looked
+ * for. Restaurants and hotels are everywhere, so a wide search is too heavy
+ * for the public servers and the nearest ones are the useful ones anyway.
+ */
+export const SEARCH_RADIUS_METERS: Record<PoiCategory, number> = {
+  TOUR: 10_000,
+  FOOD: 3_000,
+  LODGING: 5_000,
+};
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -22,8 +30,8 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
  */
 @Injectable()
 export class ActivityDiscoveryService {
-  /** Destination + type already searched, so a small city does not hit Overpass on every request. */
-  private readonly searched = new TtlCache<true>(ONE_DAY_MS, 1000);
+  /** The limit already searched for a destination + type, so a small city does not hit Overpass on every request. */
+  private readonly searched = new TtlCache<number>(ONE_DAY_MS, 1000);
 
   constructor(
     private readonly provider: PointsOfInterestProvider,
@@ -57,7 +65,7 @@ export class ActivityDiscoveryService {
     if (
       known.meta.total >= limit ||
       !hasCoordinates ||
-      this.searched.get(searchKey)
+      (this.searched.get(searchKey) ?? 0) >= limit
     ) {
       return answer(known, 0);
     }
@@ -68,7 +76,7 @@ export class ActivityDiscoveryService {
         this.provider.findNear({
           latitude: destination.latitude as number,
           longitude: destination.longitude as number,
-          radiusMeters: SEARCH_RADIUS_METERS,
+          radiusMeters: SEARCH_RADIUS_METERS[type],
           category: type,
           limit: limit * 3,
         }),
@@ -85,7 +93,8 @@ export class ActivityDiscoveryService {
         name: place.name,
         type: type satisfies PoiCategory,
         location: place.displayName,
-        city: place.city ?? destination.name,
+        // The destination is the city: the same spelling for every activity in it.
+        city: destination.name,
         country: destination.country,
         latitude: place.latitude,
         longitude: place.longitude,
@@ -94,7 +103,7 @@ export class ActivityDiscoveryService {
       })),
       destinationId,
     );
-    this.searched.set(searchKey, true);
+    this.searched.set(searchKey, limit);
 
     return answer(await fromCatalog(), imported);
   }

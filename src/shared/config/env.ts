@@ -143,7 +143,7 @@ const envSchema = z.object({
 
   // Give up on Overpass after this long, in milliseconds (queries are slower
   // than geocoding).
-  OVERPASS_TIMEOUT_MS: z.coerce.number().int().positive().default(40000),
+  OVERPASS_TIMEOUT_MS: z.coerce.number().int().positive().default(90000),
 
   // ── Object storage (S3) ──────────────────────────────────────────────── ────────────────────────────────────────────────
   // Optional: without S3_BUCKET the API still boots and photo uploads answer

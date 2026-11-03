@@ -90,7 +90,7 @@ describe('ActivityDiscoveryService', () => {
     expect(provider.findNear).toHaveBeenCalledWith({
       latitude: 48.85,
       longitude: 2.35,
-      radiusMeters: SEARCH_RADIUS_METERS,
+      radiusMeters: SEARCH_RADIUS_METERS.TOUR,
       category: 'TOUR',
       limit: 15,
     });
@@ -119,6 +119,40 @@ describe('ActivityDiscoveryService', () => {
     await service.findForDestination('dest-paris', { type: 'TOUR', limit: 5 });
     await service.findForDestination('dest-paris', { type: 'FOOD', limit: 5 });
 
+    expect(provider.findNear).toHaveBeenCalledTimes(2);
+  });
+
+  it('searches a smaller area for restaurants and hotels', async () => {
+    await service.findForDestination('dest-paris', { type: 'FOOD', limit: 5 });
+    await service.findForDestination('dest-paris', {
+      type: 'LODGING',
+      limit: 5,
+    });
+
+    expect(provider.findNear.mock.calls.map(([s]) => s.radiusMeters)).toEqual([
+      SEARCH_RADIUS_METERS.FOOD,
+      SEARCH_RADIUS_METERS.LODGING,
+    ]);
+    expect(SEARCH_RADIUS_METERS.FOOD).toBeLessThan(SEARCH_RADIUS_METERS.TOUR);
+  });
+
+  it('writes the destination name as the city, whatever the place says', async () => {
+    provider.findNear.mockResolvedValue([{ ...louvre, city: 'Londres' }]);
+
+    await service.findForDestination('dest-paris', { type: 'TOUR', limit: 5 });
+
+    expect(activities.importDiscovered).toHaveBeenCalledWith(
+      [expect.objectContaining({ city: 'Paris' })],
+      'dest-paris',
+    );
+  });
+
+  it('searches again when a larger limit is asked for, but not for a smaller one', async () => {
+    await service.findForDestination('dest-paris', { type: 'TOUR', limit: 5 });
+    await service.findForDestination('dest-paris', { type: 'TOUR', limit: 3 });
+    expect(provider.findNear).toHaveBeenCalledTimes(1);
+
+    await service.findForDestination('dest-paris', { type: 'TOUR', limit: 10 });
     expect(provider.findNear).toHaveBeenCalledTimes(2);
   });
 

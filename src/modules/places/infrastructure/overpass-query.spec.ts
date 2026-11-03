@@ -20,7 +20,10 @@ describe('buildOverpassQuery', () => {
   });
 
   it('also takes historic places for tours', () => {
-    expect(buildOverpassQuery('TOUR', 0, 0, 500, 10)).toContain('["historic"]');
+    const query = buildOverpassQuery('TOUR', 0, 0, 500, 10);
+
+    expect(query).toContain('"historic"~"^(castle|monument');
+    expect(query).not.toContain('memorial');
   });
 
   it('rounds the radius', () => {

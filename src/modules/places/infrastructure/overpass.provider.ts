@@ -79,7 +79,7 @@ export class OverpassProvider implements PointsOfInterestProvider {
       serverTimeout,
     );
     const elements = await this.request(query);
-    const places = rankPlaces(elements).slice(0, limit);
+    const places = pickBest(elements, limit);
     this.cache.set(key, places);
 
     return places;
@@ -165,6 +165,14 @@ export class OverpassProvider implements PointsOfInterestProvider {
         'Overpass answered something that is not JSON',
       );
     }
+    // When the server gives up on a query it still answers 200, with a remark.
+    const remark = (body as { remark?: unknown } | null)?.remark;
+    if (typeof remark === 'string' && /runtime error/i.test(remark)) {
+      throw new PlacesProviderError(
+        /timed out/i.test(remark) ? 'timeout' : 'unavailable',
+        `Overpass could not run the query: ${remark}`,
+      );
+    }
     const elements = (body as { elements?: unknown } | null)?.elements;
     if (!Array.isArray(elements)) {
       throw new PlacesProviderError(
@@ -207,20 +215,34 @@ export function toPlace(element: OverpassElement): ExternalPlace | null {
   };
 }
 
+/** A place with a Wikipedia/Wikidata entry is one people have heard of. */
+const isNotable = (tags: Record<string, string | undefined> = {}) =>
+  Boolean(tags.wikidata || tags.wikipedia);
+
 /**
- * Notable places first: the ones with a Wikipedia/Wikidata entry, then the
- * ones with a website. Ties break by name and id, so the order is stable.
+ * Notable places first (a Wikipedia/Wikidata entry), then the ones with a
+ * website. Ties break by name and id, so the order is stable.
  */
-export function rankPlaces(elements: OverpassElement[]): ExternalPlace[] {
+export function rankPlaces(
+  elements: OverpassElement[],
+): { place: ExternalPlace; notable: boolean }[] {
   const score = (tags: Record<string, string | undefined> = {}) =>
-    (tags.wikidata || tags.wikipedia ? 2 : 0) +
+    (isNotable(tags) ? 2 : 0) +
     (tags.website || tags['contact:website'] ? 1 : 0);
 
   return elements
     .flatMap((element) => {
       const place = toPlace(element);
 
-      return place ? [{ place, score: score(element.tags) }] : [];
+      return place
+        ? [
+            {
+              place,
+              notable: isNotable(element.tags),
+              score: score(element.tags),
+            },
+          ]
+        : [];
     })
     .sort(
       (a, b) =>
@@ -228,5 +250,22 @@ export function rankPlaces(elements: OverpassElement[]): ExternalPlace[] {
         a.place.name.localeCompare(b.place.name) ||
         a.place.externalId.localeCompare(b.place.externalId),
     )
+    .map(({ place, notable }) => ({ place, notable }));
+}
+
+/**
+ * The best `limit` places: only the notable ones when there are enough of
+ * them, so what is stored is worth showing; otherwise they are completed with
+ * the best of the rest.
+ */
+export function pickBest(
+  elements: OverpassElement[],
+  limit: number,
+): ExternalPlace[] {
+  const ranked = rankPlaces(elements);
+  const notable = ranked.filter(({ notable: yes }) => yes);
+
+  return (notable.length >= limit ? notable : ranked)
+    .slice(0, limit)
     .map(({ place }) => place);
 }

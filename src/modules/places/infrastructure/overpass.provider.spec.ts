@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { PlacesProviderError } from '../domain/places.provider.js';
 import { MinIntervalLimiter } from './min-interval-limiter.js';
-import { OverpassProvider, rankPlaces, toPlace } from './overpass.provider.js';
+import {
+  OverpassProvider,
+  pickBest,
+  rankPlaces,
+  toPlace,
+} from './overpass.provider.js';
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { status: 200, ...init });
@@ -66,7 +71,7 @@ describe('OverpassProvider', () => {
     expect((init.body as URLSearchParams).get('data')).toContain(
       '(around:10000,48.85,2.35)',
     );
-    // The notable one first, then by name, cut to the limit.
+    // Only one notable place, so it is completed with the best of the rest.
     expect(places.map((p) => p.name)).toEqual(['Notable', 'Alpha']);
   });
 
@@ -107,6 +112,22 @@ describe('OverpassProvider', () => {
       build(vi.fn().mockRejectedValue(new Error('down'))).findNear(search),
     ).rejects.toBeInstanceOf(PlacesProviderError);
   });
+
+  it.each([
+    ['runtime error: Query timed out in "query" at line 3.', 'timeout'],
+    ['runtime error: Query run out of memory.', 'unavailable'],
+  ] as const)(
+    'does not mistake the server giving up (%s) for no results',
+    async (remark, failure) => {
+      const provider = build(
+        vi.fn().mockResolvedValue(json({ elements: [], remark })),
+      );
+
+      await expect(provider.findNear(search)).rejects.toMatchObject({
+        failure,
+      });
+    },
+  );
 
   it('rejects a body that is not JSON or has no elements', async () => {
     await expect(
@@ -223,21 +244,45 @@ describe('toPlace', () => {
   });
 });
 
-describe('rankPlaces', () => {
-  it('puts Wikipedia/Wikidata first, then websites, then the rest by name', () => {
-    const ranked = rankPlaces([
-      element(1, 'B plain'),
-      element(2, 'A plain'),
-      element(3, 'Site', { website: 'https://x.org' }),
-      element(4, 'Wiki', { wikipedia: 'fr:Wiki' }),
-      { type: 'node', id: 5, tags: {} },
-    ]);
+describe('rankPlaces and pickBest', () => {
+  const elements = [
+    element(1, 'B plain'),
+    element(2, 'A plain'),
+    element(3, 'Site', { website: 'https://x.org' }),
+    element(4, 'Wiki', { wikipedia: 'fr:Wiki' }),
+    element(5, 'Data', { wikidata: 'Q1' }),
+    { type: 'node', id: 6, tags: {} },
+  ];
 
-    expect(ranked.map((p) => p.name)).toEqual([
+  it('puts Wikipedia/Wikidata first, then websites, then the rest by name, flagging the notable', () => {
+    const ranked = rankPlaces(elements);
+
+    expect(ranked.map(({ place }) => place.name)).toEqual([
+      'Data',
       'Wiki',
       'Site',
       'A plain',
       'B plain',
+    ]);
+    expect(ranked.map(({ notable }) => notable)).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('keeps only the notable places when there are enough of them', () => {
+    expect(pickBest(elements, 2).map((p) => p.name)).toEqual(['Data', 'Wiki']);
+  });
+
+  it('completes with the best of the rest when there are too few notable places', () => {
+    expect(pickBest(elements, 4).map((p) => p.name)).toEqual([
+      'Data',
+      'Wiki',
+      'Site',
+      'A plain',
     ]);
   });
 });

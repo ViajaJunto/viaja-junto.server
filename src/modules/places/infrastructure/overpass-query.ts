@@ -3,8 +3,9 @@ import type { PoiCategory } from '../domain/points-of-interest.provider.js';
 /** Overpass QL tag filters per category; every value is a constant. */
 const FILTERS: Record<PoiCategory, string[]> = {
   TOUR: [
-    '["tourism"~"^(attraction|museum|gallery|viewpoint|zoo|theme_park|aquarium)$"]',
-    '["historic"]',
+    '["tourism"~"^(attraction|museum|viewpoint|zoo|theme_park|aquarium)$"]',
+    // Not memorials, markers or wayside crosses: there are thousands and few are visits.
+    '["historic"~"^(castle|monument|ruins|archaeological_site|palace|fort|manor|city_gate|cathedral)$"]',
   ],
   FOOD: ['["amenity"~"^(restaurant|cafe|bar|pub|fast_food)$"]'],
   LODGING: [
