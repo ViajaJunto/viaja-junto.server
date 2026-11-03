@@ -1,11 +1,8 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { assertAuthor } from '../../../shared/http/assert-author.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { ReviewRepository } from '../domain/review.repository.js';
 import { ListReviewsQueryDto } from './dto/list-reviews-query.dto.js';
@@ -65,9 +62,7 @@ export class ReviewsService {
   private async getOwnedOrFail(id: string, user: AuthenticatedUser) {
     const found = await this.getOrFail(id);
 
-    if (found.userId !== user.id) {
-      throw new ForbiddenException('Only the author can change this review');
-    }
+    assertAuthor(found, user);
 
     return found;
   }

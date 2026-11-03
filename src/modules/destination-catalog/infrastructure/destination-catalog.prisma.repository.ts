@@ -3,10 +3,12 @@ import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
 import { escapeLike } from '../../../shared/database/like.js';
 import { PrismaService } from '../../../shared/database/prisma.service.js';
 import { buildDestinationWhere } from './destination-catalog.filters.js';
+import { DestinationCatalog } from '../domain/destination-catalog.entity.js';
+import type { PublicReview } from '../../../shared/domain/public-review.js';
 import {
-  DestinationCatalog,
-  DestinationReviewSummary,
-} from '../domain/destination-catalog.entity.js';
+  publicReviewSelect,
+  toPublicReviews,
+} from '../../../shared/database/public-review.js';
 import {
   CreateDestinationCatalogData,
   UpdateDestinationCatalogData,
@@ -101,25 +103,15 @@ export class DestinationCatalogPrismaRepository implements DestinationCatalogRep
   async findLatestReviews(
     destinationId: string,
     limit: number,
-  ): Promise<DestinationReviewSummary[]> {
+  ): Promise<PublicReview[]> {
     const reviews = await this.prisma.destinationReview.findMany({
       where: { destinationId },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       take: limit,
-      // The name only: the email of a reviewer is never public.
-      select: {
-        id: true,
-        rating: true,
-        comment: true,
-        createdAt: true,
-        user: { select: { name: true } },
-      },
+      select: publicReviewSelect,
     });
 
-    return reviews.map(({ user, ...review }) => ({
-      ...review,
-      authorName: user.name,
-    }));
+    return toPublicReviews(reviews);
   }
 
   countTripUsages(id: string): Promise<number> {

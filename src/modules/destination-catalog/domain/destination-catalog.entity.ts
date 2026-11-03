@@ -1,13 +1,4 @@
 // Domain entity — no framework and no ORM dependency.
-/** A review as shown on the public destination page: the author is just a name. */
-export interface DestinationReviewSummary {
-  id: string;
-  rating: number;
-  comment: string | null;
-  createdAt: Date;
-  authorName: string;
-}
-
 export interface DestinationCatalog {
   id: string;
   name: string;

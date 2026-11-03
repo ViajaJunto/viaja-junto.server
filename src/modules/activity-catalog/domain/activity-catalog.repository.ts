@@ -1,5 +1,6 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
-import { ActivityCatalog, ActivityReview } from './activity-catalog.entity.js';
+import type { PublicReview } from '../../../shared/domain/public-review.js';
+import { ActivityCatalog } from './activity-catalog.entity.js';
 
 /** Discovery filters; every field that is set narrows the result. */
 export interface ActivityCatalogFilter {
@@ -47,7 +48,7 @@ export abstract class ActivityCatalogRepository {
   abstract findLatestReviews(
     activityId: string,
     limit: number,
-  ): Promise<ActivityReview[]>;
+  ): Promise<PublicReview[]>;
   /** How many trip destinations/activities still use this entry. */
   abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;

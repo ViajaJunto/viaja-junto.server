@@ -6,6 +6,7 @@ import {
 import type { PaginatedResponseDto } from '../../../shared/http/dto/paginated-response.dto.js';
 import { buildPaginationMeta } from '../../../shared/http/dto/paginated-response.dto.js';
 import { toPageRequest } from '../../../shared/http/dto/pagination-query.dto.js';
+import { assertAuthor } from '../../../shared/http/assert-author.js';
 import type { AuthenticatedUser } from '../../auth/domain/authenticated-user.entity.js';
 import { DestinationReviewRepository } from '../domain/destination-review.repository.js';
 import { ListDestinationReviewsQueryDto } from './dto/list-destination-reviews-query.dto.js';
@@ -83,9 +84,7 @@ export class DestinationReviewsService {
   private async getOwnedOrFail(id: string, user: AuthenticatedUser) {
     const found = await this.getOrFail(id);
 
-    if (found.userId !== user.id) {
-      throw new ForbiddenException('Only the author can change this review');
-    }
+    assertAuthor(found, user);
 
     return found;
   }

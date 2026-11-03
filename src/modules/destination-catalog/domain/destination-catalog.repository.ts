@@ -1,8 +1,6 @@
 import type { Page, PageRequest } from '../../../shared/domain/pagination.js';
-import {
-  DestinationCatalog,
-  DestinationReviewSummary,
-} from './destination-catalog.entity.js';
+import type { PublicReview } from '../../../shared/domain/public-review.js';
+import { DestinationCatalog } from './destination-catalog.entity.js';
 
 /** Discovery filters; every field that is set narrows the result. */
 export interface DestinationCatalogFilter {
@@ -57,7 +55,7 @@ export abstract class DestinationCatalogRepository {
   abstract findLatestReviews(
     destinationId: string,
     limit: number,
-  ): Promise<DestinationReviewSummary[]>;
+  ): Promise<PublicReview[]>;
   /** How many trip destinations/activities still use this entry. */
   abstract countTripUsages(id: string): Promise<number>;
   abstract remove(id: string): Promise<void>;

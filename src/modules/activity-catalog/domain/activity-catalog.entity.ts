@@ -1,13 +1,4 @@
 // Domain entity — no framework and no ORM dependency.
-/** A review as shown on the public activity page: the author is just a name. */
-export interface ActivityReview {
-  id: string;
-  rating: number;
-  comment: string | null;
-  createdAt: Date;
-  authorName: string;
-}
-
 export interface ActivityCatalog {
   id: string;
   name: string;
