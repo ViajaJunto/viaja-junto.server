@@ -15,6 +15,7 @@ const louvre = {
   formattedAddress: 'Rue de Rivoli, 75001 Paris, França',
   location: { latitude: 48.8606, longitude: 2.3376 },
   primaryType: 'museum',
+  googleMapsUri: 'https://maps.google.com/?cid=42',
   photos: [{ name: 'places/ChIJLU7/photos/AUc7' }],
 };
 const orsay = {
@@ -78,6 +79,19 @@ describe('GooglePlacesProvider', () => {
     });
   });
 
+  it('asks for the maps link', async () => {
+    const fetchMock = google([louvre]);
+
+    await build(fetchMock).findNear(search);
+
+    const init = (
+      fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    )[1];
+    expect(
+      (init.headers as Record<string, string>)['X-Goog-FieldMask'],
+    ).toContain('places.googleMapsUri');
+  });
+
   it('never puts the key in a URL, so it cannot reach a stored photo link', async () => {
     const fetchMock = google([louvre]);
 
@@ -106,6 +120,7 @@ describe('GooglePlacesProvider', () => {
         source: 'GOOGLE',
         googlePlaceId: 'ChIJLU7jZClu5kcR4PcOOO6p3I0',
         photoUrl: 'https://lh3.example/photo.jpg',
+        mapsUrl: 'https://maps.google.com/?cid=42',
       },
       expect.objectContaining({ name: "Musée d'Orsay", photoUrl: null }),
     ]);
@@ -247,6 +262,13 @@ describe('toPlace', () => {
     ['without a location', { ...louvre, location: undefined }],
   ])('drops a place %s', (_label, place) => {
     expect(toPlace(place)).toBeNull();
+  });
+
+  it('uses the maps link Google gives, or builds the documented one from the place id', () => {
+    expect(toPlace(louvre)?.mapsUrl).toBe('https://maps.google.com/?cid=42');
+    expect(toPlace({ ...louvre, googleMapsUri: undefined })?.mapsUrl).toBe(
+      'https://www.google.com/maps/search/?api=1&query=Google&query_place_id=ChIJLU7jZClu5kcR4PcOOO6p3I0',
+    );
   });
 
   it('uses the name when there is no address', () => {

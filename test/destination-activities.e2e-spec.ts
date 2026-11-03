@@ -35,6 +35,7 @@ describe('Activities of a destination (e2e)', () => {
     source: 'GOOGLE' as const,
     googlePlaceId: `g${run}${batch}${n}`,
     photoUrl: `https://lh3.example/${n}.jpg`,
+    mapsUrl: `https://maps.google.com/?cid=${n}`,
     city: null,
     country: null,
     countryCode: null,
@@ -116,6 +117,7 @@ describe('Activities of a destination (e2e)', () => {
       source: 'GOOGLE',
       googlePlaceId: expect.any(String),
       photoUrl: expect.stringContaining('https://lh3.example/'),
+      mapsUrl: expect.stringContaining('https://maps.google.com/'),
     });
 
     const second = await get(

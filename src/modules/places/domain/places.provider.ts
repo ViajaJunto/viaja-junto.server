@@ -21,6 +21,8 @@ export interface ExternalPlace {
   googlePlaceId?: string | null;
   /** Public URL of a photo of the place, when the provider has one. */
   photoUrl?: string | null;
+  /** Link that opens the place in a maps app, when the provider gives one. */
+  mapsUrl?: string | null;
 }
 
 export type PlacesFailure =

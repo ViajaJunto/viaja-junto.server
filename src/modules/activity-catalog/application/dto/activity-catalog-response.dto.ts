@@ -92,6 +92,15 @@ export class ActivityCatalogResponseDto {
 
   @ApiProperty({
     type: String,
+    description: 'Link that opens the place in Google Maps, when known.',
+    format: 'uri',
+    example: 'https://maps.google.com/?cid=1234567890',
+    nullable: true,
+  })
+  mapsUrl!: string | null;
+
+  @ApiProperty({
+    type: String,
     description: 'Origin of the entry.',
     example: 'MANUAL',
     nullable: true,
@@ -148,6 +157,7 @@ export class ActivityCatalogResponseDto {
       longitude: entity.longitude ?? null,
       googlePlaceId: entity.googlePlaceId ?? null,
       photoUrl: entity.photoUrl ?? null,
+      mapsUrl: entity.mapsUrl ?? null,
       source: entity.source ?? null,
       destinationId: entity.destinationCatalogId ?? null,
       averageRating: entity.averageRating ?? null,

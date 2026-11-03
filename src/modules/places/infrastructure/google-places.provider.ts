@@ -48,6 +48,7 @@ const FIELD_MASK = [
   'places.formattedAddress',
   'places.location',
   'places.primaryType',
+  'places.googleMapsUri',
   'places.photos.name',
 ].join(',');
 
@@ -57,6 +58,7 @@ interface GooglePlace {
   formattedAddress?: string;
   location?: { latitude?: number; longitude?: number };
   primaryType?: string;
+  googleMapsUri?: string;
   photos?: { name?: string }[];
 }
 
@@ -225,5 +227,11 @@ export function toPlace(place: GooglePlace): ExternalPlace | null {
     source: 'GOOGLE',
     googlePlaceId: place.id,
     photoUrl: null,
+    mapsUrl: place.googleMapsUri ?? mapsUrlFor(place.id),
   };
+}
+
+/** The documented Google Maps URL that opens a place by id (https://developers.google.com/maps/documentation/urls/get-started). */
+function mapsUrlFor(placeId: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${encodeURIComponent(placeId)}`;
 }

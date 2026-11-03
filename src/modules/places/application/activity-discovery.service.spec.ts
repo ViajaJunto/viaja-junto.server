@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityCatalogService } from '../../activity-catalog/application/activity-catalog.service.js';
 import type { DestinationCatalogService } from '../../destination-catalog/application/destination-catalog.service.js';
 import { PlacesProviderError } from '../domain/places.provider.js';
+import type { PlacePhotoProvider } from '../domain/place-photo.provider.js';
 import type { PointsOfInterestProvider } from '../domain/points-of-interest.provider.js';
 import {
   ActivityDiscoveryService,
@@ -41,6 +42,7 @@ describe('ActivityDiscoveryService', () => {
     findAll: ReturnType<typeof vi.fn>;
     importDiscovered: ReturnType<typeof vi.fn>;
   };
+  let photos: { find: ReturnType<typeof vi.fn> };
   let destinations: { findOne: ReturnType<typeof vi.fn> };
   let service: ActivityDiscoveryService;
 
@@ -50,9 +52,11 @@ describe('ActivityDiscoveryService', () => {
       findAll: vi.fn().mockResolvedValue(page([])),
       importDiscovered: vi.fn().mockResolvedValue(1),
     };
+    photos = { find: vi.fn().mockResolvedValue(null) };
     destinations = { findOne: vi.fn().mockResolvedValue(paris) };
     service = new ActivityDiscoveryService(
       provider as unknown as PointsOfInterestProvider,
+      photos as unknown as PlacePhotoProvider,
       activities as unknown as ActivityCatalogService,
       destinations as unknown as DestinationCatalogService,
     );
@@ -142,6 +146,72 @@ describe('ActivityDiscoveryService', () => {
           photoUrl: 'https://lh3.example/p.jpg',
         }),
       ],
+      'dest-paris',
+    );
+  });
+
+  describe('photos', () => {
+    const photoOf = () =>
+      (
+        activities.importDiscovered.mock.calls[0][0] as {
+          photoUrl: string | null;
+        }[]
+      )[0].photoUrl;
+
+    it('asks Wikipedia for a tour that has no photo, and stores what it finds', async () => {
+      photos.find.mockResolvedValue('https://upload.wikimedia.org/louvre.jpg');
+
+      await service.findForDestination('dest-paris', {
+        type: 'TOUR',
+        limit: 5,
+      });
+
+      expect(photos.find).toHaveBeenCalledWith('Louvre');
+      expect(photoOf()).toBe('https://upload.wikimedia.org/louvre.jpg');
+    });
+
+    it('keeps the provider’s own photo and does not ask Wikipedia', async () => {
+      provider.findNear.mockResolvedValue([
+        { ...louvre, photoUrl: 'https://lh3.example/p.jpg' },
+      ]);
+
+      await service.findForDestination('dest-paris', {
+        type: 'TOUR',
+        limit: 5,
+      });
+
+      expect(photos.find).not.toHaveBeenCalled();
+      expect(photoOf()).toBe('https://lh3.example/p.jpg');
+    });
+
+    it('stores the place without a photo when there is none', async () => {
+      await service.findForDestination('dest-paris', {
+        type: 'TOUR',
+        limit: 5,
+      });
+
+      expect(photoOf()).toBeNull();
+    });
+
+    it.each(['FOOD', 'LODGING'] as const)(
+      'does not look for a photo of a %s place',
+      async (type) => {
+        await service.findForDestination('dest-paris', { type, limit: 5 });
+
+        expect(photos.find).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  it('stores the maps link of the place', async () => {
+    provider.findNear.mockResolvedValue([
+      { ...louvre, mapsUrl: 'https://maps.google.com/?cid=1' },
+    ]);
+
+    await service.findForDestination('dest-paris', { type: 'TOUR', limit: 5 });
+
+    expect(activities.importDiscovered).toHaveBeenCalledWith(
+      [expect.objectContaining({ mapsUrl: 'https://maps.google.com/?cid=1' })],
       'dest-paris',
     );
   });

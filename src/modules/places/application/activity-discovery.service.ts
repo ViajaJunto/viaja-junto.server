@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ActivityCatalogService } from '../../activity-catalog/application/activity-catalog.service.js';
 import { DestinationCatalogService } from '../../destination-catalog/application/destination-catalog.service.js';
+import { PlacePhotoProvider } from '../domain/place-photo.provider.js';
 import {
   PointsOfInterestProvider,
   type PoiCategory,
@@ -51,6 +52,7 @@ export class ActivityDiscoveryService {
 
   constructor(
     private readonly provider: PointsOfInterestProvider,
+    private readonly photos: PlacePhotoProvider,
     private readonly activities: ActivityCatalogService,
     private readonly destinations: DestinationCatalogService,
   ) {}
@@ -107,8 +109,9 @@ export class ActivityDiscoveryService {
       throw error;
     }
 
+    const places = await this.withPhotos(found, type);
     const imported = await this.activities.importDiscovered(
-      found.map((place) => ({
+      places.map((place) => ({
         externalId: place.externalId,
         name: place.name,
         type: type satisfies PoiCategory,
@@ -121,6 +124,7 @@ export class ActivityDiscoveryService {
         source: place.source ?? 'OSM',
         googlePlaceId: place.googlePlaceId ?? null,
         photoUrl: place.photoUrl ?? null,
+        mapsUrl: place.mapsUrl ?? null,
         destinationCatalogId: destinationId,
       })),
       destinationId,
@@ -128,5 +132,25 @@ export class ActivityDiscoveryService {
     this.searched.set(searchKey, limit);
 
     return answer(await fromCatalog(), imported);
+  }
+
+  /**
+   * Fills in a photo from Wikipedia for the places the provider had none for.
+   * Only tours: monuments and museums have articles, a restaurant or a hotel
+   * rarely does and a wrong match would be worse than no photo.
+   */
+  private withPhotos<T extends { name: string; photoUrl?: string | null }>(
+    places: T[],
+    type: PoiCategory,
+  ): Promise<T[]> {
+    if (type !== 'TOUR') return Promise.resolve(places);
+
+    return Promise.all(
+      places.map(async (place) =>
+        place.photoUrl
+          ? place
+          : { ...place, photoUrl: await this.photos.find(place.name) },
+      ),
+    );
   }
 }

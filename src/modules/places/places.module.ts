@@ -9,6 +9,11 @@ import { PlacesProvider } from './domain/places.provider.js';
 import { NominatimProvider } from './infrastructure/nominatim.provider.js';
 import { UnconfiguredPlacesProvider } from './infrastructure/unconfigured-places.provider.js';
 import { ActivityDiscoveryService } from './application/activity-discovery.service.js';
+import { PlacePhotoProvider } from './domain/place-photo.provider.js';
+import {
+  DEFAULT_USER_AGENT,
+  WikipediaPhotoProvider,
+} from './infrastructure/wikipedia-photo.provider.js';
 import { PointsOfInterestProvider } from './domain/points-of-interest.provider.js';
 import { GooglePlacesProvider } from './infrastructure/google-places.provider.js';
 import { UnconfiguredPointsOfInterestProvider } from './infrastructure/unconfigured-points-of-interest.provider.js';
@@ -35,6 +40,14 @@ import { PlacesController } from './presentation/places.controller.js';
               timeoutMs: env.GOOGLE_PLACES_TIMEOUT_MS,
             })
           : new UnconfiguredPointsOfInterestProvider(),
+    },
+    {
+      provide: PlacePhotoProvider,
+      useFactory: (): PlacePhotoProvider =>
+        new WikipediaPhotoProvider({
+          userAgent: env.PLACES_USER_AGENT ?? DEFAULT_USER_AGENT,
+          timeoutMs: env.PLACES_TIMEOUT_MS,
+        }),
     },
     {
       provide: PlacesProvider,
