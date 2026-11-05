@@ -77,6 +77,7 @@ npm ci                      # installs dependencies and runs `prisma generate`
 npm run db:up               # starts PostgreSQL in Docker
 npx prisma migrate deploy   # creates the tables
 npm run db:seed             # optional: a sample destination (London)
+npm run db:seed:demo        # optional: demo user, big catalogs and a scheduled trip
 npm run start:dev           # API on http://localhost:3000/api
 ```
 
@@ -500,6 +501,7 @@ Dependencies point inwards only
 | `npm run db:up` / `npm run db:down` / `npm run db:nuke` | Starts PostgreSQL / stops the containers / stops them and deletes the volume |
 | `npm run db:logs` / `npm run db:admin` | Database logs / Adminer |
 | `npm run db:seed` / `npm run db:reset` | Sample data / recreates the database from scratch |
+| `npm run db:seed:demo` | Demo: one user (ADMIN, `admin@demo.viajajunto.dev`), 64 destinations, 930 activities, and a scheduled trip (Eurotrip 2027: Paris, Roma, Barcelona) with 21 planned activities and a budget. Repeatable; `-- --clean` removes only what it created. Development only |
 | `npm run prisma:migrate` / `npm run prisma:generate` / `npm run prisma:studio` | New migration / regenerates the client / browses the data |
 | `npm run auth:dev-token` | Development JWT |
 | `npm run openapi:generate` / `npm run openapi:lint` | Exports / validates the OpenAPI contract |
