@@ -1,0 +1,64 @@
+# The whole project in one command: PostgreSQL, migrations, the API, the
+# emulated S3 (MiniStack) and demo data. Meant for trying the API (for example,
+# to grade it): nothing has to be configured, no .env, no Google account.
+#
+#   npm run demo           # or: docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build --wait
+#   npm run demo:down      # stop (data is kept); npm run demo:reset also deletes it
+#
+# It is an override of docker-compose.yml, so the services (postgres, migrate,
+# api) are the same ones; this file only adds the demo settings and two
+# one-shot steps. The values below are for a throwaway local demo: never reuse
+# them anywhere else.
+services:
+  postgres:
+    # Nothing on the host needs the database, and 5432 is often taken.
+    ports: !reset []
+
+  ministack:
+    # Only S3 is used. The service is off by default in docker-compose.yml.
+    profiles: !reset []
+
+  # Creates the photos bucket, then loads the sample destination and the demo
+  # data (one user, big catalogs, a scheduled trip) and prints a token.
+  seed:
+    build:
+      context: .
+      target: build
+    image: viajajunto-migrate:local
+    container_name: viajajunto-seed
+    restart: "no"
+    command: >
+      sh -c "node scripts/demo-storage.mjs && node prisma/seed.mjs && node prisma/seed-demo.mjs"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-viajajunto}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-viajajunto-demo-jwt-secret-not-for-production-use}
+      DEMO_PRINT_TOKEN: "1"
+      S3_BUCKET: viajajunto-photos-000000000000
+      S3_ENDPOINT: http://ministack:4566
+      S3_PUBLIC_URL: http://localhost:${MINISTACK_PORT:-4566}/viajajunto-photos-000000000000
+      S3_FORCE_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      ministack:
+        condition: service_healthy
+
+  api:
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-viajajunto-demo-jwt-secret-not-for-production-use}
+      # Google sign-in is not used in the demo: the token printed by the demo is.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-demo-client-id.apps.googleusercontent.com}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-demo-client-secret}
+      S3_BUCKET: viajajunto-photos-000000000000
+      S3_ENDPOINT: http://ministack:4566
+      S3_PUBLIC_URL: http://localhost:${MINISTACK_PORT:-4566}/viajajunto-photos-000000000000
+      S3_FORCE_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    depends_on:
+      seed:
+        condition: service_completed_successfully
