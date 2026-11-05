@@ -63,7 +63,7 @@ const inviteCode = (key) => {
 const FIRST = ['Ana', 'Bruno', 'Carla', 'Diego', 'Elisa', 'Felipe', 'Gabriela', 'Henrique', 'Isabela', 'João', 'Karina', 'Lucas', 'Mariana', 'Nicolas', 'Olívia', 'Pedro', 'Rafaela', 'Sérgio', 'Tatiana', 'Vinícius', 'Beatriz', 'Caio', 'Débora', 'Eduardo', 'Fernanda', 'Guilherme', 'Helena', 'Igor', 'Júlia', 'Leonardo'];
 const LAST = ['Almeida', 'Barbosa', 'Cardoso', 'Dias', 'Esteves', 'Ferreira', 'Gomes', 'Holanda', 'Ito', 'Junqueira', 'Lima', 'Moreira', 'Nogueira', 'Oliveira', 'Pereira', 'Queiroz', 'Ribeiro', 'Souza', 'Teixeira', 'Vasconcelos'];
 
-// name, country, ISO, category, lat, lng, description, currency, five real attractions
+// name, country, ISO, category, lat, lng, description, currency, the real attractions
 const CITIES = [
   ['Paris', 'França', 'FR', 'CITY', 48.8566, 2.3522, 'Capital da França, dos museus, dos cafés e da Torre Eiffel.', 'EUR', ['Torre Eiffel', 'Museu do Louvre', 'Catedral de Notre-Dame', 'Basílica de Sacré-Cœur', 'Museu d’Orsay']],
   ['Roma', 'Itália', 'IT', 'CULTURAL', 41.9028, 12.4964, 'A cidade eterna: ruínas, fontes e massas inesquecíveis.', 'EUR', ['Coliseu', 'Fontana di Trevi', 'Panteão', 'Fórum Romano', 'Museus do Vaticano']],
@@ -95,6 +95,40 @@ const CITIES = [
   ['Atenas', 'Grécia', 'GR', 'CULTURAL', 37.9838, 23.7275, 'Berço da democracia e da filosofia.', 'EUR', ['Acrópole', 'Partenon', 'Ágora Antiga', 'Plaka', 'Museu da Acrópole']],
   ['Marrakech', 'Marrocos', 'MA', 'CULTURAL', 31.6295, -7.9811, 'Souks, riads e a praça Jemaa el-Fna.', 'EUR', ['Praça Jemaa el-Fna', 'Jardim Majorelle', 'Palácio da Bahia', 'Mesquita Koutoubia', 'Souks de Marrakech']],
   ['Londres', 'Reino Unido', 'GB', 'CITY', 51.5007, -0.1246, 'Capital do Reino Unido, do Big Ben e de museus gratuitos.', 'GBP', ['Big Ben', 'Museu Britânico', 'Torre de Londres', 'London Eye', 'Palácio de Buckingham']],
+  ['Veneza', 'Itália', 'IT', 'CULTURAL', 45.4408, 12.3155, 'Cidade de canais, gôndolas e palácios sobre a lagoa.', 'EUR', ['Praça San Marco', 'Ponte di Rialto', 'Palácio Ducal', 'Basílica de São Marcos', 'Ilha de Murano', 'Grande Canal']],
+  ['Florença', 'Itália', 'IT', 'CULTURAL', 43.7696, 11.2558, 'Berço do Renascimento, com arte em cada esquina.', 'EUR', ['Duomo de Florença', 'Galeria Uffizi', 'Ponte Vecchio', 'Galeria da Academia', 'Palazzo Pitti', 'Piazzale Michelangelo']],
+  ['Milão', 'Itália', 'IT', 'CITY', 45.4642, 9.19, 'Moda, design e a catedral mais exuberante da Itália.', 'EUR', ['Duomo di Milano', 'Galleria Vittorio Emanuele II', 'Teatro alla Scala', 'Castelo Sforzesco', 'Santa Maria delle Grazie', 'Navigli']],
+  ['Madri', 'Espanha', 'ES', 'CITY', 40.4168, -3.7038, 'Grandes museus, parques e noites que começam tarde.', 'EUR', ['Museu do Prado', 'Palácio Real de Madri', 'Parque do Retiro', 'Plaza Mayor', 'Museu Reina Sofía', 'Puerta del Sol']],
+  ['Sevilha', 'Espanha', 'ES', 'CULTURAL', 37.3891, -5.9845, 'Flamenco, laranjeiras e o legado mouro da Andaluzia.', 'EUR', ['Real Alcázar', 'Catedral de Sevilha', 'Plaza de España', 'Torre del Oro', 'Bairro de Santa Cruz', 'Metropol Parasol']],
+  ['Porto', 'Portugal', 'PT', 'CITY', 41.1579, -8.6291, 'Vinho, azulejos e a Ribeira à beira do Douro.', 'EUR', ['Ribeira do Porto', 'Livraria Lello', 'Ponte Dom Luís I', 'Torre dos Clérigos', 'Palácio da Bolsa', 'Caves de Vinho do Porto']],
+  ['Bruxelas', 'Bélgica', 'BE', 'CITY', 50.8503, 4.3517, 'Chocolate, cerveja e uma das praças mais bonitas da Europa.', 'EUR', ['Grand-Place', 'Atomium', 'Manneken Pis', 'Galerias Saint-Hubert', 'Museus Reais de Belas-Artes', 'Basílica de Koekelberg']],
+  ['Budapeste', 'Hungria', 'HU', 'CITY', 47.4979, 19.0402, 'Duas margens, termas e um parlamento de cartão-postal.', 'EUR', ['Parlamento Húngaro', 'Bastião dos Pescadores', 'Ponte das Correntes', 'Banhos Termais Széchenyi', 'Castelo de Buda', 'Praça dos Heróis']],
+  ['Edimburgo', 'Reino Unido', 'GB', 'CULTURAL', 55.9533, -3.1883, 'Castelo no alto da colina e ruelas medievais.', 'GBP', ['Castelo de Edimburgo', 'Royal Mile', 'Arthur’s Seat', 'Palácio de Holyroodhouse', 'Calton Hill', 'Museu Nacional da Escócia']],
+  ['Dublin', 'Irlanda', 'IE', 'CITY', 53.3498, -6.2603, 'Pubs, literatura e música ao vivo.', 'EUR', ['Trinity College', 'Guinness Storehouse', 'Castelo de Dublin', 'Temple Bar', 'Catedral de São Patrício', 'Phoenix Park']],
+  ['Copenhague', 'Dinamarca', 'DK', 'CITY', 55.6761, 12.5683, 'Design nórdico, bicicletas e o porto colorido de Nyhavn.', 'EUR', ['Nyhavn', 'Jardins de Tivoli', 'A Pequena Sereia', 'Castelo de Rosenborg', 'Palácio de Christiansborg', 'Strøget']],
+  ['Estocolmo', 'Suécia', 'SE', 'CITY', 59.3293, 18.0686, 'Arquipélago, museus e uma cidade antiga encantadora.', 'EUR', ['Gamla Stan', 'Museu Vasa', 'Palácio Real de Estocolmo', 'Skansen', 'ABBA The Museum', 'Fotografiska']],
+  ['Oslo', 'Noruega', 'NO', 'CITY', 59.9139, 10.7522, 'Fiordes na porta da cidade e museus de navios vikings.', 'EUR', ['Ópera de Oslo', 'Museu dos Navios Vikings', 'Parque Vigeland', 'Fortaleza de Akershus', 'Museu Munch', 'Museu Fram']],
+  ['Zurique', 'Suíça', 'CH', 'CITY', 47.3769, 8.5417, 'Lago cristalino, relógios e chocolate.', 'EUR', ['Bahnhofstrasse', 'Lago de Zurique', 'Grossmünster', 'Cidade Velha de Zurique', 'Lindenhof', 'Museu Nacional Suíço']],
+  ['Munique', 'Alemanha', 'DE', 'CITY', 48.1351, 11.582, 'Cervejarias, palácios e a porta para os Alpes.', 'EUR', ['Marienplatz', 'Englischer Garten', 'Palácio de Nymphenburg', 'Hofbräuhaus', 'Residenz de Munique', 'Viktualienmarkt']],
+  ['Nice', 'França', 'FR', 'BEACH', 43.7102, 7.262, 'A pérola da Riviera Francesa.', 'EUR', ['Promenade des Anglais', 'Colina do Castelo', 'Cidade Velha de Nice', 'Cours Saleya', 'Museu Matisse', 'Porto de Nice']],
+  ['Santorini', 'Grécia', 'GR', 'BEACH', 36.3932, 25.4615, 'Casas brancas sobre a caldeira e o pôr do sol mais famoso do Egeu.', 'EUR', ['Oia', 'Fira', 'Praia Vermelha', 'Sítio Arqueológico de Akrotiri', 'Baía de Amoudi', 'Praia Preta de Perissa']],
+  ['Dubrovnik', 'Croácia', 'HR', 'CULTURAL', 42.6507, 18.0944, 'Muralhas medievais sobre o Adriático.', 'EUR', ['Muralhas de Dubrovnik', 'Stradun', 'Fortaleza de Lovrijenac', 'Ilha de Lokrum', 'Palácio do Reitor', 'Teleférico do Monte Srđ']],
+  ['Los Angeles', 'Estados Unidos', 'US', 'CITY', 34.0522, -118.2437, 'Cinema, praias e muito sol.', 'USD', ['Calçada da Fama de Hollywood', 'Observatório Griffith', 'Santa Monica Pier', 'Universal Studios Hollywood', 'Getty Center', 'Venice Beach']],
+  ['São Francisco', 'Estados Unidos', 'US', 'CITY', 37.7749, -122.4194, 'Ladeiras, bondinhos e a ponte mais fotografada do mundo.', 'USD', ['Golden Gate Bridge', 'Alcatraz', 'Fisherman’s Wharf', 'Lombard Street', 'Chinatown de São Francisco', 'Painted Ladies']],
+  ['Miami', 'Estados Unidos', 'US', 'BEACH', 25.7617, -80.1918, 'Art déco, praias e cultura latina.', 'USD', ['South Beach', 'Distrito Art Déco', 'Wynwood Walls', 'Vizcaya Museum and Gardens', 'Little Havana', 'Everglades']],
+  ['Toronto', 'Canadá', 'CA', 'CITY', 43.6532, -79.3832, 'A maior cidade do Canadá, às margens do lago Ontário.', 'USD', ['CN Tower', 'Ripley’s Aquarium of Canada', 'Royal Ontario Museum', 'Distillery District', 'Ilhas de Toronto', 'Mercado St. Lawrence']],
+  ['Vancouver', 'Canadá', 'CA', 'NATURE', 49.2827, -123.1207, 'Montanhas, floresta e mar a poucos minutos do centro.', 'USD', ['Stanley Park', 'Granville Island', 'Ponte Suspensa de Capilano', 'Gastown', 'Grouse Mountain', 'English Bay']],
+  ['Havana', 'Cuba', 'CU', 'CULTURAL', 23.1136, -82.3666, 'Carros antigos, música e arquitetura colonial.', 'USD', ['Malecón', 'Havana Velha', 'El Capitolio', 'Plaza de la Catedral', 'Plaza de la Revolución', 'Fábrica de Arte Cubano']],
+  ['Cartagena', 'Colômbia', 'CO', 'BEACH', 10.391, -75.4794, 'Cidade amuralhada colorida à beira do Caribe.', 'USD', ['Cidade Amuralhada', 'Castillo San Felipe de Barajas', 'Torre del Reloj', 'Plaza Santo Domingo', 'Ilhas do Rosário', 'Getsemaní']],
+  ['Bogotá', 'Colômbia', 'CO', 'CITY', 4.711, -74.0721, 'Capital cultural entre montanhas.', 'USD', ['Monserrate', 'La Candelaria', 'Museu do Ouro', 'Plaza de Bolívar', 'Museu Botero', 'Catedral de Sal de Zipaquirá']],
+  ['Gramado', 'Brasil', 'BR', 'CITY', -29.3788, -50.8741, 'Charme europeu na Serra Gaúcha, com chocolate e fondue.', 'BRL', ['Rua Coberta', 'Lago Negro', 'Mini Mundo', 'Palácio dos Festivais', 'Snowland', 'Parque Knorr']],
+  ['Foz do Iguaçu', 'Brasil', 'BR', 'NATURE', -25.5163, -54.5854, 'Uma das maiores quedas d’água do planeta.', 'BRL', ['Cataratas do Iguaçu', 'Parque das Aves', 'Itaipu Binacional', 'Marco das Três Fronteiras', 'Templo Budista Chen Tien', 'Garganta do Diabo']],
+  ['Fernando de Noronha', 'Brasil', 'BR', 'BEACH', -3.8547, -32.4249, 'Arquipélago de águas cristalinas e tartarugas.', 'BRL', ['Baía do Sancho', 'Praia do Leão', 'Baía dos Porcos', 'Morro do Pico', 'Praia do Atalaia', 'Projeto Tamar']],
+  ['Jericoacoara', 'Brasil', 'BR', 'BEACH', -2.7975, -40.5136, 'Dunas, lagoas e o pôr do sol mais disputado do Ceará.', 'BRL', ['Duna do Pôr do Sol', 'Pedra Furada', 'Lagoa do Paraíso', 'Praia de Jericoacoara', 'Lagoa Azul', 'Árvore da Preguiça']],
+  ['Seul', 'Coreia do Sul', 'KR', 'CITY', 37.5665, 126.978, 'Palácios antigos ao lado de arranha-céus e K-pop.', 'USD', ['Palácio Gyeongbokgung', 'N Seoul Tower', 'Vila Hanok de Bukchon', 'Mercado de Myeongdong', 'Dongdaemun Design Plaza', 'Templo Bongeunsa']],
+  ['Singapura', 'Singapura', 'SG', 'CITY', 1.3521, 103.8198, 'Cidade-estado de jardins futuristas e comida de rua premiada.', 'USD', ['Marina Bay Sands', 'Gardens by the Bay', 'Sentosa', 'Merlion Park', 'Chinatown de Singapura', 'Maxwell Food Centre']],
+  ['Hanói', 'Vietnã', 'VN', 'CITY', 21.0278, 105.8342, 'Ruelas, lagos e café com ovo.', 'USD', ['Lago Hoàn Kiếm', 'Templo da Literatura', 'Bairro Antigo de Hanói', 'Mausoléu de Ho Chi Minh', 'Teatro de Marionetes na Água', 'Prisão de Hoa Lo']],
+  ['Pequim', 'China', 'CN', 'CULTURAL', 39.9042, 116.4074, 'Cidade Proibida, hutongs e a Grande Muralha por perto.', 'USD', ['Cidade Proibida', 'Grande Muralha de Badaling', 'Templo do Céu', 'Palácio de Verão', 'Praça Tiananmen', 'Hutongs de Pequim']],
 ];
 // London already exists from `npm run db:seed` with this id: reuse it.
 const LONDON_ID = '7c1e9a52-3b4d-4f60-9a1e-2d8b5c6f0a11';
@@ -138,8 +172,8 @@ function build() {
       dest.activities.push(act);
     };
     for (const tour of tours) add('TOUR', tour, `Um dos lugares mais visitados de ${name}.`);
-    for (const food of sample(FOOD_PREFIX, 4).map((p) => `${p} ${pick(FOOD_SUFFIX)}`)) add('FOOD', `${food} – ${name}`, `Cozinha local em ${name}.`);
-    for (const hotel of sample(HOTEL_PREFIX, 3).map((p) => `${p} ${pick(HOTEL_SUFFIX)}`)) add('LODGING', `${hotel} ${name}`, `Hospedagem bem localizada em ${name}.`);
+    for (const food of sample(FOOD_PREFIX, 5).map((p) => `${p} ${pick(FOOD_SUFFIX)}`)) add('FOOD', `${food} – ${name}`, `Cozinha local em ${name}.`);
+    for (const hotel of sample(HOTEL_PREFIX, 4).map((p) => `${p} ${pick(HOTEL_SUFFIX)}`)) add('LODGING', `${hotel} ${name}`, `Hospedagem bem localizada em ${name}.`);
   }
 
   // Trips: a third are over, a third are confirmed, a third are still being planned.
