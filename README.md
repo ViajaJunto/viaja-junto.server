@@ -16,6 +16,7 @@ thought of the places. Built for the Software Construction course (PUCRS).
 
 - [Stack](#stack)
 - [Prerequisites](#prerequisites)
+- [Try it with one command](#try-it-with-one-command)
 - [Quick start](#quick-start)
 - [Environment variables (`.env`)](#environment-variables-env)
 - [Google sign-in, development token and administrators](#google-sign-in-development-token-and-administrators)
@@ -65,6 +66,19 @@ The code is organised in feature modules, each with
 > `Missing: typescript@... from lock file`. Install dependencies with
 > **`npm ci`**, which never changes the lock file, and use
 > `npm install <package>` only when you really add a package.
+
+## Try it with one command
+
+To see the API work (no `.env`, no Google account, nothing to configure), you
+only need Docker:
+
+```bash
+npm run demo     # PostgreSQL, migrations, API, emulated S3 and demo data
+```
+
+It prints the Swagger URL and a ready-to-use token. The step-by-step tour of
+the main flow, with the expected result of each call, is in
+[docs/happy-path.md](docs/happy-path.md). `npm run demo:down` stops it.
 
 ## Quick start
 
@@ -501,6 +515,7 @@ Dependencies point inwards only
 | `npm run db:up` / `npm run db:down` / `npm run db:nuke` | Starts PostgreSQL / stops the containers / stops them and deletes the volume |
 | `npm run db:logs` / `npm run db:admin` | Database logs / Adminer |
 | `npm run db:seed` / `npm run db:reset` | Sample data / recreates the database from scratch |
+| `npm run demo` / `demo:info` / `demo:down` / `demo:reset` | The whole project in Docker with demo data, with one command ([happy path](docs/happy-path.md)) |
 | `npm run db:seed:demo` | Demo: one user (ADMIN, `admin@demo.viajajunto.dev`), 64 destinations, 930 activities, and a scheduled trip (Eurotrip 2027: Paris, Roma, Barcelona) with 21 planned activities and a budget. Repeatable; `-- --clean` removes only what it created. Development only |
 | `npm run prisma:migrate` / `npm run prisma:generate` / `npm run prisma:studio` | New migration / regenerates the client / browses the data |
 | `npm run auth:dev-token` | Development JWT |

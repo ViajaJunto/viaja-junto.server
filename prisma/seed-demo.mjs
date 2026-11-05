@@ -18,17 +18,9 @@
 import 'dotenv/config';
 import { createHash } from 'node:crypto';
 import pg from 'pg';
-
-const DOMAIN = 'demo.viajajunto.dev';
+import { DEMO_DOMAIN as DOMAIN, DEMO_USER, id, signDemoToken } from './demo-helpers.mjs';
 
 // ── deterministic helpers ──────────────────────────────────────────────────
-
-/** A version 4 UUID derived from a key, so the same key is always the same id. */
-function id(key) {
-  const h = createHash('sha1').update(`viajajunto-demo:${key}`).digest('hex');
-  const variant = '89ab'[parseInt(h[16], 16) % 4];
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${variant}${h.slice(17, 20)}-${h.slice(20, 32)}`;
-}
 
 /** Small seeded generator: the data is "random" but identical on every run. */
 function rng(seed) {
@@ -148,7 +140,7 @@ const addDays = (iso, days) => new Date(new Date(`${iso}T00:00:00Z`).getTime() +
 function build() {
   const d = { users: [], destinations: [], activities: [], trips: [], tripDestinations: [], tripActivities: [], budgets: [] };
 
-  const user = { id: id('user:admin'), name: 'Viajante Demo', email: `admin@${DOMAIN}`, role: 'ADMIN' };
+  const user = { id: DEMO_USER.id, name: 'Viajante Demo', email: DEMO_USER.email, role: 'ADMIN' };
   d.users.push(user);
 
   for (const [name, country, countryCode, category, latitude, longitude, description, currency, tours] of CITIES) {
@@ -287,7 +279,13 @@ async function main() {
     await db.query('COMMIT');
     console.log(cleaning ? 'Removed:' : 'Demo data ready:');
     for (const [key, value] of Object.entries(counts)) console.log(`  ${key.padEnd(20)} ${value}`);
-    if (!cleaning) console.log(`\nDemo user: admin@${DOMAIN} (ADMIN, id ${id('user:admin')})`);
+    if (!cleaning) {
+      console.log(`\nDemo user: ${DEMO_USER.email} (ADMIN, id ${DEMO_USER.id})`);
+      // The one-command demo sets this so the token shows up in the logs.
+      if (process.env.DEMO_PRINT_TOKEN && process.env.JWT_SECRET) {
+        console.log(`\nDemo token (valid 24 h):\n${signDemoToken(process.env.JWT_SECRET)}`);
+      }
+    }
   } catch (error) {
     await db.query('ROLLBACK').catch(() => undefined);
     throw error;
