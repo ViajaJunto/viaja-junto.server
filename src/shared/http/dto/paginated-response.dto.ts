@@ -1,22 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PaginationMetaDto {
-  @ApiProperty({ description: 'Pagina retornada.', example: 1 })
+  @ApiProperty({ description: 'Page returned.', example: 1 })
   page!: number;
 
-  @ApiProperty({ description: 'Registros por pagina.', example: 20 })
+  @ApiProperty({ description: 'Records per page.', example: 20 })
   limit!: number;
 
-  @ApiProperty({ description: 'Total de registros existentes.', example: 137 })
+  @ApiProperty({ description: 'Total number of records.', example: 137 })
   total!: number;
 
-  @ApiProperty({ description: 'Total de paginas disponiveis.', example: 7 })
+  @ApiProperty({ description: 'Total number of pages.', example: 7 })
   totalPages!: number;
 
-  @ApiProperty({ description: 'Existe pagina seguinte.', example: true })
+  @ApiProperty({ description: 'Whether there is a next page.', example: true })
   hasNext!: boolean;
 
-  @ApiProperty({ description: 'Existe pagina anterior.', example: false })
+  @ApiProperty({
+    description: 'Whether there is a previous page.',
+    example: false,
+  })
   hasPrevious!: boolean;
 }
 

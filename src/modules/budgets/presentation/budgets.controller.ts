@@ -88,7 +88,7 @@ export class BudgetsController {
   @ApiOperation({
     summary: 'Create a trip budget',
     description:
-      'Defines the total amount available for a trip. A trip has at most one budget.',
+      'Defines the total amount available for a trip. A trip has at most one budget (409 for a second one). Requires EDITOR permission or the trip creator.',
   })
   @ApiBody({ type: CreateBudgetDto })
   @ApiCreatedResponse({
@@ -141,7 +141,7 @@ export class BudgetsController {
   @ApiOperation({
     summary: 'Delete a budget',
     description:
-      'Removes budget tracking from the trip. The trip and its activities are untouched.',
+      'Removes budget tracking from the trip. The trip and its activities are untouched. Requires EDITOR permission or the trip creator.',
   })
   @ApiIdParam('Budget identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })

@@ -56,6 +56,10 @@ export class TripExpensesController {
       'Expenses of the trips the caller created or joined, most recent first. Filter by trip with `?tripId=`, which also checks the caller can see that trip.',
   })
   @ApiPaginatedResponse(TripExpenseResponseDto, 'Page of expenses.')
+  @ApiUnprocessableEntityResponse({
+    description: 'Invalid pagination parameters or tripId.',
+    type: ValidationErrorResponseDto,
+  })
   @ApiNotFound(
     'The trip filtered by does not exist, or the caller has no access to it.',
   )

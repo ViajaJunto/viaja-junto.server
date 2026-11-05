@@ -24,7 +24,7 @@ import {
  */
 export const ApiPaginatedResponse = <TModel extends Type<unknown>>(
   model: TModel,
-  description = 'Pagina de resultados.',
+  description = 'Page of results.',
 ) =>
   applyDecorators(
     ApiExtraModels(PaginatedResponseDto, PaginationMetaDto, model),
@@ -32,7 +32,7 @@ export const ApiPaginatedResponse = <TModel extends Type<unknown>>(
       name: 'page',
       required: false,
       schema: { type: 'integer', minimum: 1, default: DEFAULT_PAGE },
-      description: 'Numero da pagina, comecando em 1.',
+      description: 'Page number, starting at 1.',
       example: 1,
     }),
     ApiQuery({
@@ -44,7 +44,7 @@ export const ApiPaginatedResponse = <TModel extends Type<unknown>>(
         maximum: MAX_LIMIT,
         default: DEFAULT_LIMIT,
       },
-      description: `Registros por pagina (maximo ${MAX_LIMIT}).`,
+      description: `Records per page (maximum ${MAX_LIMIT}).`,
       example: 20,
     }),
     ApiOkResponse({

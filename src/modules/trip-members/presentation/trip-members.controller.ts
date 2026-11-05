@@ -52,7 +52,7 @@ export class TripMembersController {
   @ApiOperation({
     summary: 'List trip members',
     description:
-      'Returns a paginated list of trip memberships. Requires authentication.',
+      'Memberships of the trips the caller created or joined, newest first. Pass `tripId` for the members of one trip (404 if the caller cannot see it). The creator is not listed: they own the trip without a membership row.',
   })
   @ApiPaginatedResponse(TripMemberResponseDto, 'Page of trip member records.')
   @ApiUnprocessableEntityResponse({
@@ -73,7 +73,8 @@ export class TripMembersController {
 
   @ApiOperation({
     summary: 'Get a membership by id',
-    description: 'Returns a single membership record.',
+    description:
+      'Returns a single membership record. Any member of the trip can read it.',
   })
   @ApiIdParam('TripMember identifier.')
   @ApiOkResponse({
@@ -148,7 +149,7 @@ export class TripMembersController {
   @ApiOperation({
     summary: 'Remove a member',
     description:
-      'Revokes a user access to the trip. The trip itself is not affected.',
+      'Revokes a user’s access to the trip. The trip itself is not affected. Only the trip creator can do this.',
   })
   @ApiIdParam('TripMember identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })

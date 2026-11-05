@@ -727,9 +727,14 @@ job for its coverage report.
 | **Publish image** | `docker/build-push-action` | — (does not run on pull requests) |
 
 **Contract linting.** `scripts/generate-openapi.mjs` boots the real `AppModule`
-with `PrismaService` stubbed and writes the OpenAPI document to disk, so the
-contract Spectral checks is produced by the same decorators the API serves —
-it cannot drift. The file is generated in CI rather than committed.
+with `PrismaService` stubbed, applies the same HTTP setup as `main.ts`
+(`configureHttp`, so paths carry the `/api` prefix) and writes the document
+built by `createOpenApiDocument` to disk. The contract Spectral checks is
+therefore produced by the same decorators and the same builder the API serves —
+it cannot drift. `createOpenApiDocument` also adds the rate limiter's `429`
+(with `Retry-After`) to every operation except `/health`, since a global guard
+is invisible to the Swagger scanner. The file is generated in CI rather than
+committed.
 
 **Coverage.** `npm run test:cov` writes `coverage/lcov.info`, which is uploaded
 as an artifact and handed to SonarCloud. The scan job never re-runs the suite.
@@ -806,7 +811,7 @@ RDS API ────────── PostgreSQL 17 instance
 
 ```bash
 npm run aws:up        # start MiniStack
-npm run aws:deploy    # steps 1-7; the API answers on http://localhost:3001/api
+npm run aws:deploy    # steps 1-7; the API answers on http://localhost:3000/api
 npm run aws:status    # stacks, RDS, ECR images, ECS service and tasks
 npm run aws:destroy   # remove everything deploy created
 ```
@@ -818,7 +823,8 @@ with dummy credentials; no real AWS account is involved.
 
 - *ECS on the EC2 launch type with bridge networking*, not Fargate. Fargate
   requires `awsvpc`, which publishes no port on the host, so the API would be
-  unreachable locally. Bridge mode maps container port 3000 to host port 3001.
+  unreachable locally. Bridge mode maps container port 3000 to host port 3000
+  (`HOST_PORT` in `infra/deploy.sh`).
 - *Single task, fixed host port* means a new task cannot start while the old
   one holds the port, so the service uses `MinimumHealthyPercent: 0` /
   `MaximumPercent: 100`: stop, then start.
@@ -843,7 +849,7 @@ with dummy credentials; no real AWS account is involved.
 require a bearer token:
 
 ```bash
-curl -X PUT http://localhost:3001/api/destination-catalog/<id>/photo \
+curl -X PUT http://localhost:3000/api/destination-catalog/<id>/photo \
   -H "Authorization: Bearer <token>" -F file=@london.jpg
 ```
 
