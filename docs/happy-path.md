@@ -31,16 +31,10 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build --
 The first run builds the images and takes a couple of minutes; later runs take
 seconds. It starts PostgreSQL, applies the migrations, starts the emulated AWS
 S3 (MiniStack) for photos, loads the demo data and starts the API. When it
-finishes, `npm run demo` prints the URLs and a **token**. To see them again:
+finishes, `npm run demo` prints the URLs and a **token** (see [the access token](#the-access-token)). To see them again:
 
 ```bash
 npm run demo:info
-```
-
-Without Node, the token is in the log of the step that loaded the data:
-
-```bash
-docker logs viajajunto-seed | tail -2
 ```
 
 What the demo data contains:
@@ -51,6 +45,48 @@ What the demo data contains:
 | Destination catalog | 64 cities with coordinates (Paris, Roma, Londres, Tóquio...) |
 | Activity catalog | 930 places (tours, restaurants, hotels), each linked to its city |
 | A scheduled trip | "Eurotrip 2027": Paris, Roma and Barcelona, 21 planned activities and a budget |
+
+### The access token
+
+There is no sign-in screen to go through: the token is ready-made, and there
+are three ways to get it.
+
+1. **When it starts.** The end of `npm run demo` prints it, right after the URLs:
+
+   ```
+   Token (valid 24 h)      paste it in Swagger > Authentication > Bearer token
+
+   eyJhbGciOiJIUzI1NiIs...
+   ```
+
+   The long line starting with `eyJ` is the token.
+2. **At any time later**, without starting anything again: `npm run demo:info`.
+3. **Without Node on the machine**, it is in the log of the step that loads the
+   data: `docker logs viajajunto-seed | tail -2`.
+
+To use it, either open **<http://localhost:3000/docs>**, click *Authentication*,
+choose *Bearer* and paste it, or send it in a header:
+`curl -H "Authorization: Bearer <token>" ...` (step 2 below keeps it in a
+variable).
+
+How it works: in the real product the token is issued after a Google sign-in.
+In the demo, the step that loads the data signs the same kind of token (a JWT)
+for the demo user, with the demo secret. The API checks two things only: that
+the signature is right and that the user exists in the database. It cannot tell
+the token did not come from Google, so everything you try is the real API, just
+without the Google screen.
+
+What to keep in mind:
+
+- The token is valid for **24 hours**. After that, `npm run demo:info` gives a
+  new one.
+- It is always the **same user**: the demo administrator. You cannot try the API
+  as a second person, so the flows that need another user (joining a trip with
+  an invite code, notifications caused by another member) are not part of this
+  tour.
+- If your environment or a `.env` file defines `JWT_SECRET`, the demo uses it
+  instead of the built-in secret, and `npm run demo:info` follows the same rule,
+  so the token it prints keeps working.
 
 ## 2. Set up your terminal
 
