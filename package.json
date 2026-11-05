@@ -31,6 +31,7 @@
     "db:logs": "docker compose logs -f postgres",
     "db:admin": "docker compose --profile tools up -d",
     "db:seed": "node prisma/seed.mjs",
+    "db:seed:demo": "node prisma/seed-demo.mjs",
     "auth:dev-token": "node scripts/dev-token.mjs",
     "openapi:generate": "npm run build && node scripts/generate-openapi.mjs openapi.json",
     "openapi:lint": "npx --yes @stoplight/spectral-cli@6 lint openapi.json --ruleset .spectral.yaml",
