@@ -4,200 +4,201 @@
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ViajaJunto_viaja-junto.server&metric=alert_status)](https://sonarcloud.io/project/overview?id=ViajaJunto_viaja-junto.server)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ViajaJunto_viaja-junto.server&metric=coverage)](https://sonarcloud.io/project/overview?id=ViajaJunto_viaja-junto.server)
 
-API REST do **ViajaJunto**, um planejador de viagens colaborativo: um grupo
-organiza roteiros com vários destinos, datas, atividades, orçamento e despesas
-num só lugar, vê o plano no mapa e lê o que outros viajantes acharam dos
-lugares. Projeto da disciplina de Construção de Software (PUCRS).
+REST API of **ViajaJunto**, a collaborative trip planner: a group organizes
+itineraries with several destinations, dates, activities, a budget and shared
+expenses in one place, sees the plan on a map and reads what other travellers
+thought of the places. Built for the Software Construction course (PUCRS).
 
-> A especificação completa (requisitos, arquitetura, modelo de dados) está em
-> [`docs/`](docs/index.md), em inglês, assim como o código e os comentários.
+> The full specification (requirements, architecture, data model) lives in
+> [`docs/`](docs/index.md).
 
-## Sumário
+## Contents
 
 - [Stack](#stack)
-- [Pré-requisitos](#pré-requisitos)
-- [Início rápido](#início-rápido)
-- [Variáveis de ambiente (`.env`)](#variáveis-de-ambiente-env)
-- [Login com Google, token de desenvolvimento e administradores](#login-com-google-token-de-desenvolvimento-e-administradores)
-- [Documentação da API (Swagger / Scalar)](#documentação-da-api-swagger--scalar)
-- [Visão geral dos endpoints](#visão-geral-dos-endpoints)
-- [Banco de dados](#banco-de-dados)
-- [Rodando tudo com Docker Compose](#rodando-tudo-com-docker-compose)
-- [Fotos e armazenamento (S3)](#fotos-e-armazenamento-s3)
-- [Ambiente AWS emulado (MiniStack)](#ambiente-aws-emulado-ministack)
-- [Testes](#testes)
-- [Qualidade e integração contínua](#qualidade-e-integração-contínua)
-- [Estrutura do projeto](#estrutura-do-projeto)
-- [Comandos npm](#comandos-npm)
-- [Solução de problemas](#solução-de-problemas)
-- [Contribuição e equipe](#contribuição-e-equipe)
+- [Prerequisites](#prerequisites)
+- [Quick start](#quick-start)
+- [Environment variables (`.env`)](#environment-variables-env)
+- [Google sign-in, development token and administrators](#google-sign-in-development-token-and-administrators)
+- [API documentation (Swagger / Scalar)](#api-documentation-swagger--scalar)
+- [Endpoint overview](#endpoint-overview)
+- [Database](#database)
+- [Running everything with Docker Compose](#running-everything-with-docker-compose)
+- [Photos and storage (S3)](#photos-and-storage-s3)
+- [Emulated AWS environment (MiniStack)](#emulated-aws-environment-ministack)
+- [Tests](#tests)
+- [Quality and continuous integration](#quality-and-continuous-integration)
+- [Project layout](#project-layout)
+- [npm scripts](#npm-scripts)
+- [Troubleshooting](#troubleshooting)
+- [Contributing and team](#contributing-and-team)
 
 ## Stack
 
-| Camada | Tecnologia |
-| ------ | ---------- |
-| Runtime e framework | Node.js 22, NestJS 12, TypeScript |
-| Banco de dados | PostgreSQL 17 com Prisma 7 (driver adapter `pg`) |
-| Autenticação | Passport.js: login com Google (OAuth 2.0) e JWT nas rotas protegidas |
-| Validação | `class-validator` nos payloads, Zod nas variáveis de ambiente |
-| Arquivos | Amazon S3 (MiniStack no ambiente local) |
-| Integrações externas | Google Places (atividades perto de um destino), OpenStreetMap / Nominatim (busca e importação de lugares), Wikipedia (foto reserva) |
-| Segurança HTTP | Helmet, CORS por lista de origens, rate limiting por IP (`@nestjs/throttler`) |
-| Documentação | OpenAPI gerado pelos decorators do `@nestjs/swagger`, exibido com Scalar |
-| Testes e qualidade | Vitest (unitários e e2e), oxlint, Prettier, Spectral, SonarCloud, Trivy |
-| Infraestrutura | Docker / Docker Compose, CloudFormation, MiniStack (emulador da AWS) |
+| Layer | Technology |
+| ----- | ---------- |
+| Runtime and framework | Node.js 22, NestJS 12, TypeScript |
+| Database | PostgreSQL 17 with Prisma 7 (`pg` driver adapter) |
+| Authentication | Passport.js: Google sign-in (OAuth 2.0) and JWT on protected routes |
+| Validation | `class-validator` for payloads, Zod for environment variables |
+| Files | Amazon S3 (MiniStack locally) |
+| External integrations | Google Places (activities around a destination), OpenStreetMap / Nominatim (place search and import), Wikipedia (fallback photos) |
+| HTTP security | Helmet, CORS allow-list, per-IP rate limiting (`@nestjs/throttler`) |
+| Documentation | OpenAPI generated from `@nestjs/swagger` decorators, rendered with Scalar |
+| Tests and quality | Vitest (unit and e2e), oxlint, Prettier, Spectral, SonarCloud, Trivy |
+| Infrastructure | Docker / Docker Compose, CloudFormation, MiniStack (AWS emulator) |
 
-A arquitetura é em módulos por funcionalidade, cada um com camadas
-`domain / application / infrastructure / presentation`
+The code is organised in feature modules, each with
+`domain / application / infrastructure / presentation` layers
 ([architecture §5.3](docs/architecture.md)).
 
-## Pré-requisitos
+## Prerequisites
 
-| Ferramenta | Para quê | Obrigatória? |
-| ---------- | -------- | ------------ |
-| **Node.js 22** e **npm 10** | Rodar a API, os testes e os scripts | Sim |
-| **Docker Desktop** (com Compose) | PostgreSQL local, stack completa e MiniStack | Sim, para o banco |
-| **AWS CLI v2** (`brew install awscli`) | Só para o ambiente AWS emulado (`npm run aws:*`) | Não |
-| Conta no Google Cloud | Credenciais OAuth para o login com Google; chave do Places | Não para desenvolver (veja o token de desenvolvimento) |
+| Tool | What for | Required? |
+| ---- | -------- | --------- |
+| **Node.js 22** and **npm 10** | Running the API, the tests and the scripts | Yes |
+| **Docker Desktop** (with Compose) | Local PostgreSQL, the full stack and MiniStack | Yes, for the database |
+| **AWS CLI v2** (`brew install awscli`) | Only for the emulated AWS environment (`npm run aws:*`) | No |
+| Google Cloud account | OAuth credentials for Google sign-in; Places API key | Not for development (see the development token) |
 
-> **Versão do npm:** a imagem Docker usa npm 10. Versões mais novas (11+)
-> reescrevem o `package-lock.json` de um jeito que o npm 10 não aceita, e o
-> build da imagem quebra com `Missing: typescript@... from lock file`. Instale
-> as dependências com **`npm ci`**, que nunca altera o lock, e só use
-> `npm install <pacote>` quando for de fato adicionar um pacote.
+> **npm version:** the Docker image uses npm 10. Newer versions (11+) rewrite
+> `package-lock.json` in a way npm 10 rejects, and the image build fails with
+> `Missing: typescript@... from lock file`. Install dependencies with
+> **`npm ci`**, which never changes the lock file, and use
+> `npm install <package>` only when you really add a package.
 
-## Início rápido
+## Quick start
 
 ```bash
 git clone https://github.com/ViajaJunto/viaja-junto.server.git
 cd viaja-junto.server
 
-cp .env.example .env        # depois preencha JWT_SECRET e o Google (veja abaixo)
-npm ci                      # instala as dependências e roda `prisma generate`
-npm run db:up               # sobe o PostgreSQL no Docker
-npx prisma migrate deploy   # cria as tabelas
-npm run db:seed             # opcional: destino de exemplo (Londres)
-npm run start:dev           # API em http://localhost:3000/api
+cp .env.example .env        # then fill in JWT_SECRET and Google (see below)
+npm ci                      # installs dependencies and runs `prisma generate`
+npm run db:up               # starts PostgreSQL in Docker
+npx prisma migrate deploy   # creates the tables
+npm run db:seed             # optional: a sample destination (London)
+npm run start:dev           # API on http://localhost:3000/api
 ```
 
-Abra **<http://localhost:3000/docs>** para a referência interativa da API e
-**<http://localhost:3000/api/health>** para conferir se a API e o banco estão
-de pé.
+Open **<http://localhost:3000/docs>** for the interactive API reference and
+**<http://localhost:3000/api/health>** to check that the API and the database
+are up.
 
-O `.env` mínimo para subir a API localmente:
+The minimum `.env` to run the API locally:
 
 ```dotenv
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/viajajunto?schema=public"
-JWT_SECRET=<saída de: openssl rand -base64 48>
-GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com   # ou o valor real
-GOOGLE_CLIENT_SECRET=placeholder                          # ou o valor real
+JWT_SECRET=<output of: openssl rand -base64 48>
+GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com   # or the real value
+GOOGLE_CLIENT_SECRET=placeholder                          # or the real value
 ```
 
-Com valores de mentira no Google a API sobe normalmente; só o login com Google
-não funciona. Para chamar rotas protegidas sem ele, use o
-[token de desenvolvimento](#sem-credenciais-do-google-token-de-desenvolvimento).
+With placeholder Google values the API starts normally; only Google sign-in
+does not work. To call protected routes without it, use the
+[development token](#without-google-credentials-development-token).
 
-## Variáveis de ambiente (`.env`)
+## Environment variables (`.env`)
 
-Todas as variáveis são validadas na inicialização por
-[`src/shared/config/env.ts`](src/shared/config/env.ts) (Zod). Se alguma
-obrigatória faltar ou estiver em formato errado, a API **não sobe** e mostra a
-lista de problemas. O [`.env.example`](.env.example) traz todas comentadas;
-copie-o para `.env`, que está no `.gitignore` e nunca deve ser commitado.
+Every variable is validated at startup by
+[`src/shared/config/env.ts`](src/shared/config/env.ts) (Zod). If a required
+one is missing or malformed, the API **refuses to start** and lists the
+problems. [`.env.example`](.env.example) documents all of them; copy it to
+`.env`, which is git-ignored and must never be committed.
 
-Legenda: **Obrigatória** = a API não sobe sem ela. **Opcional** = tem valor
-padrão ou só desliga uma funcionalidade.
+Legend: **Required** = the API does not start without it. **Optional** = it has
+a default or only turns a feature off.
 
-### Aplicação
+### Application
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `NODE_ENV` | Opcional | `development` | `development`, `test` ou `production` |
-| `PORT` | Opcional | `3000` | Porta HTTP da API |
-| `API_PREFIX` | Opcional | `api` | Prefixo de todas as rotas (`/api/trips`) |
-| `SWAGGER_PATH` | Opcional | `docs` | Caminho da documentação interativa (`/docs`) |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `NODE_ENV` | Optional | `development` | `development`, `test` or `production` |
+| `PORT` | Optional | `3000` | HTTP port of the API |
+| `API_PREFIX` | Optional | `api` | Prefix of every route (`/api/trips`) |
+| `SWAGGER_PATH` | Optional | `docs` | Path of the interactive documentation (`/docs`) |
 
-### Banco de dados
+### Database
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `DATABASE_URL` | **Obrigatória** | — | Connection string do PostgreSQL. Precisa começar com `postgresql://`. O valor do `.env.example` já aponta para o banco do Docker |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `DATABASE_URL` | **Required** | — | PostgreSQL connection string. Must start with `postgresql://`. The value in `.env.example` already points at the Docker database |
 
-### Login com Google (OAuth)
+### Google sign-in (OAuth)
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `GOOGLE_CLIENT_ID` | **Obrigatória** | — | Client ID do OAuth (Google Cloud Console). Pode ser um valor de mentira para desenvolver sem login |
-| `GOOGLE_CLIENT_SECRET` | **Obrigatória** | — | Client secret do OAuth. **Nunca compartilhe nem commite o valor real** |
-| `GOOGLE_CALLBACK_URL` | Opcional | `http://localhost:3000/api/auth/google/callback` | Para onde o Google volta após o login. Precisa estar cadastrada como *Authorized redirect URI* no Google Cloud |
-| `AUTH_REDIRECT_URL` | Opcional | `http://localhost:5173/auth/callback` | Página do frontend que recebe o token depois do login |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `GOOGLE_CLIENT_ID` | **Required** | — | OAuth client ID (Google Cloud Console). Can be a placeholder to develop without sign-in |
+| `GOOGLE_CLIENT_SECRET` | **Required** | — | OAuth client secret. **Never share or commit the real value** |
+| `GOOGLE_CALLBACK_URL` | Optional | `http://localhost:3000/api/auth/google/callback` | Where Google returns after sign-in. Must be registered as an *Authorized redirect URI* in Google Cloud |
+| `AUTH_REDIRECT_URL` | Optional | `http://localhost:5173/auth/callback` | Frontend page that receives the token after sign-in |
 
 ### Frontend (CORS)
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `CORS_ORIGINS` | Opcional | `http://localhost:5173` | Origens do navegador que podem chamar a API, separadas por vírgula, sem barra no final (`http://localhost:5173,https://app.exemplo.com`) |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `CORS_ORIGINS` | Optional | `http://localhost:5173` | Browser origins allowed to call the API, comma-separated, no trailing slash (`http://localhost:5173,https://app.example.com`) |
 
 ### Tokens (JWT)
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `JWT_SECRET` | **Obrigatória** | — | Segredo que assina os tokens, com **pelo menos 32 caracteres**. Gere com `openssl rand -base64 48` |
-| `JWT_EXPIRES_IN` | Opcional | `3600` | Validade do token, em segundos |
-| `JWT_SECRET_PREVIOUS` | Opcional | — | Para trocar o `JWT_SECRET` sem deslogar todo mundo: coloque o segredo **antigo** aqui e o novo em `JWT_SECRET`. Tokens antigos valem até expirar; remova depois de `JWT_EXPIRES_IN` segundos |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `JWT_SECRET` | **Required** | — | Secret that signs the tokens, **at least 32 characters**. Generate it with `openssl rand -base64 48` |
+| `JWT_EXPIRES_IN` | Optional | `3600` | Token lifetime, in seconds |
+| `JWT_SECRET_PREVIOUS` | Optional | — | To rotate `JWT_SECRET` without signing everyone out: put the **old** secret here and the new one in `JWT_SECRET`. Old tokens stay valid until they expire; remove it after `JWT_EXPIRES_IN` seconds |
 
-### Limite de requisições (rate limiting)
+### Rate limiting
 
-Contado por IP, numa janela fixa. Acima do limite a API responde `429` com o
-cabeçalho `Retry-After`.
+Counted per IP, in a fixed window. Over the limit the API answers `429` with a
+`Retry-After` header.
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `THROTTLE_TTL_SECONDS` | Opcional | `60` | Tamanho da janela, em segundos |
-| `THROTTLE_LIMIT` | Opcional | `300` | Leituras (GET) por janela |
-| `THROTTLE_WRITE_LIMIT` | Opcional | `60` | Escritas (POST, PATCH, PUT, DELETE) por janela |
-| `THROTTLE_STRICT_LIMIT` | Opcional | `10` | Rotas sensíveis: login, entrar numa viagem com código, upload de foto, escrever avaliação e as rotas de lugares |
-| `TRUST_PROXY_HOPS` | Opcional | `0` | Quantos proxies reversos ficam na frente da API (ex.: `1` atrás de um load balancer), para ler o IP real do `X-Forwarded-For`. Deixe `0` quando os clientes conectam direto |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `THROTTLE_TTL_SECONDS` | Optional | `60` | Window length, in seconds |
+| `THROTTLE_LIMIT` | Optional | `300` | Reads (GET) per window |
+| `THROTTLE_WRITE_LIMIT` | Optional | `60` | Writes (POST, PATCH, PUT, DELETE) per window |
+| `THROTTLE_STRICT_LIMIT` | Optional | `10` | Sensitive routes: sign-in, joining a trip with a code, photo uploads, writing reviews and the places routes |
+| `TRUST_PROXY_HOPS` | Optional | `0` | How many reverse proxies sit in front of the API (e.g. `1` behind a load balancer), so the real IP is read from `X-Forwarded-For`. Leave `0` when clients connect directly |
 
-### Lugares: OpenStreetMap (Nominatim)
+### Places: OpenStreetMap (Nominatim)
 
-Usado pelos administradores para buscar e importar cidades e lugares
+Used by administrators to search for and import cities and places
 (`/places/search`, `/places/import/*`).
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `PLACES_USER_AGENT` | Opcional | — | Identificação exigida pela política do Nominatim, com um contato: `ViajaJunto/1.0 (voce@exemplo.com)`. **Sem ela, essas rotas respondem `503`**. Também é enviada à Wikipedia ao buscar fotos reserva |
-| `PLACES_BASE_URL` | Opcional | `https://nominatim.openstreetmap.org` | Servidor do Nominatim |
-| `PLACES_TIMEOUT_MS` | Opcional | `5000` | Tempo máximo de espera pelo Nominatim, em ms |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `PLACES_USER_AGENT` | Optional | — | Identification required by Nominatim's usage policy, with a contact: `ViajaJunto/1.0 (you@example.com)`. **Without it these routes answer `503`**. Also sent to Wikipedia when fetching fallback photos |
+| `PLACES_BASE_URL` | Optional | `https://nominatim.openstreetmap.org` | Nominatim server |
+| `PLACES_TIMEOUT_MS` | Optional | `5000` | Maximum wait for Nominatim, in ms |
 
-### Lugares: Google Places
+### Places: Google Places
 
-Usado por `GET /destination-catalog/:id/activities`: a API responde primeiro
-com o catálogo e, quando há poucas atividades, busca as mais populares no
-Google Places e as copia para o catálogo, com foto e link do Maps.
+Used by `GET /destination-catalog/:id/activities`: the API answers from the
+catalog first and, when it has too few activities, fetches the most popular
+ones from Google Places and copies them into the catalog with their photo and
+Maps link.
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `GOOGLE_PLACES_API_KEY` | Opcional | — | Chave da **Places API (New)**, com faturamento ativo no projeto do Google Cloud (cada busca e cada foto é cobrada). **Sem ela, a busca externa responde `503`**; o que já está no catálogo continua sendo retornado |
-| `GOOGLE_PLACES_TIMEOUT_MS` | Opcional | `10000` | Tempo máximo de espera pelo Google, em ms |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `GOOGLE_PLACES_API_KEY` | Optional | — | **Places API (New)** key, with billing enabled on the Google Cloud project (every search and every photo is billed). **Without it the external search answers `503`**; what is already in the catalog is still returned |
+| `GOOGLE_PLACES_TIMEOUT_MS` | Optional | `10000` | Maximum wait for Google, in ms |
 
-### Armazenamento de fotos (S3)
+### Photo storage (S3)
 
-Sem `S3_BUCKET` a API sobe normalmente e só os uploads de foto respondem `503`.
-As credenciais da AWS **não** ficam aqui: o SDK as lê da cadeia padrão
-(variáveis `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, papel da task no ECS ou
+Without `S3_BUCKET` the API starts normally and only photo uploads answer
+`503`. AWS credentials are **not** set here: the SDK reads them from its
+default chain (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, the ECS task role or
 `~/.aws`).
 
-| Variável | Obrigatória? | Padrão | O que é |
-| -------- | ------------ | ------ | ------- |
-| `AWS_REGION` | Opcional | `us-east-1` | Região do bucket |
-| `S3_BUCKET` | Opcional | — | Nome do bucket das fotos |
-| `S3_ENDPOINT` | Opcional | — | Endpoint customizado (MiniStack, LocalStack, MinIO). Deixe vazio na AWS real |
-| `S3_PUBLIC_URL` | Opcional | — | URL que o navegador usa para abrir as fotos, com o bucket no final. Necessária quando a API acessa o S3 por um endereço interno diferente |
-| `S3_FORCE_PATH_STYLE` | Opcional | `false` | `true` em emuladores, que endereçam o bucket como `host/bucket` em vez de subdomínio |
+| Variable | Required? | Default | What it is |
+| -------- | --------- | ------- | ---------- |
+| `AWS_REGION` | Optional | `us-east-1` | Bucket region |
+| `S3_BUCKET` | Optional | — | Name of the photos bucket |
+| `S3_ENDPOINT` | Optional | — | Custom endpoint (MiniStack, LocalStack, MinIO). Leave empty on real AWS |
+| `S3_PUBLIC_URL` | Optional | — | URL the browser uses to open photos, bucket included. Needed when the API reaches S3 through a different, internal address |
+| `S3_FORCE_PATH_STYLE` | Optional | `false` | `true` for emulators, which address the bucket as `host/bucket` instead of a subdomain |
 
-Para usar o bucket do MiniStack rodando a API com `npm run start:dev`, depois
-de um `npm run aws:deploy`:
+To use the MiniStack bucket while running the API with `npm run start:dev`,
+after `npm run aws:deploy`:
 
 ```dotenv
 S3_BUCKET=viajajunto-photos-000000000000
@@ -209,221 +210,221 @@ AWS_SECRET_ACCESS_KEY=test
 
 ### Docker Compose
 
-Lidas só pelo `docker-compose.yml`, não pela API.
+Read only by `docker-compose.yml`, not by the API.
 
-| Variável | Padrão | O que é |
-| -------- | ------ | ------- |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `postgres` / `postgres` / `viajajunto` | Credenciais e nome do banco do contêiner. Devem bater com o `DATABASE_URL` |
-| `POSTGRES_PORT` | `5432` | Porta do PostgreSQL no seu computador |
-| `ADMINER_PORT` | `8080` | Porta do Adminer (cliente web do banco) |
-| `API_PORT` | `3000` | Porta da API quando ela roda pelo Compose |
-| `API_IMAGE` | `viajajunto-api:local` | Imagem da API; troque para rodar a publicada no Docker Hub |
-| `MINISTACK_PORT` | `4566` | Porta do MiniStack |
+| Variable | Default | What it is |
+| -------- | ------- | ---------- |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `postgres` / `postgres` / `viajajunto` | Credentials and name of the container database. Must match `DATABASE_URL` |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port on your machine |
+| `ADMINER_PORT` | `8080` | Adminer port (web database client) |
+| `API_PORT` | `3000` | API port when it runs through Compose |
+| `API_IMAGE` | `viajajunto-api:local` | API image; change it to run the one published on Docker Hub |
+| `MINISTACK_PORT` | `4566` | MiniStack port |
 
-### O que funciona sem as integrações opcionais
+### What works without the optional integrations
 
-| Falta | O que acontece |
-| ----- | -------------- |
-| Credenciais reais do Google | A API sobe; o login com Google falha. Use o token de desenvolvimento |
-| `S3_BUCKET` | Upload de foto responde `503`; o resto funciona |
-| `GOOGLE_PLACES_API_KEY` | `GET /destination-catalog/:id/activities` responde só com o catálogo ou `503` quando precisaria buscar fora |
-| `PLACES_USER_AGENT` | Busca e importação de lugares (`/places/*`) respondem `503` |
+| Missing | What happens |
+| ------- | ------------ |
+| Real Google credentials | The API starts; Google sign-in fails. Use the development token |
+| `S3_BUCKET` | Photo uploads answer `503`; everything else works |
+| `GOOGLE_PLACES_API_KEY` | `GET /destination-catalog/:id/activities` answers from the catalog only, or `503` when it would need to search outside |
+| `PLACES_USER_AGENT` | Place search and import (`/places/*`) answer `503` |
 
-## Login com Google, token de desenvolvimento e administradores
+## Google sign-in, development token and administrators
 
-### Configurando o login com Google
+### Setting up Google sign-in
 
-O Google é o **único** método de login; não existem senhas.
+Google is the **only** sign-in method; there are no passwords.
 
-1. No [Google Cloud Console](https://console.cloud.google.com/), abra
-   **APIs & Services → Credentials** e crie um **OAuth client ID** do tipo
+1. In the [Google Cloud Console](https://console.cloud.google.com/), open
+   **APIs & Services → Credentials** and create an **OAuth client ID** of type
    *Web application*.
-2. Em **Authorized redirect URIs**, cadastre
-   `http://localhost:3000/api/auth/google/callback` (tem que ser igual ao
+2. Under **Authorized redirect URIs**, register
+   `http://localhost:3000/api/auth/google/callback` (it must equal
    `GOOGLE_CALLBACK_URL`).
-3. Copie o client ID e o client secret para o `.env`.
+3. Copy the client ID and client secret into `.env`.
 
-O fluxo começa em `GET /api/auth/google`, que precisa ser aberto **no
-navegador** (navegação de página inteira, não `fetch`/XHR — o redirect para o
-Google é bloqueado por CORS em chamadas via script, inclusive no botão "Send"
-da documentação). Depois do consentimento, a API redireciona para
-`AUTH_REDIRECT_URL#access_token=<jwt>&token_type=Bearer&expires_in=<s>`. As
-chamadas seguintes mandam o cabeçalho `Authorization: Bearer <token>`.
-`POST /api/auth/logout` invalida todos os tokens do usuário, em todos os
-dispositivos.
+The flow starts at `GET /api/auth/google`, which must be opened **in the
+browser** (a full page load, not `fetch`/XHR — the redirect to Google is
+blocked by CORS when called from a script, including the documentation's
+"Send" button). After consent, the API redirects to
+`AUTH_REDIRECT_URL#access_token=<jwt>&token_type=Bearer&expires_in=<s>`.
+Subsequent calls send the `Authorization: Bearer <token>` header.
+`POST /api/auth/logout` revokes every token of the user, on every device.
 
-### Sem credenciais do Google: token de desenvolvimento
+### Without Google credentials: development token
 
-Gera um token de uma hora assinado com o seu `JWT_SECRET`. O usuário é criado
-no banco se o e-mail for novo, então o `DATABASE_URL` precisa apontar para o
-banco da API, com as migrations aplicadas.
+Mints a one-hour token signed with your `JWT_SECRET`. The user is created in
+the database if the email is new, so `DATABASE_URL` must point at the API's
+database, with the migrations applied.
 
 ```bash
 npm run auth:dev-token                                    # dev@viajajunto.local
-npm run auth:dev-token -- alguem@exemplo.com
-npm run auth:dev-token -- alguem@exemplo.com --admin      # e o torna administrador
+npm run auth:dev-token -- someone@example.com
+npm run auth:dev-token -- someone@example.com --admin     # also makes them an administrator
 
 curl -H "Authorization: Bearer $(npm run -s auth:dev-token)" http://localhost:3000/api/auth/me
 ```
 
-Na documentação interativa, cole o token em **Authentication → Bearer**.
+In the interactive documentation, paste the token under **Authentication →
+Bearer**.
 
-> Só para desenvolvimento: quem tem o `JWT_SECRET` consegue gerar token para
-> qualquer usuário.
+> Development only: whoever holds `JWT_SECRET` can mint a token for any user.
 
-### Administradores
+### Administrators
 
-Só um administrador (`role = ADMIN`) cria, edita, apaga ou importa entradas
-dos catálogos de destinos e atividades e envia as fotos delas. A API nunca
-concede esse papel sozinha; promova uma conta pelo banco (ou gere um token com
-`--admin`):
+Only an administrator (`role = ADMIN`) creates, edits, deletes or imports
+entries of the destination and activity catalogs and uploads their photos. The
+API never grants the role by itself; promote an account in the database (or
+mint a token with `--admin`):
 
 ```sql
-UPDATE "user" SET role = 'ADMIN' WHERE email = 'alguem@exemplo.com';
+UPDATE "user" SET role = 'ADMIN' WHERE email = 'someone@example.com';
 ```
 
-## Documentação da API (Swagger / Scalar)
+## API documentation (Swagger / Scalar)
 
-Com a API rodando, a referência interativa fica em
-**<http://localhost:3000/docs>** (o caminho vem de `SWAGGER_PATH`). Ela é gerada
-dos decorators do código, então descreve exatamente o que a API faz: cada
-endpoint, parâmetro, corpo, exemplo e código de resposta, inclusive os de
-erro. Rotas com cadeado exigem `Authorization: Bearer <token>`.
+With the API running, the interactive reference is at
+**<http://localhost:3000/docs>** (the path comes from `SWAGGER_PATH`). It is
+generated from the decorators in the code, so it describes exactly what the API
+does: every endpoint, parameter, body, example and status code, error codes
+included. Routes with a padlock require `Authorization: Bearer <token>`.
 
-Para exportar e validar o contrato, como o CI faz:
+To export and validate the contract, as CI does:
 
 ```bash
-npm run openapi:generate   # compila e grava o openapi.json (com os caminhos /api/...)
-npm run openapi:lint       # valida com Spectral (.spectral.yaml)
+npm run openapi:generate   # builds and writes openapi.json (with the /api/... paths)
+npm run openapi:lint       # validates it with Spectral (.spectral.yaml)
 ```
 
-Convenções que valem para toda a API:
+Conventions that apply to the whole API:
 
-| Tema | Regra |
-| ---- | ----- |
-| Paginação | Listas aceitam `page` (padrão 1) e `limit` (padrão 20, máximo 100) e respondem `{ data, meta }` |
-| Permissões em viagens | O criador (`OWNER`) gerencia a viagem e os membros; `EDITOR` altera destinos, atividades, orçamento e despesas; `VIEWER` só lê. Quem não participa recebe `404` |
-| Catálogos | Leitura pública; escrita só para administradores (`403`) |
-| Erros | Formato `{ statusCode, message, error }`; `422` lista todas as regras de validação violadas |
-| Rate limiting | `429` com `Retry-After` ao passar do limite |
+| Topic | Rule |
+| ----- | ---- |
+| Pagination | Lists accept `page` (default 1) and `limit` (default 20, maximum 100) and answer `{ data, meta }` |
+| Trip permissions | The creator (`OWNER`) manages the trip and its members; an `EDITOR` changes destinations, activities, budget and expenses; a `VIEWER` only reads. Anyone outside the trip gets `404` |
+| Catalogs | Public reads; writes for administrators only (`403`) |
+| Errors | Shape `{ statusCode, message, error }`; `422` lists every violated validation rule |
+| Rate limiting | `429` with `Retry-After` when over the limit |
 
-Códigos de status usados: `400` (UUID inválido no caminho), `401` (sem token
-ou token inválido), `403` (sem permissão), `404` (não existe ou não é visível
-para você), `409` (conflito: duplicado, em uso, já é membro), `413` (arquivo
-grande demais), `422` (validação), `429` (limite de requisições), `502`/`504`
-(provedor externo falhou ou demorou), `503` (integração opcional não
-configurada, ou banco fora do ar no `/health`).
+Status codes in use: `400` (invalid UUID in the path), `401` (missing or
+invalid token), `403` (not allowed), `404` (does not exist or is not visible to
+you), `409` (conflict: duplicate, in use, already a member), `413` (file too
+large), `422` (validation), `429` (rate limit), `502`/`504` (external provider
+failed or timed out), `503` (optional integration not configured, or database
+down on `/health`).
 
-## Visão geral dos endpoints
+## Endpoint overview
 
-Todos com o prefixo `/api`. Detalhes completos em `/docs`.
+All routes carry the `/api` prefix. Full details at `/docs`.
 
-| Módulo | Rotas principais | Quem pode |
-| ------ | ---------------- | --------- |
-| Health | `GET /health` | Público |
-| Auth | `GET /auth/google`, `GET /auth/google/callback`, `GET /auth/me`, `POST /auth/logout` | Público (login); usuário logado |
-| Users | `GET /users`, `GET/PATCH/DELETE /users/:id`, `GET /users/me/visited-countries` | Usuário logado; alterar só a própria conta |
-| Trips | CRUD em `/trips` (filtro `?status=`), `POST /trips/join`, `GET /trips/:id/invite-code`, `POST /trips/:id/invite-code/regenerate` | Membros leem; o criador edita, apaga e gerencia o código de convite |
-| Trip Members | CRUD em `/trip-members` (filtro `?tripId=`) | Membros leem; o criador convida, muda permissão e remove |
-| Trip Destinations | CRUD em `/trip-destinations` (filtro `?tripId=`), `PUT /trips/:tripId/destinations/order` | Membros leem; criador e `EDITOR` alteram |
-| Trip Activities | CRUD em `/trip-activities` (filtro `?tripDestinationId=`) | Membros leem; criador e `EDITOR` alteram |
-| Budgets | CRUD em `/budgets`, `GET /trips/:id/budget/summary` | Membros leem; criador e `EDITOR` alteram |
-| Trip Expenses | CRUD em `/trip-expenses` (filtro `?tripId=`), `GET /trips/:id/expenses/summary` | Membros leem; criador e `EDITOR` alteram |
-| Destination Catalog | `GET /destination-catalog` (filtros `q`, `country`, `category`), `/top`, `/:id`, `/:id/details`; POST/PATCH/DELETE; `PUT /:id/photo` | Leitura pública; escrita só administrador |
-| Activity Catalog | `GET /activity-catalog` (filtros `q`, `type`, `minRating`, `city`, `country`, `destinationId`, `sort`), `/:id`, `/:id/details`; POST/PATCH/DELETE; `PUT /:id/photo` | Leitura pública; escrita só administrador |
-| Places | `GET /destination-catalog/:id/activities`, `GET /places/search`, `POST /places/import/destinations`, `POST /places/import/activities` | Usuário logado (atividades); administrador (busca e importação) |
-| Reviews | CRUD em `/reviews` (filtro `?activityId=`) | Leitura pública; escrever exige login; editar e apagar só o autor |
-| Destination Reviews | CRUD em `/destination-reviews` (filtro `?destinationId=`) | Leitura pública; só quem fez uma viagem concluída com o destino avalia |
-| Notifications | `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/read-all`, `PATCH /notifications/:id/read` | Cada usuário vê só as suas |
+| Module | Main routes | Who can |
+| ------ | ----------- | ------- |
+| Health | `GET /health` | Public |
+| Auth | `GET /auth/google`, `GET /auth/google/callback`, `GET /auth/me`, `POST /auth/logout` | Public (sign-in); signed-in user |
+| Users | `GET /users`, `GET/PATCH/DELETE /users/:id`, `GET /users/me/visited-countries` | Signed-in user; only your own account can be changed |
+| Trips | CRUD on `/trips` (`?status=` filter), `POST /trips/join`, `GET /trips/:id/invite-code`, `POST /trips/:id/invite-code/regenerate` | Members read; the creator edits, deletes and manages the invite code |
+| Trip Members | CRUD on `/trip-members` (`?tripId=` filter) | Members read; the creator invites, changes permissions and removes |
+| Trip Destinations | CRUD on `/trip-destinations` (`?tripId=` filter), `PUT /trips/:tripId/destinations/order` | Members read; creator and `EDITOR` change |
+| Trip Activities | CRUD on `/trip-activities` (`?tripDestinationId=` filter) | Members read; creator and `EDITOR` change |
+| Budgets | CRUD on `/budgets`, `GET /trips/:id/budget/summary` | Members read; creator and `EDITOR` change |
+| Trip Expenses | CRUD on `/trip-expenses` (`?tripId=` filter), `GET /trips/:id/expenses/summary` | Members read; creator and `EDITOR` change |
+| Destination Catalog | `GET /destination-catalog` (`q`, `country`, `category` filters), `/top`, `/:id`, `/:id/details`; POST/PATCH/DELETE; `PUT /:id/photo` | Public reads; writes for administrators only |
+| Activity Catalog | `GET /activity-catalog` (`q`, `type`, `minRating`, `city`, `country`, `destinationId`, `sort`), `/:id`, `/:id/details`; POST/PATCH/DELETE; `PUT /:id/photo` | Public reads; writes for administrators only |
+| Places | `GET /destination-catalog/:id/activities`, `GET /places/search`, `POST /places/import/destinations`, `POST /places/import/activities` | Signed-in user (activities); administrator (search and import) |
+| Reviews | CRUD on `/reviews` (`?activityId=` filter) | Public reads; writing needs sign-in; only the author edits or deletes |
+| Destination Reviews | CRUD on `/destination-reviews` (`?destinationId=` filter) | Public reads; only travellers with a completed trip to the destination can review |
+| Notifications | `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/read-all`, `PATCH /notifications/:id/read` | Each user sees only their own |
 
-## Banco de dados
+## Database
 
-O schema fica em [`prisma/schema.prisma`](prisma/schema.prisma) e as migrations
-em [`prisma/migrations/`](prisma/migrations). Entidades principais: `user`,
+The schema is in [`prisma/schema.prisma`](prisma/schema.prisma) and the
+migrations in [`prisma/migrations/`](prisma/migrations). Main entities: `user`,
 `trip`, `trip_member`, `trip_destination`, `trip_activity`, `budget`,
-`trip_expense` (com `trip_expense_share`), `destination_catalog`,
-`activity_catalog`, `review`, `destination_review` e `notification`. O resumo
-do modelo está na [architecture §5.2](docs/architecture.md).
+`trip_expense` (with `trip_expense_share`), `destination_catalog`,
+`activity_catalog`, `review`, `destination_review` and `notification`. The
+model is summarised in [architecture §5.2](docs/architecture.md).
 
-| Tarefa | Comando |
-| ------ | ------- |
-| Aplicar as migrations existentes | `npx prisma migrate deploy` |
-| Criar uma migration depois de mudar o schema | `npm run prisma:migrate` |
-| Apagar o banco, reaplicar tudo e rodar o seed | `npm run db:reset` |
-| Dados de exemplo (destino Londres, com foto se houver S3) | `npm run db:seed` |
-| Navegar nos dados | `npm run prisma:studio` ou `npm run db:admin` (Adminer em <http://localhost:8080>) |
-| Ver os logs do PostgreSQL | `npm run db:logs` |
+| Task | Command |
+| ---- | ------- |
+| Apply the existing migrations | `npx prisma migrate deploy` |
+| Create a migration after changing the schema | `npm run prisma:migrate` |
+| Drop the database, re-apply everything and seed | `npm run db:reset` |
+| Sample data (London destination, with a photo when S3 is set) | `npm run db:seed` |
+| Browse the data | `npm run prisma:studio` or `npm run db:admin` (Adminer on <http://localhost:8080>) |
+| PostgreSQL logs | `npm run db:logs` |
 
-Antes de gerar uma migration, atualize sua branch com a `master`, para não
-criar migrations em ordem conflitante com as de outra pessoa.
+Before generating a migration, update your branch with `master`, so migrations
+do not end up in an order that conflicts with someone else's.
 
-## Rodando tudo com Docker Compose
+## Running everything with Docker Compose
 
 ```bash
-npm run stack:up                     # PostgreSQL, migrations e a API (com build)
-docker compose --profile tools up -d # + Adminer em http://localhost:8080
-npm run stack:logs                   # logs da API
-npm run stack:down                   # derruba tudo (inclusive MiniStack e Adminer)
-npm run db:nuke                      # derruba e apaga o volume do banco
+npm run stack:up                     # PostgreSQL, migrations and the API (with build)
+docker compose --profile tools up -d # plus Adminer on http://localhost:8080
+npm run stack:logs                   # API logs
+npm run stack:down                   # stops everything (MiniStack and Adminer included)
+npm run db:nuke                      # stops everything and deletes the database volume
 ```
 
-A API responde em `http://localhost:3000/api` (`API_PORT`). O Compose lê o
-mesmo `.env`; dentro da rede do Compose o banco é acessado pelo nome
-`postgres`, e isso já está configurado.
+The API answers on `http://localhost:3000/api` (`API_PORT`). Compose reads the
+same `.env`; inside the Compose network the database is reached by the name
+`postgres`, and that is already configured.
 
-## Fotos e armazenamento (S3)
+## Photos and storage (S3)
 
-Destinos e atividades do catálogo têm foto. Um administrador envia a imagem em
-`PUT /api/destination-catalog/:id/photo` (ou `/activity-catalog/:id/photo`)
-como `multipart/form-data`, no campo `file`:
+Catalog destinations and activities have a photo. An administrator uploads the
+image to `PUT /api/destination-catalog/:id/photo` (or
+`/activity-catalog/:id/photo`) as `multipart/form-data`, in the `file` field:
 
 ```bash
 curl -X PUT http://localhost:3000/api/destination-catalog/<id>/photo \
-  -H "Authorization: Bearer $(npm run -s auth:dev-token -- admin@exemplo.com --admin)" \
-  -F file=@foto.jpg
+  -H "Authorization: Bearer $(npm run -s auth:dev-token -- admin@example.com --admin)" \
+  -F file=@photo.jpg
 ```
 
-- Aceita JPEG, PNG e WebP de até 5 MB. O tipo é conferido pelo conteúdo do
-  arquivo, não pela extensão (`422` para arquivo falso, `413` acima do tamanho).
-- Cada upload grava uma chave nova (`destinations/<id>/<uuid>.jpg`), salva só a
-  URL pública no banco (`photoUrl`) e só então apaga a foto anterior.
-- O bucket tem leitura pública: o navegador baixa a imagem direto do S3, sem
-  passar pela API.
+- Accepts JPEG, PNG and WebP up to 5 MB. The type is checked from the file
+  content, not the extension (`422` for a fake file, `413` when too large).
+- Each upload writes a new key (`destinations/<id>/<uuid>.jpg`), stores only
+  the public URL in the database (`photoUrl`) and only then deletes the
+  previous photo.
+- The bucket is publicly readable: the browser downloads the image straight
+  from S3, without going through the API.
 
-## Ambiente AWS emulado (MiniStack)
+## Emulated AWS environment (MiniStack)
 
-A hospedagem na AWS (RDS, ECR, ECS, S3, Secrets Manager, IAM, CloudWatch Logs)
-é reproduzida no seu computador com o [MiniStack](https://ministack.org), via
-CloudFormation. Nada é cobrado e nenhuma conta da AWS é usada.
+Hosting on AWS (RDS, ECR, ECS, S3, Secrets Manager, IAM, CloudWatch Logs) is
+reproduced on your machine with [MiniStack](https://ministack.org), driven by
+CloudFormation. Nothing is billed and no AWS account is used.
 
-Pré-requisitos: Docker Desktop **aberto**, AWS CLI v2 e o `.env` com
-`JWT_SECRET` e as variáveis do Google preenchidas (podem ser de mentira).
+Prerequisites: Docker Desktop **running**, AWS CLI v2 and a `.env` with
+`JWT_SECRET` and the Google variables filled in (placeholders are fine).
 
 ```bash
-npm run aws:up        # sobe o MiniStack em http://localhost:4566
-npm run aws:deploy    # RDS, imagem no ECR, migrations, stack do app (ECS, S3, segredos) e seed
-npm run aws:status    # stacks, banco, imagens, serviço ECS, tasks paradas e bucket
-npm run aws:destroy   # remove tudo o que o deploy criou (esvazia e apaga o bucket)
-npm run aws:down      # remove o contêiner do MiniStack
+npm run aws:up        # starts MiniStack on http://localhost:4566
+npm run aws:deploy    # RDS, image in ECR, migrations, app stack (ECS, S3, secrets) and seed
+npm run aws:status    # stacks, database, images, ECS service, stopped tasks and bucket
+npm run aws:destroy   # removes everything deploy created (empties and deletes the bucket)
+npm run aws:down      # removes the MiniStack container
 ```
 
-A API do ECS responde em `http://localhost:3000/api` (mude com
-`HOST_PORT=3001 npm run aws:deploy`). O MiniStack guarda o estado em memória:
-se o contêiner reiniciar, rode `npm run aws:deploy` de novo. Templates e
-scripts ficam em [`infra/`](infra); a
-[architecture §9](docs/architecture.md) explica cada passo e onde o MiniStack
-difere da AWS.
+The ECS API answers on `http://localhost:3000/api` (change it with
+`HOST_PORT=3001 npm run aws:deploy`). MiniStack keeps its state in memory: if
+the container restarts, run `npm run aws:deploy` again. Templates and scripts
+live in [`infra/`](infra); [architecture §9](docs/architecture.md) explains
+every step and where MiniStack differs from AWS.
 
-## Testes
+## Tests
 
 ```bash
-npm test             # testes unitários
-npm run test:cov     # com cobertura (o CI exige os mínimos do vitest.config.ts)
-npm run test:e2e     # ponta a ponta, contra um PostgreSQL de verdade
+npm test             # unit tests
+npm run test:cov     # with coverage (CI enforces the thresholds in vitest.config.ts)
+npm run test:e2e     # end-to-end, against a real PostgreSQL
 ```
 
-Os testes unitários nunca acessam banco. Os **e2e** sobem a aplicação inteira
-e usam um PostgreSQL real; use um banco separado, com as migrations aplicadas:
+Unit tests never touch a database. The **e2e** tests boot the whole application
+and use a real PostgreSQL; use a separate database, with the migrations
+applied:
 
 ```bash
 docker compose exec postgres createdb -U postgres viajajunto_test
@@ -432,24 +433,24 @@ npx prisma migrate deploy
 npm run test:e2e
 ```
 
-As suítes e2e rodam em paralelo no mesmo banco: cada uma cria linhas com nomes
-únicos e remove exatamente essas ao terminar (`test/support`). Nunca truncam
-tabelas.
+The e2e suites run in parallel on the same database: each one creates rows with
+unique names and removes exactly those when it ends (`test/support`). They
+never truncate tables.
 
-## Qualidade e integração contínua
+## Quality and continuous integration
 
-Cada pull request roda o workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+Every pull request runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
 
-| Job | O que verifica |
+| Job | What it checks |
 | --- | -------------- |
-| Lint | oxlint sem avisos e formatação com Prettier |
-| Tests | Migrations, testes unitários com cobertura e testes e2e com PostgreSQL |
-| API contract | Gera o `openapi.json` e valida com Spectral |
-| SonarCloud | Análise estática e quality gate |
-| Image scan | Build da imagem Docker e varredura do Trivy (falha em HIGH/CRITICAL com correção disponível) |
-| Publish image | Publica no Docker Hub a partir da `master` e de tags `v*` |
+| Lint | oxlint with no warnings and Prettier formatting |
+| Tests | Migrations, unit tests with coverage and e2e tests on PostgreSQL |
+| API contract | Generates `openapi.json` and validates it with Spectral |
+| SonarCloud | Static analysis and quality gate |
+| Image scan | Docker image build and Trivy scan (fails on HIGH/CRITICAL with a fix available) |
+| Publish image | Publishes to Docker Hub from `master` and `v*` tags |
 
-Antes de abrir um PR, rode localmente:
+Before opening a PR, run locally:
 
 ```bash
 npm run lint && npx prettier --check "src/**/*.ts" "test/**/*.ts"
@@ -457,78 +458,78 @@ npm run test:cov
 npm run openapi:generate && npm run openapi:lint
 ```
 
-## Estrutura do projeto
+## Project layout
 
 ```
 src/
 ├── main.ts, app.module.ts
 ├── shared/
-│   ├── config/        Validação das variáveis de ambiente (Zod)
-│   ├── database/      PrismaService e consultas compartilhadas (viagens visíveis, notas)
-│   ├── events/        Eventos de viagem (geram notificações)
-│   ├── expenses/      Biblioteca de divisão de despesas, sem framework
-│   ├── http/          CORS, Helmet, rate limiting, filtros de erro, OpenAPI, DTOs comuns
-│   └── storage/       Upload de fotos para o S3
-└── modules/<funcionalidade>/
-    ├── domain/          Entidades e contratos de repositório — sem framework, sem ORM
-    ├── application/     Casos de uso (services) e DTOs
-    ├── infrastructure/  Repositórios Prisma e outros adaptadores
-    ├── presentation/    Controllers (rotas HTTP e documentação OpenAPI)
-    └── <funcionalidade>.module.ts
-prisma/      Schema, migrations, seed e imagens do seed
-scripts/     Token de desenvolvimento e exportação do OpenAPI
-test/        Testes e2e e utilitários
-infra/       Templates CloudFormation e scripts do ambiente AWS emulado
-docs/        Requisitos, arquitetura, plano de reuso e identidade visual
+│   ├── config/        Environment variable validation (Zod)
+│   ├── database/      PrismaService and shared queries (visible trips, ratings)
+│   ├── events/        Trip events (they produce notifications)
+│   ├── expenses/      Framework-free expense-splitting library
+│   ├── http/          CORS, Helmet, rate limiting, error filters, OpenAPI, common DTOs
+│   └── storage/       Photo uploads to S3
+└── modules/<feature>/
+    ├── domain/          Entities and repository contracts — no framework, no ORM
+    ├── application/     Use cases (services) and DTOs
+    ├── infrastructure/  Prisma repositories and other adapters
+    ├── presentation/    Controllers (HTTP routes and OpenAPI documentation)
+    └── <feature>.module.ts
+prisma/      Schema, migrations, seed and seed images
+scripts/     Development token and OpenAPI export
+test/        End-to-end tests and helpers
+infra/       CloudFormation templates and scripts of the emulated AWS environment
+docs/        Requirements, architecture, reuse plan and visual identity
 ```
 
-As dependências só apontam para dentro
-(`presentation → application → domain ← infrastructure`); veja a
+Dependencies point inwards only
+(`presentation → application → domain ← infrastructure`); see
 [architecture §5.3](docs/architecture.md).
 
-## Comandos npm
+## npm scripts
 
-| Comando | O que faz |
-| ------- | --------- |
-| `npm run start:dev` | API com reload a cada alteração |
-| `npm run start:debug` | Idem, com o inspector do Node |
-| `npm run build` / `npm run start:prod` | Compila / roda a versão compilada |
-| `npm test` / `npm run test:watch` / `npm run test:cov` | Testes unitários (uma vez / modo watch / com cobertura) |
-| `npm run test:e2e` | Testes ponta a ponta |
+| Command | What it does |
+| ------- | ------------ |
+| `npm run start:dev` | API with reload on change |
+| `npm run start:debug` | Same, with the Node inspector |
+| `npm run build` / `npm run start:prod` | Builds / runs the compiled API |
+| `npm test` / `npm run test:watch` / `npm run test:cov` | Unit tests (once / watch mode / with coverage) |
+| `npm run test:e2e` | End-to-end tests |
 | `npm run lint` / `npm run format` | oxlint / Prettier |
-| `npm run db:up` / `npm run db:down` / `npm run db:nuke` | Sobe o PostgreSQL / derruba os contêineres / derruba e apaga o volume |
-| `npm run db:logs` / `npm run db:admin` | Logs do banco / Adminer |
-| `npm run db:seed` / `npm run db:reset` | Dados de exemplo / recria o banco do zero |
-| `npm run prisma:migrate` / `npm run prisma:generate` / `npm run prisma:studio` | Nova migration / regera o client / navega nos dados |
-| `npm run auth:dev-token` | Token JWT de desenvolvimento |
-| `npm run openapi:generate` / `npm run openapi:lint` | Exporta / valida o contrato OpenAPI |
-| `npm run stack:up` / `npm run stack:logs` / `npm run stack:down` | Stack completa no Docker Compose |
-| `npm run aws:up` / `aws:deploy` / `aws:status` / `aws:destroy` / `aws:down` | Ambiente AWS emulado |
+| `npm run db:up` / `npm run db:down` / `npm run db:nuke` | Starts PostgreSQL / stops the containers / stops them and deletes the volume |
+| `npm run db:logs` / `npm run db:admin` | Database logs / Adminer |
+| `npm run db:seed` / `npm run db:reset` | Sample data / recreates the database from scratch |
+| `npm run prisma:migrate` / `npm run prisma:generate` / `npm run prisma:studio` | New migration / regenerates the client / browses the data |
+| `npm run auth:dev-token` | Development JWT |
+| `npm run openapi:generate` / `npm run openapi:lint` | Exports / validates the OpenAPI contract |
+| `npm run stack:up` / `npm run stack:logs` / `npm run stack:down` | Full stack on Docker Compose |
+| `npm run aws:up` / `aws:deploy` / `aws:status` / `aws:destroy` / `aws:down` | Emulated AWS environment |
 
-## Solução de problemas
+## Troubleshooting
 
-| Sintoma | Causa e solução |
-| ------- | --------------- |
-| A API não sobe e lista `Invalid environment variables` | Falta uma obrigatória ou está em formato errado no `.env` (ex.: `JWT_SECRET` com menos de 32 caracteres). A mensagem diz qual |
-| `Cannot connect to the Docker daemon` | O Docker Desktop está fechado. Abra e espere iniciar (`docker ps` tem que responder) |
-| Build da imagem falha com `npm ci can only install packages when your package.json and package-lock.json ... are in sync` | O `package-lock.json` foi reescrito por um npm mais novo. Restaure com `git checkout package-lock.json` e use `npm ci` |
-| `port is already allocated` / a porta 3000 está ocupada | Outra API está de pé: o `api` do Compose (`docker compose stop api`) ou um `npm run start:dev` em outro terminal. Não rode a API do Compose e a do MiniStack ao mesmo tempo na mesma porta |
-| `npm run aws:deploy` fica parado em "ECS: registering the task definition" | A task do ECS não consegue subir; quase sempre é a porta 3000 ocupada. Veja `npm run aws:status`, que mostra o motivo das tasks paradas |
-| "Load failed" / erro de CORS ao testar `/auth/google` na documentação | Essa rota é um redirect para o Google e só funciona aberta no navegador. Use o token de desenvolvimento nas outras |
-| `401` em todas as rotas depois de trocar o `JWT_SECRET` | Tokens antigos deixam de valer. Gere um novo ou use `JWT_SECRET_PREVIOUS` durante a troca |
-| `403` ao criar ou editar catálogo | A conta não é administradora. Veja [Administradores](#administradores) |
-| `503` no upload de foto ou nas rotas de lugares | A integração opcional não está configurada (`S3_BUCKET`, `GOOGLE_PLACES_API_KEY` ou `PLACES_USER_AGENT`) |
-| `429 Too Many Requests` | Limite de requisições atingido. Espere os segundos do `Retry-After` ou aumente os `THROTTLE_*` no `.env` de desenvolvimento |
+| Symptom | Cause and fix |
+| ------- | ------------- |
+| The API does not start and lists `Invalid environment variables` | A required variable is missing or malformed in `.env` (e.g. `JWT_SECRET` shorter than 32 characters). The message names it |
+| `Cannot connect to the Docker daemon` | Docker Desktop is not running. Open it and wait until it starts (`docker ps` must answer) |
+| The image build fails with `npm ci can only install packages when your package.json and package-lock.json ... are in sync` | `package-lock.json` was rewritten by a newer npm. Restore it with `git checkout package-lock.json` and use `npm ci` |
+| `port is already allocated` / port 3000 is taken | Another API is running: the Compose `api` (`docker compose stop api`) or an `npm run start:dev` in another terminal. Do not run the Compose API and the MiniStack API on the same port at the same time |
+| `npm run aws:deploy` hangs on "ECS: registering the task definition" | The ECS task cannot start; almost always because port 3000 is taken. `npm run aws:status` shows why tasks stopped |
+| "Load failed" / CORS error when trying `/auth/google` in the documentation | That route redirects to Google and only works when opened in the browser. Use the development token for the other routes |
+| `401` on every route after changing `JWT_SECRET` | Old tokens are no longer valid. Mint a new one, or use `JWT_SECRET_PREVIOUS` during the rotation |
+| `403` when creating or editing a catalog entry | The account is not an administrator. See [Administrators](#administrators) |
+| `503` on photo upload or on the places routes | The optional integration is not configured (`S3_BUCKET`, `GOOGLE_PLACES_API_KEY` or `PLACES_USER_AGENT`) |
+| `429 Too Many Requests` | Rate limit reached. Wait the `Retry-After` seconds, or raise the `THROTTLE_*` values in your development `.env` |
 
-## Contribuição e equipe
+## Contributing and team
 
-Leia o [`CONTRIBUTING.md`](CONTRIBUTING.md) e o
-[Código de Conduta](CODE_OF_CONDUCT.md). Em resumo: escolha uma issue,
-trabalhe numa branch, mantenha a mudança pequena, adicione testes para regras
-de negócio e casos de borda e abra um pull request. Código, comentários,
-testes e a documentação em `docs/` são escritos em inglês.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md). In short: pick an issue, work on a
+branch, keep the change small, add tests for business rules and edge cases, and
+open a pull request. Code, comments, tests and documentation are written in
+English.
 
-| Integrante | GitHub |
-| ---------- | ------ |
+| Member | GitHub |
+| ------ | ------ |
 | Gustavo de Freitas Fidélis | [@gustavofid](https://github.com/gustavofid) |
 | Bernardo Lykawka Medeiros da Silva | [@BernardoLykawka](https://github.com/BernardoLykawka) |
