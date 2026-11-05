@@ -2,17 +2,22 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /** Nest's default error shape (HttpException). */
 export class ErrorResponseDto {
-  @ApiProperty({ description: 'Codigo HTTP.', example: 404 })
+  @ApiProperty({ description: 'HTTP status code.', example: 404 })
   statusCode!: number;
 
   @ApiProperty({
-    description: 'Mensagem descrevendo o erro.',
+    description: 'What went wrong, in plain words.',
     example: 'Trip with id "0b8f...-9c21" not found',
   })
   message!: string;
 
-  @ApiProperty({ description: 'Nome do status HTTP.', example: 'Not Found' })
-  error!: string;
+  @ApiProperty({
+    description:
+      'HTTP status name. Absent on a few framework errors, such as 429.',
+    example: 'Not Found',
+    required: false,
+  })
+  error?: string;
 }
 
 /**
@@ -23,11 +28,11 @@ export class ValidationErrorResponseDto {
   statusCode!: number;
 
   @ApiProperty({
-    description: 'Uma entrada por regra de validacao violada.',
+    description: 'One entry per violated rule.',
     type: [String],
     example: [
-      'email must be an email',
-      'password must be longer than or equal to 8 characters',
+      'name must be longer than or equal to 2 characters',
+      'endDate must be a Date instance',
     ],
   })
   message!: string[];

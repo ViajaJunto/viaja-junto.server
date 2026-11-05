@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { buildOpenApiConfig } from './openapi.js';
+import { SwaggerModule } from '@nestjs/swagger';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildOpenApiConfig, createOpenApiDocument } from './openapi.js';
 
 describe('buildOpenApiConfig', () => {
   const document = buildOpenApiConfig();
@@ -23,8 +24,64 @@ describe('buildOpenApiConfig', () => {
     });
   });
 
-  it('documents pagination and auth in the description', () => {
-    expect(document.info.description).toContain('Pagination');
-    expect(document.info.description).toContain('Authentication');
+  it('documents pagination, auth, permissions and rate limits in the description', () => {
+    for (const section of [
+      'Authentication',
+      'Permissions',
+      'Pagination',
+      'Rate limiting',
+      'Errors',
+    ]) {
+      expect(document.info.description).toContain(`### ${section}`);
+    }
+  });
+});
+
+describe('createOpenApiDocument', () => {
+  const document = {
+    paths: {
+      '/api/health': {
+        get: { tags: ['Health'], responses: { '200': {} } },
+      },
+      '/api/trips': {
+        get: { tags: ['Trips'], responses: { '200': {} } },
+        post: {
+          tags: ['Trips'],
+          responses: { '201': {}, '429': { description: 'custom' } },
+        },
+      },
+    },
+  };
+
+  beforeEach(() => {
+    vi.spyOn(SwaggerModule, 'createDocument').mockReturnValue(
+      structuredClone(document) as never,
+    );
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('documents the rate limiter 429 on every limited operation', () => {
+    const result = createOpenApiDocument({} as never);
+
+    expect(result.paths['/api/trips'].get?.responses['429']).toMatchObject({
+      headers: { 'Retry-After': expect.any(Object) },
+    });
+  });
+
+  it('leaves the health check alone, which is not rate limited', () => {
+    const result = createOpenApiDocument({} as never);
+
+    expect(result.paths['/api/health'].get?.responses).not.toHaveProperty(
+      '429',
+    );
+  });
+
+  it('keeps a 429 an operation documents itself', () => {
+    const result = createOpenApiDocument({} as never);
+
+    expect(result.paths['/api/trips'].post?.responses['429']).toEqual({
+      description: 'custom',
+    });
   });
 });

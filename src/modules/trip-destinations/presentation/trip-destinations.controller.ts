@@ -48,7 +48,7 @@ export class TripDestinationsController {
   @ApiOperation({
     summary: 'List trip destinations',
     description:
-      'Returns the destinations of a trip in itinerary order. Entries without an explicit order come last.',
+      'Stops of the trips the caller can see, in itinerary order; entries without an explicit order come last. Pass `tripId` for the itinerary of one trip (FR08) — 404 if the caller cannot see it.',
   })
   @ApiPaginatedResponse(
     TripDestinationResponseDto,
@@ -116,7 +116,7 @@ export class TripDestinationsController {
   @ApiOperation({
     summary: 'Update a trip destination',
     description:
-      'Adjusts dates, notes or the position in the itinerary. The trip and the catalog entry cannot be reassigned.',
+      'Adjusts dates, notes or the position in the itinerary. The trip and the catalog entry cannot be reassigned. Requires EDITOR permission or the trip creator.',
   })
   @ApiIdParam('TripDestination identifier.')
   @ApiBody({ type: UpdateTripDestinationDto })
@@ -142,7 +142,8 @@ export class TripDestinationsController {
 
   @ApiOperation({
     summary: 'Remove a destination from a trip',
-    description: 'Also removes every activity planned for that stop.',
+    description:
+      'Also removes every activity planned for that stop. Requires EDITOR permission or the trip creator.',
   })
   @ApiIdParam('TripDestination identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })

@@ -92,7 +92,6 @@ export class TripsController {
     description: 'The payload failed validation.',
     type: ValidationErrorResponseDto,
   })
-  @ApiForbidden('The caller is not the creator of the trip.')
   @ApiAuthenticated()
   @Post()
   @HttpCode(HttpStatus.CREATED)

@@ -52,7 +52,7 @@ export class ReviewsController {
   @ApiOperation({
     summary: 'Browse reviews',
     description:
-      'Returns a paginated list of community reviews, newest first. Public — visitors can read reviews without an account.',
+      'Returns a paginated list of activity reviews, newest first. Narrow it with `activityId`. Public — visitors can read reviews without an account.',
   })
   @ApiPaginatedResponse(ReviewResponseDto, 'Page of review records.')
   @ApiUnprocessableEntityResponse({
@@ -141,7 +141,7 @@ export class ReviewsController {
   @ApiOperation({
     summary: 'Delete a review',
     description:
-      'Removes the review and recalculates the activity average rating.',
+      'Removes the review and recalculates the activity average rating. Only the author can do this.',
   })
   @ApiIdParam('Review identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })

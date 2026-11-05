@@ -18,10 +18,10 @@ process.env.GOOGLE_CLIENT_SECRET ??= 'openapi-export';
 process.env.JWT_SECRET ??= 'openapi-export-placeholder-secret-32+';
 
 const { Test } = await import('@nestjs/testing');
-const { SwaggerModule } = await import('@nestjs/swagger');
 const { AppModule } = await import('../dist/app.module.js');
 const { PrismaService } = await import('../dist/shared/database/prisma.service.js');
-const { buildOpenApiConfig } = await import('../dist/shared/http/openapi.js');
+const { createOpenApiDocument } = await import('../dist/shared/http/openapi.js');
+const { configureHttp } = await import('../dist/shared/http/configure-http.js');
 
 const output = resolve(process.argv[2] ?? 'openapi.json');
 
@@ -36,9 +36,12 @@ const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
   .compile();
 
 const app = moduleRef.createNestApplication({ logger: false });
+// Same HTTP setup as src/main.ts — above all the global prefix, so the paths
+// in the exported document are the ones the API really serves (/api/...).
+configureHttp(app);
 await app.init();
 
-const document = SwaggerModule.createDocument(app, buildOpenApiConfig());
+const document = createOpenApiDocument(app);
 
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(document, null, 2)}\n`);

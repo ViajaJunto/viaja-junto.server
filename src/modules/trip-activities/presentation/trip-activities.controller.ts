@@ -48,7 +48,7 @@ export class TripActivitiesController {
   @ApiOperation({
     summary: 'List planned activities',
     description:
-      'Returns the activities planned for a trip in chronological order. Entries without a date come last.',
+      'Activities planned in the trips the caller can see, in chronological order; entries without a date come last. Pass `tripDestinationId` for the activities of one stop (FR14) — 404 if the caller cannot see it.',
   })
   @ApiPaginatedResponse(
     TripActivityResponseDto,
@@ -116,7 +116,7 @@ export class TripActivitiesController {
   @ApiOperation({
     summary: 'Update a planned activity',
     description:
-      'Adjusts schedule, duration, cost or status. The stop and the catalog entry cannot be reassigned.',
+      'Adjusts schedule, duration, cost or status. The stop and the catalog entry cannot be reassigned. Requires EDITOR permission or the trip creator.',
   })
   @ApiIdParam('TripActivity identifier.')
   @ApiBody({ type: UpdateTripActivityDto })
@@ -143,7 +143,7 @@ export class TripActivitiesController {
   @ApiOperation({
     summary: 'Remove a planned activity',
     description:
-      'Removes the activity from the itinerary. The catalog entry is untouched.',
+      'Removes the activity from the itinerary. The catalog entry is untouched. Requires EDITOR permission or the trip creator.',
   })
   @ApiIdParam('TripActivity identifier.')
   @ApiNoContentResponse({ description: 'Deleted. No content returned.' })
